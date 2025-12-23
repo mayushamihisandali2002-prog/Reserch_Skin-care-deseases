@@ -146,10 +146,7 @@ This system is intended strictly for **research purposes** and is **not a substi
 
 ---
 
-## ✅ Final Confirmation
+## 📌 Notes
 
-- ✔ Component-specific  
-- ✔ Group-safe  
-- ✔ Supervisor-safe  
-- ✔ Viva-safe  
-- ✔ GitHub-professional  
+This repository documents a single research component that is aligned with the approved group research proposal and is intended solely for academic and research purposes.
+
