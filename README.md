@@ -6,39 +6,30 @@ Personalies treatment suggesion function
 
 This function integrates multiple AI components into a single workflow, providing structured, explainable, and safety-aware skin care guidance.
 
-Purpose of the Function
-
+            Purpose of the Function
 The function is the core function of the SkinAI system.
 It integrates disease prediction, treatment recommendation, and knowledge graph explanation into a single end-to-end workflow.
 
 This function is responsible for converting raw user symptom input into a structured, explainable medical guidance output.
 
-Why This Function Is Needed
-
+       
+         Why This Function Is Needed
 Instead of calling multiple independent components manually (classifier, treatment engine, knowledge graph), this function:
-
 Centralizes the logic in one place
-
 Ensures correct execution order
-
 Makes the system easier to deploy as a chatbot or API
-
 Improves maintainability and readability
 
-Input Parameters
+                 Input Parameters
 
 The function typically accepts:
-
-symptom_text (string)
+   symptom_text (string)
 User’s description of skin symptoms in natural language
-
-severity (optional, string)
+    severity (optional, string)
 Severity level such as mild, moderate, or severe
-
-skin_type / patient profile info (optional)
+     skin_type / patient profile info (optional)
 Used to personalize recommendations
-
-preferences (optional)
+      preferences (optional)
 Such as allergy list or OTC-only preference
 
 Step-by-Step Function Workflow
@@ -54,7 +45,7 @@ Top-K alternative diseases
 
 Confidence scores
 
-Why:
+  Why:
 Symptom text is unstructured; prediction converts it into a medical category.
 
 2️⃣ Disease Name Normalization
@@ -116,26 +107,16 @@ Knowledge graph explanation
 Why:
 Makes output suitable for chatbot UI, API response, or report generation.
 
-Output of the Function
+                 Output of the Function
+  The function returns a structured result containing:
+  Predicted disease
+  Confidence score
+  Top-K alternative diseases
+  Recommended treatments
+  Explanation based on medical knowledge graph
 
-The function returns a structured result containing:
-
-Predicted disease
-
-Confidence score
-
-Top-K alternative diseases
-
-Recommended treatments
-
-Explanation based on medical knowledge graph
-
-Key Design Advantages
-
+          Key Design Advantages
 Modular integration of multiple AI components
-
 Explainable predictions (not black-box output)
-
 Safe medical guidance (non-diagnostic)
-
 Easy to extend with new models or datasets
