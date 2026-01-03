@@ -1,0 +1,13 @@
+{
+  "model_name": "convnext_tiny",
+  "num_classes": 5,
+  "test_accuracy": 0.8621730382293763,
+  "test_macro_f1": 0.8013724847298311,
+  "labels": [
+    "acne_pimples",
+    "redness_irritation",
+    "dark_spots_uneven_tone",
+    "dryness_flaking",
+    "normal_clear"
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "user_id": "user_001",
+  "timestamp": "20251231_082431",
+  "skin_type": "dry",
+  "skin_concern": "normal_clear",
+  "goal": "acne",
+  "sensitive": true,
+  "fragrance_allergy": false,
+  "allergies": [],
+  "routine": {
+    "AM": [
+      {
+        "category": "cleanser",
+        "products": [
+          {
+            "product_id": "P00003",
+            "product_name": "PureDerm Clear Gel Cleanser",
+            "brand": "PureDerm",
+            "price_range": "premium"
+          },
+          {
+            "product_id": "P00026",
+            "product_name": "ClearTone Brightening Foaming Cleanser",
+            "brand": "ClearTone",
+            "price_range": "budget"
+          },
+          {
+            "product_id": "P00034",
+            "product_name": "DermaGlow Brightening Gel Cleanser",
+            "brand": "DermaGlow",
+            "price_range": "mid"
+          }
+        ]
+      },
+      {
+        "category": "moisturizer",
+        "products": [
+          {
+            "product_id": "P00001",
+            "product_name": "DermaGlow Hydrating Moisturizer",
+            "brand": "DermaGlow",
+            "price_range": "budget"
+          },
+          {
+            "product_id": "P00002",
+            "product_name": "GlowLab Brightening Barrier Cream",
+            "brand": "GlowLab",
+            "price_range": "mid"
+          },
+          {
+            "product_id": "P00017",
+            "product_name": "DermaGlow Daily Moisturizer",
+            "brand": "DermaGlow",
+            "price_range": "budget"
+          }
+        ]
+      },
+      {
+        "category": "sunscreen",
+        "products": [
+          {
+            "product_id": "P00012",
+            "product_name": "PureDerm Soothing Sunscreen SPF 30",
+            "brand": "PureDerm",
+            "price_range": "premium"
+          },
+          {
+            "product_id": "P00018",
+            "product_name": "HydraNest Gentle Sunscreen SPF 50",
+            "brand": "HydraNest",
+            "price_range": "budget"
+          },
+          {
+            "product_id": "P00020",
+            "product_name": "SkinNova Pure Sunscreen SPF 30",
+            "brand": "SkinNova",
+            "price_range": "mid"
+          }
+        ]
+      }
+    ],
+    "PM": [
+      {
+        "category": "cleanser",
+        "products": [
+          {
+            "product_id": "P00003",
+            "product_name": "PureDerm Clear Gel Cleanser",
+            "brand": "PureDerm",
+            "price_range": "premium"
+          },
+          {
+            "product_id": "P00026",
+            "product_name": "ClearTone Brightening Foaming Cleanser",
+            "brand": "ClearTone",
+            "price_range": "budget"
+          },
+          {
+            "product_id": "P00034",
+            "product_name": "DermaGlow Brightening Gel Cleanser",
+            "brand": "DermaGlow",
+            "price_range": "mid"
+          }
+        ]
+      },
+      {
+        "category": "moisturizer",
+        "products": [
+          {
+            "product_id": "P00001",
+            "product_name": "DermaGlow Hydrating Moisturizer",
+            "brand": "DermaGlow",
+            "price_range": "budget"
+          },
+          {
+            "product_id": "P00002",
+            "product_name": "GlowLab Brightening Barrier Cream",
+            "brand": "GlowLab",
+            "price_range": "mid"
+          },
+          {
+            "product_id": "P00017",
+            "product_name": "DermaGlow Daily Moisturizer",
+            "brand": "DermaGlow",
+            "price_range": "budget"
+          }
+        ]
+      }
+    ]
+  }
+}

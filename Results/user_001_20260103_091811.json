@@ -1,0 +1,159 @@
+{
+  "user_id": "user_001",
+  "timestamp": "20260103_091811",
+  "skin_type": "oily",
+  "skin_concern": "acne_pimples",
+  "goal": "glow",
+  "sensitive": true,
+  "fragrance_allergy": false,
+  "allergies": [
+    "zinc_oxide",
+    "arbutin",
+    "allantoin",
+    "fragrance"
+  ],
+  "routine": {
+    "AM": [
+      {
+        "category": "cleanser",
+        "products": [
+          {
+            "product_id": "P00026",
+            "product_name": "ClearTone Brightening Foaming Cleanser",
+            "brand": "ClearTone",
+            "price_range": "budget"
+          },
+          {
+            "product_id": "P00094",
+            "product_name": "GlowLab Clear Foaming Cleanser",
+            "brand": "GlowLab",
+            "price_range": "mid"
+          },
+          {
+            "product_id": "P00170",
+            "product_name": "DermaGlow Calming Foaming Cleanser",
+            "brand": "DermaGlow",
+            "price_range": "budget"
+          }
+        ]
+      },
+      {
+        "category": "moisturizer",
+        "products": [
+          {
+            "product_id": "P00052",
+            "product_name": "DermaGlow Pure Gel Cream",
+            "brand": "DermaGlow",
+            "price_range": "premium"
+          },
+          {
+            "product_id": "P00067",
+            "product_name": "SunShield Gentle Barrier Cream",
+            "brand": "SunShield",
+            "price_range": "mid"
+          },
+          {
+            "product_id": "P00114",
+            "product_name": "ClearTone Calming Barrier Cream",
+            "brand": "ClearTone",
+            "price_range": "mid"
+          }
+        ]
+      },
+      {
+        "category": "sunscreen",
+        "products": [
+          {
+            "product_id": "P00038",
+            "product_name": "GlowLab Calming Sunscreen SPF 50",
+            "brand": "GlowLab",
+            "price_range": "mid"
+          },
+          {
+            "product_id": "P00086",
+            "product_name": "CalmCare Pure Sunscreen SPF 50",
+            "brand": "CalmCare",
+            "price_range": "budget"
+          },
+          {
+            "product_id": "P00111",
+            "product_name": "SunShield Soothing Sunscreen SPF 30",
+            "brand": "SunShield",
+            "price_range": "budget"
+          }
+        ]
+      }
+    ],
+    "PM": [
+      {
+        "category": "cleanser",
+        "products": [
+          {
+            "product_id": "P00026",
+            "product_name": "ClearTone Brightening Foaming Cleanser",
+            "brand": "ClearTone",
+            "price_range": "budget"
+          },
+          {
+            "product_id": "P00094",
+            "product_name": "GlowLab Clear Foaming Cleanser",
+            "brand": "GlowLab",
+            "price_range": "mid"
+          },
+          {
+            "product_id": "P00170",
+            "product_name": "DermaGlow Calming Foaming Cleanser",
+            "brand": "DermaGlow",
+            "price_range": "budget"
+          }
+        ]
+      },
+      {
+        "category": "treatment_acne",
+        "products": [
+          {
+            "product_id": "P00127",
+            "product_name": "ClearTone Daily BHA Treatment",
+            "brand": "ClearTone",
+            "price_range": "premium"
+          },
+          {
+            "product_id": "P00166",
+            "product_name": "GlowLab Clear Acne Serum",
+            "brand": "GlowLab",
+            "price_range": "mid"
+          },
+          {
+            "product_id": "P00197",
+            "product_name": "CalmCare Gentle BHA Treatment",
+            "brand": "CalmCare",
+            "price_range": "premium"
+          }
+        ]
+      },
+      {
+        "category": "moisturizer",
+        "products": [
+          {
+            "product_id": "P00052",
+            "product_name": "DermaGlow Pure Gel Cream",
+            "brand": "DermaGlow",
+            "price_range": "premium"
+          },
+          {
+            "product_id": "P00067",
+            "product_name": "SunShield Gentle Barrier Cream",
+            "brand": "SunShield",
+            "price_range": "mid"
+          },
+          {
+            "product_id": "P00114",
+            "product_name": "ClearTone Calming Barrier Cream",
+            "brand": "ClearTone",
+            "price_range": "mid"
+          }
+        ]
+      }
+    ]
+  }
+}

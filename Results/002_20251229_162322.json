@@ -1,0 +1,146 @@
+{
+  "user_id": "002",
+  "timestamp": "20251229_162322",
+  "skin_type": "dry",
+  "skin_concern": "normal_clear",
+  "goal": "glow",
+  "sensitive": true,
+  "fragrance_allergy": false,
+  "allergies": [],
+  "recommended_products": {
+    "AM": [
+      {
+        "category": "cleanser",
+        "products": [
+          {
+            "product_id": "P00003",
+            "product_name": "PureDerm Clear Gel Cleanser",
+            "brand": "PureDerm",
+            "price_range": "premium",
+            "key_ingredients": "azelaic_acid,hyaluronic_acid,niacinamide,panthenol,salicylic_acid,titanium_dioxide,urea,zinc_oxide,zinc_pca"
+          },
+          {
+            "product_id": "P00026",
+            "product_name": "ClearTone Brightening Foaming Cleanser",
+            "brand": "ClearTone",
+            "price_range": "budget",
+            "key_ingredients": "benzoyl_peroxide,glycolic_acid,hyaluronic_acid,panthenol,salicylic_acid,titanium_dioxide,tranexamic_acid,vitamin_c"
+          },
+          {
+            "product_id": "P00034",
+            "product_name": "DermaGlow Brightening Gel Cleanser",
+            "brand": "DermaGlow",
+            "price_range": "mid",
+            "key_ingredients": "arbutin,benzoyl_peroxide,ferulic_acid,mandelic_acid,retinol,urea"
+          }
+        ]
+      },
+      {
+        "category": "moisturizer",
+        "products": [
+          {
+            "product_id": "P00001",
+            "product_name": "DermaGlow Hydrating Moisturizer",
+            "brand": "DermaGlow",
+            "price_range": "budget",
+            "key_ingredients": "essential_oils,glycolic_acid,hyaluronic_acid,mandelic_acid,niacinamide,panthenol,tranexamic_acid,zinc_oxide"
+          },
+          {
+            "product_id": "P00002",
+            "product_name": "GlowLab Brightening Barrier Cream",
+            "brand": "GlowLab",
+            "price_range": "mid",
+            "key_ingredients": "arbutin,ferulic_acid,fragrance,glycolic_acid,urea"
+          },
+          {
+            "product_id": "P00017",
+            "product_name": "DermaGlow Daily Moisturizer",
+            "brand": "DermaGlow",
+            "price_range": "budget",
+            "key_ingredients": "adapalene,allantoin,fragrance,squalane,titanium_dioxide,zinc_oxide"
+          }
+        ]
+      },
+      {
+        "category": "sunscreen",
+        "products": [
+          {
+            "product_id": "P00012",
+            "product_name": "PureDerm Soothing Sunscreen SPF 30",
+            "brand": "PureDerm",
+            "price_range": "premium",
+            "key_ingredients": "arbutin,azelaic_acid,benzoyl_peroxide,glycolic_acid,green_tea,lactic_acid,titanium_dioxide,urea,vitamin_c"
+          },
+          {
+            "product_id": "P00018",
+            "product_name": "HydraNest Gentle Sunscreen SPF 50",
+            "brand": "HydraNest",
+            "price_range": "budget",
+            "key_ingredients": "adapalene,alcohol_denat,arbutin,benzoyl_peroxide,fragrance,glycolic_acid,hyaluronic_acid,retinol"
+          },
+          {
+            "product_id": "P00020",
+            "product_name": "SkinNova Pure Sunscreen SPF 30",
+            "brand": "SkinNova",
+            "price_range": "mid",
+            "key_ingredients": "allantoin,arbutin,azelaic_acid,ceramides,fragrance,mandelic_acid,panthenol"
+          }
+        ]
+      }
+    ],
+    "PM": [
+      {
+        "category": "cleanser",
+        "products": [
+          {
+            "product_id": "P00003",
+            "product_name": "PureDerm Clear Gel Cleanser",
+            "brand": "PureDerm",
+            "price_range": "premium",
+            "key_ingredients": "azelaic_acid,hyaluronic_acid,niacinamide,panthenol,salicylic_acid,titanium_dioxide,urea,zinc_oxide,zinc_pca"
+          },
+          {
+            "product_id": "P00026",
+            "product_name": "ClearTone Brightening Foaming Cleanser",
+            "brand": "ClearTone",
+            "price_range": "budget",
+            "key_ingredients": "benzoyl_peroxide,glycolic_acid,hyaluronic_acid,panthenol,salicylic_acid,titanium_dioxide,tranexamic_acid,vitamin_c"
+          },
+          {
+            "product_id": "P00034",
+            "product_name": "DermaGlow Brightening Gel Cleanser",
+            "brand": "DermaGlow",
+            "price_range": "mid",
+            "key_ingredients": "arbutin,benzoyl_peroxide,ferulic_acid,mandelic_acid,retinol,urea"
+          }
+        ]
+      },
+      {
+        "category": "moisturizer",
+        "products": [
+          {
+            "product_id": "P00001",
+            "product_name": "DermaGlow Hydrating Moisturizer",
+            "brand": "DermaGlow",
+            "price_range": "budget",
+            "key_ingredients": "essential_oils,glycolic_acid,hyaluronic_acid,mandelic_acid,niacinamide,panthenol,tranexamic_acid,zinc_oxide"
+          },
+          {
+            "product_id": "P00002",
+            "product_name": "GlowLab Brightening Barrier Cream",
+            "brand": "GlowLab",
+            "price_range": "mid",
+            "key_ingredients": "arbutin,ferulic_acid,fragrance,glycolic_acid,urea"
+          },
+          {
+            "product_id": "P00017",
+            "product_name": "DermaGlow Daily Moisturizer",
+            "brand": "DermaGlow",
+            "price_range": "budget",
+            "key_ingredients": "adapalene,allantoin,fragrance,squalane,titanium_dioxide,zinc_oxide"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+data/10_images/splits/test/acne/07Acne081101.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/07Acne0811011 - Copy.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/07RosaceaFulFAce1.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/07SteroidPerioral11 - Copy.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/1.png | true=acne pred=acne
+data/10_images/splits/test/acne/182.JPG | true=acne pred=acne
+data/10_images/splits/test/acne/2 (13)1.jpeg | true=acne pred=acne
+data/10_images/splits/test/acne/2 (3)1.jpeg | true=acne pred=acne
+data/10_images/splits/test/acne/2 (51).jpg | true=acne pred=acne
+data/10_images/splits/test/acne/2 (54)1.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/2 (6).jpg | true=acne pred=acne
+data/10_images/splits/test/acne/2 (6)1.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/2.png | true=acne pred=acne
+data/10_images/splits/test/acne/2063533_nintchdbpict000580154756_15883143441.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/23.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/32212176-8650569-image-a-10_1598002142635.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/353492fd44963e8f0f4e7ea4697aed7e1.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/362f516bc2be4f01904fb2950eb700f41.png | true=acne pred=acne
+data/10_images/splits/test/acne/39.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/45.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/527434_m1 - Copy.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/6.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/63.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/7.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/752kd5y464t011.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/7b5781acbf8cf3ef59928bf1fd56df9eC!r23ac1983a0274adecccb505518971ace1.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/8aeaf633edac569490f585bccd0ca64b1 - Copy.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/8aeaf633edac569490f585bccd0ca64b1.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne-Before41.png | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_109.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_112.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_114.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_127.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_131.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_135.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_137.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_141.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_147.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_15.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_168.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_171.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_172.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_174.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_176.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_198.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_201.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_205.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_208.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_21.jpg | true=acne pred=acne
+data/10_images/splits/test/acne/Acne_210.jpg | true=acne pred=acne

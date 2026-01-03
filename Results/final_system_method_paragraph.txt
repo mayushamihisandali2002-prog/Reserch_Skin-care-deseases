@@ -1,0 +1,10 @@
+METHOD DESCRIPTION — FINAL SKIN TYPE SYSTEM (FOR REPORT)
+
+A hybrid skin-type assessment system was developed by combining an image-based deep learning model with a lightweight user questionnaire.
+First, a ConvNeXt image classifier predicts a probability distribution over skin types (oily, dry, combination) from a facial selfie image, producing P_img.
+Since skin type depends on time-dependent skin behavior (e.g., oiliness after washing and T-zone patterns) that cannot be reliably inferred from a single image, a short conditional yes/no questionnaire is used to obtain complementary evidence.
+User responses are converted into a questionnaire probability distribution P_q.
+The final decision is computed using a weighted probability fusion:
+P_final = alpha·P_img + (1−alpha)·P_q, where alpha = 0.75 controls the contribution of the image model relative to the questionnaire.
+The final skin type is selected as the class with the highest probability in P_final.
+This fusion strategy improves interpretability and robustness while keeping the system simple and suitable for deployment.

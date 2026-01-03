@@ -1,0 +1,37 @@
+{
+  "predicted_concern": "acne",
+  "confidence": 0.997979462146759,
+  "user_skin_type": "combination",
+  "avoid_ingredients": [
+    "fragrance"
+  ],
+  "recommended_ingredients": [
+    {
+      "ingredient": "sulfur",
+      "benefit": ""
+    },
+    {
+      "ingredient": "niacinamide",
+      "benefit": ""
+    },
+    {
+      "ingredient": "azelaic acid",
+      "benefit": ""
+    },
+    {
+      "ingredient": "zinc PCA",
+      "benefit": ""
+    },
+    {
+      "ingredient": "salicylic acid",
+      "benefit": ""
+    },
+    {
+      "ingredient": "zinc PCA",
+      "benefit": ""
+    }
+  ],
+  "routine_am": "Gentle cleanser \u2192 Lightweight moisturizer \u2192 Sunscreen (SPF 30+)",
+  "routine_pm": "Gentle cleanser \u2192 Moisturizer (barrier-supporting)",
+  "note": "This is cosmetic guidance only (not a medical diagnosis). Patch-test new products and avoid ingredients you know you react to."
+}

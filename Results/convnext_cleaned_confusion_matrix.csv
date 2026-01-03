@@ -1,0 +1,4 @@
+,pred_oily,pred_dry,pred_combination
+true_oily,257,81,31
+true_dry,56,363,27
+true_combination,43,43,150

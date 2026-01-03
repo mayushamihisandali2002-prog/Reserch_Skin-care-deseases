@@ -1,0 +1,35 @@
+PSEUDOCODE — FINAL SKIN TYPE SYSTEM (IMAGE + QUESTIONNAIRE)
+
+Given:
+  image I
+  trained image model M
+  fusion weight alpha = 0.75
+
+1) Image inference:
+   P_img = softmax(M(preprocess(I)))
+
+2) Ask questionnaire (conditional):
+   q_oily = ask_yesno("Oily/shiny within 2–3 hours after washing?")
+   q_dry = 0
+   q_tzone = 0
+
+   if q_oily == 0:
+       q_dry = ask_yesno("Dry/tight/flaky after washing?")
+   else:
+       q_tzone = ask_yesno("Oily mainly in T-zone while cheeks normal/dry?")
+
+3) Convert answers to questionnaire distribution P_q:
+   initialize P_q with small prior for all classes
+   if q_oily == 1: increase P_q[oily]
+   if q_dry  == 1: increase P_q[dry]
+   if q_tzone== 1: increase P_q[combination]
+   normalize P_q to sum to 1
+
+4) Fuse:
+   P_final = alpha * P_img + (1 - alpha) * P_q
+   normalize P_final
+
+5) Predict:
+   y_final = argmax(P_final)
+
+Return y_final, P_final

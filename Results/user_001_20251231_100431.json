@@ -1,0 +1,65 @@
+{
+  "user_id": "user_001",
+  "timestamp": "20251231_100431",
+  "skin_type": "dry",
+  "skin_concern": "normal_clear",
+  "goal": "glow",
+  "sensitive": true,
+  "fragrance_allergy": false,
+  "allergies": [
+    "essential_oils",
+    "benzoyl_peroxide",
+    "squalane",
+    "salicylic_acid",
+    "fragrance",
+    "glycolic_acid",
+    "urea",
+    "zinc_oxide",
+    "glycerin",
+    "arbutin",
+    "adapalene",
+    "allantoin",
+    "vitamin_c",
+    "tranexamic_acid",
+    "zinc_pca",
+    "panthenol",
+    "alcohol_denat",
+    "ceramides",
+    "titanium_dioxide",
+    "azelaic_acid",
+    "centella_asiatica",
+    "retinol",
+    "green_tea",
+    "lactic_acid",
+    "hyaluronic_acid",
+    "ferulic_acid",
+    "mandelic_acid",
+    "niacinamide"
+  ],
+  "routine": {
+    "AM": [
+      {
+        "category": "cleanser",
+        "products": []
+      },
+      {
+        "category": "moisturizer",
+        "products": []
+      },
+      {
+        "category": "sunscreen",
+        "products": []
+      }
+    ],
+    "PM": [
+      {
+        "category": "cleanser",
+        "products": []
+      },
+      {
+        "category": "moisturizer",
+        "products": []
+      }
+    ]
+  }
+}

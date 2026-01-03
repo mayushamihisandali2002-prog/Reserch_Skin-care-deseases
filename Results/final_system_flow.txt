@@ -1,0 +1,28 @@
+FINAL SKIN TYPE SYSTEM FLOW (IMAGE + QUESTIONNAIRE FUSION)
+
+Input:
+  - Facial selfie image
+  - User answers to a short yes/no questionnaire
+
+Step 1: Image Model Inference
+  - Preprocess image (resize 224x224, normalize with ImageNet mean/std)
+  - ConvNeXt model outputs probability distribution:
+      P_img = [P(oily), P(dry), P(combination)]
+
+Step 2: Conditional Questionnaire
+  - Q1: "Does your face become oily/shiny within 2–3 hours after washing?"
+  - If Q1 = No:
+      Q2: "Does your skin feel dry/tight/flaky after washing?"
+    Else (Q1 = Yes):
+      Q2: "Is oiliness mainly in the T-zone while cheeks are normal/dry?"
+
+  - Convert answers into questionnaire probabilities:
+      P_q = [P(oily), P(dry), P(combination)]
+
+Step 3: Weighted Fusion
+  - Combine both probability vectors using:
+      P_final = alpha * P_img + (1 - alpha) * P_q
+  - Final prediction = argmax(P_final)
+
+Output:
+  - Final skin type class and confidence (P_final)

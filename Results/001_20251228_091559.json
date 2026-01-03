@@ -1,0 +1,150 @@
+{
+  "user_id": "001",
+  "timestamp": "20251228_091559",
+  "skin_type": "dry",
+  "skin_concern": "normal_clear",
+  "goal": "glow",
+  "sensitive": true,
+  "fragrance_allergy": false,
+  "allergies": [
+    "ceramides",
+    "glycerin",
+    "glycolic_acid"
+  ],
+  "recommended_products": {
+    "AM": [
+      {
+        "category": "cleanser",
+        "products": [
+          {
+            "product_id": "P00003",
+            "product_name": "PureDerm Clear Gel Cleanser",
+            "brand": "PureDerm",
+            "price_range": "premium",
+            "key_ingredients": "azelaic_acid,hyaluronic_acid,niacinamide,panthenol,salicylic_acid,titanium_dioxide,urea,zinc_oxide,zinc_pca"
+          },
+          {
+            "product_id": "P00034",
+            "product_name": "DermaGlow Brightening Gel Cleanser",
+            "brand": "DermaGlow",
+            "price_range": "mid",
+            "key_ingredients": "arbutin,benzoyl_peroxide,ferulic_acid,mandelic_acid,retinol,urea"
+          },
+          {
+            "product_id": "P00042",
+            "product_name": "DermaGlow Brightening Cleanser",
+            "brand": "DermaGlow",
+            "price_range": "mid",
+            "key_ingredients": "adapalene,allantoin,fragrance,tranexamic_acid,vitamin_c"
+          }
+        ]
+      },
+      {
+        "category": "moisturizer",
+        "products": [
+          {
+            "product_id": "P00017",
+            "product_name": "DermaGlow Daily Moisturizer",
+            "brand": "DermaGlow",
+            "price_range": "budget",
+            "key_ingredients": "adapalene,allantoin,fragrance,squalane,titanium_dioxide,zinc_oxide"
+          },
+          {
+            "product_id": "P00067",
+            "product_name": "SunShield Gentle Barrier Cream",
+            "brand": "SunShield",
+            "price_range": "mid",
+            "key_ingredients": "adapalene,benzoyl_peroxide,centella_asiatica,ferulic_acid,hyaluronic_acid,niacinamide,zinc_pca"
+          },
+          {
+            "product_id": "P00099",
+            "product_name": "PureDerm Soothing Gel Cream",
+            "brand": "PureDerm",
+            "price_range": "mid",
+            "key_ingredients": "adapalene,arbutin,ferulic_acid,fragrance,hyaluronic_acid,mandelic_acid,niacinamide,retinol,titanium_dioxide,tranexamic_acid,vitamin_c,zinc_pca"
+          }
+        ]
+      },
+      {
+        "category": "sunscreen",
+        "products": [
+          {
+            "product_id": "P00027",
+            "product_name": "PureDerm Clear Sunscreen SPF 30",
+            "brand": "PureDerm",
+            "price_range": "budget",
+            "key_ingredients": "benzoyl_peroxide,centella_asiatica,fragrance,tranexamic_acid,zinc_oxide,zinc_pca"
+          },
+          {
+            "product_id": "P00032",
+            "product_name": "CalmCare Clear Sunscreen SPF 30",
+            "brand": "CalmCare",
+            "price_range": "budget",
+            "key_ingredients": "arbutin,benzoyl_peroxide,ferulic_acid,green_tea,mandelic_acid,retinol,urea,vitamin_c,zinc_pca"
+          },
+          {
+            "product_id": "P00046",
+            "product_name": "HydraNest Barrier Sunscreen SPF 50",
+            "brand": "HydraNest",
+            "price_range": "premium",
+            "key_ingredients": "alcohol_denat,allantoin,benzoyl_peroxide,centella_asiatica,fragrance,mandelic_acid,niacinamide,retinol,titanium_dioxide,tranexamic_acid,zinc_oxide,zinc_pca"
+          }
+        ]
+      }
+    ],
+    "PM": [
+      {
+        "category": "cleanser",
+        "products": [
+          {
+            "product_id": "P00003",
+            "product_name": "PureDerm Clear Gel Cleanser",
+            "brand": "PureDerm",
+            "price_range": "premium",
+            "key_ingredients": "azelaic_acid,hyaluronic_acid,niacinamide,panthenol,salicylic_acid,titanium_dioxide,urea,zinc_oxide,zinc_pca"
+          },
+          {
+            "product_id": "P00034",
+            "product_name": "DermaGlow Brightening Gel Cleanser",
+            "brand": "DermaGlow",
+            "price_range": "mid",
+            "key_ingredients": "arbutin,benzoyl_peroxide,ferulic_acid,mandelic_acid,retinol,urea"
+          },
+          {
+            "product_id": "P00042",
+            "product_name": "DermaGlow Brightening Cleanser",
+            "brand": "DermaGlow",
+            "price_range": "mid",
+            "key_ingredients": "adapalene,allantoin,fragrance,tranexamic_acid,vitamin_c"
+          }
+        ]
+      },
+      {
+        "category": "moisturizer",
+        "products": [
+          {
+            "product_id": "P00017",
+            "product_name": "DermaGlow Daily Moisturizer",
+            "brand": "DermaGlow",
+            "price_range": "budget",
+            "key_ingredients": "adapalene,allantoin,fragrance,squalane,titanium_dioxide,zinc_oxide"
+          },
+          {
+            "product_id": "P00067",
+            "product_name": "SunShield Gentle Barrier Cream",
+            "brand": "SunShield",
+            "price_range": "mid",
+            "key_ingredients": "adapalene,benzoyl_peroxide,centella_asiatica,ferulic_acid,hyaluronic_acid,niacinamide,zinc_pca"
+          },
+          {
+            "product_id": "P00099",
+            "product_name": "PureDerm Soothing Gel Cream",
+            "brand": "PureDerm",
+            "price_range": "mid",
+            "key_ingredients": "adapalene,arbutin,ferulic_acid,fragrance,hyaluronic_acid,mandelic_acid,niacinamide,retinol,titanium_dioxide,tranexamic_acid,vitamin_c,zinc_pca"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,158 @@
+{
+  "user_id": "user_001",
+  "timestamp": "20260102_104509",
+  "skin_type": "oily",
+  "skin_concern": "redness_irritation",
+  "goal": "acne",
+  "sensitive": true,
+  "fragrance_allergy": false,
+  "allergies": [
+    "alcohol_denat",
+    "tranexamic_acid",
+    "panthenol"
+  ],
+  "routine": {
+    "AM": [
+      {
+        "category": "cleanser",
+        "products": [
+          {
+            "product_id": "P00034",
+            "product_name": "DermaGlow Brightening Gel Cleanser",
+            "brand": "DermaGlow",
+            "price_range": "mid"
+          },
+          {
+            "product_id": "P00051",
+            "product_name": "PureDerm Hydrating Cleanser",
+            "brand": "PureDerm",
+            "price_range": "mid"
+          },
+          {
+            "product_id": "P00075",
+            "product_name": "CalmCare Soothing Cleanser",
+            "brand": "CalmCare",
+            "price_range": "mid"
+          }
+        ]
+      },
+      {
+        "category": "moisturizer",
+        "products": [
+          {
+            "product_id": "P00002",
+            "product_name": "GlowLab Brightening Barrier Cream",
+            "brand": "GlowLab",
+            "price_range": "mid"
+          },
+          {
+            "product_id": "P00017",
+            "product_name": "DermaGlow Daily Moisturizer",
+            "brand": "DermaGlow",
+            "price_range": "budget"
+          },
+          {
+            "product_id": "P00067",
+            "product_name": "SunShield Gentle Barrier Cream",
+            "brand": "SunShield",
+            "price_range": "mid"
+          }
+        ]
+      },
+      {
+        "category": "sunscreen",
+        "products": [
+          {
+            "product_id": "P00012",
+            "product_name": "PureDerm Soothing Sunscreen SPF 30",
+            "brand": "PureDerm",
+            "price_range": "premium"
+          },
+          {
+            "product_id": "P00032",
+            "product_name": "CalmCare Clear Sunscreen SPF 30",
+            "brand": "CalmCare",
+            "price_range": "budget"
+          },
+          {
+            "product_id": "P00038",
+            "product_name": "GlowLab Calming Sunscreen SPF 50",
+            "brand": "GlowLab",
+            "price_range": "mid"
+          }
+        ]
+      }
+    ],
+    "PM": [
+      {
+        "category": "cleanser",
+        "products": [
+          {
+            "product_id": "P00034",
+            "product_name": "DermaGlow Brightening Gel Cleanser",
+            "brand": "DermaGlow",
+            "price_range": "mid"
+          },
+          {
+            "product_id": "P00051",
+            "product_name": "PureDerm Hydrating Cleanser",
+            "brand": "PureDerm",
+            "price_range": "mid"
+          },
+          {
+            "product_id": "P00075",
+            "product_name": "CalmCare Soothing Cleanser",
+            "brand": "CalmCare",
+            "price_range": "mid"
+          }
+        ]
+      },
+      {
+        "category": "treatment_redness",
+        "products": [
+          {
+            "product_id": "P00022",
+            "product_name": "PureDerm Oil-Control Calming Serum",
+            "brand": "PureDerm",
+            "price_range": "premium"
+          },
+          {
+            "product_id": "P00039",
+            "product_name": "HydraNest Clear Calming Serum",
+            "brand": "HydraNest",
+            "price_range": "premium"
+          },
+          {
+            "product_id": "P00065",
+            "product_name": "SunShield Barrier Redness Serum",
+            "brand": "SunShield",
+            "price_range": "mid"
+          }
+        ]
+      },
+      {
+        "category": "moisturizer",
+        "products": [
+          {
+            "product_id": "P00002",
+            "product_name": "GlowLab Brightening Barrier Cream",
+            "brand": "GlowLab",
+            "price_range": "mid"
+          },
+          {
+            "product_id": "P00017",
+            "product_name": "DermaGlow Daily Moisturizer",
+            "brand": "DermaGlow",
+            "price_range": "budget"
+          },
+          {
+            "product_id": "P00067",
+            "product_name": "SunShield Gentle Barrier Cream",
+            "brand": "SunShield",
+            "price_range": "mid"
+          }
+        ]
+      }
+    ]
+  }
+}

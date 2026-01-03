@@ -1,0 +1,177 @@
+{
+  "user_id": "user_009",
+  "timestamp": "20260103_091847",
+  "skin_type": "oily",
+  "skin_concern": "acne_pimples",
+  "goal": "glow",
+  "sensitive": true,
+  "fragrance_allergy": false,
+  "allergies": [
+    "allantoin",
+    "arbutin",
+    "fragrance",
+    "zinc_oxide"
+  ],
+  "recommended_products": {
+    "AM": [
+      {
+        "category": "cleanser",
+        "products": [
+          {
+            "product_id": "P00026",
+            "product_name": "ClearTone Brightening Foaming Cleanser",
+            "brand": "ClearTone",
+            "price_range": "budget",
+            "key_ingredients": "benzoyl_peroxide,glycolic_acid,hyaluronic_acid,panthenol,salicylic_acid,titanium_dioxide,tranexamic_acid,vitamin_c"
+          },
+          {
+            "product_id": "P00094",
+            "product_name": "GlowLab Clear Foaming Cleanser",
+            "brand": "GlowLab",
+            "price_range": "mid",
+            "key_ingredients": "glycerin,green_tea,hyaluronic_acid,titanium_dioxide,urea"
+          },
+          {
+            "product_id": "P00170",
+            "product_name": "DermaGlow Calming Foaming Cleanser",
+            "brand": "DermaGlow",
+            "price_range": "budget",
+            "key_ingredients": "benzoyl_peroxide,essential_oils,glycerin,hyaluronic_acid,titanium_dioxide"
+          }
+        ]
+      },
+      {
+        "category": "moisturizer",
+        "products": [
+          {
+            "product_id": "P00052",
+            "product_name": "DermaGlow Pure Gel Cream",
+            "brand": "DermaGlow",
+            "price_range": "premium",
+            "key_ingredients": "adapalene,alcohol_denat,azelaic_acid,centella_asiatica,ceramides,niacinamide,panthenol,retinol,squalane,tranexamic_acid,vitamin_c,zinc_pca"
+          },
+          {
+            "product_id": "P00067",
+            "product_name": "SunShield Gentle Barrier Cream",
+            "brand": "SunShield",
+            "price_range": "mid",
+            "key_ingredients": "adapalene,benzoyl_peroxide,centella_asiatica,ferulic_acid,hyaluronic_acid,niacinamide,zinc_pca"
+          },
+          {
+            "product_id": "P00114",
+            "product_name": "ClearTone Calming Barrier Cream",
+            "brand": "ClearTone",
+            "price_range": "mid",
+            "key_ingredients": "adapalene,alcohol_denat,azelaic_acid,ceramides,ferulic_acid"
+          }
+        ]
+      },
+      {
+        "category": "sunscreen",
+        "products": [
+          {
+            "product_id": "P00038",
+            "product_name": "GlowLab Calming Sunscreen SPF 50",
+            "brand": "GlowLab",
+            "price_range": "mid",
+            "key_ingredients": "azelaic_acid,benzoyl_peroxide,ceramides,ferulic_acid,glycerin,glycolic_acid,mandelic_acid,retinol,titanium_dioxide,urea,zinc_pca"
+          },
+          {
+            "product_id": "P00086",
+            "product_name": "CalmCare Pure Sunscreen SPF 50",
+            "brand": "CalmCare",
+            "price_range": "budget",
+            "key_ingredients": "alcohol_denat,benzoyl_peroxide,essential_oils,ferulic_acid,glycolic_acid,green_tea,lactic_acid,panthenol,retinol,urea,vitamin_c"
+          },
+          {
+            "product_id": "P00111",
+            "product_name": "SunShield Soothing Sunscreen SPF 30",
+            "brand": "SunShield",
+            "price_range": "budget",
+            "key_ingredients": "centella_asiatica,glycerin,glycolic_acid,hyaluronic_acid,urea,vitamin_c"
+          }
+        ]
+      }
+    ],
+    "PM": [
+      {
+        "category": "cleanser",
+        "products": [
+          {
+            "product_id": "P00026",
+            "product_name": "ClearTone Brightening Foaming Cleanser",
+            "brand": "ClearTone",
+            "price_range": "budget",
+            "key_ingredients": "benzoyl_peroxide,glycolic_acid,hyaluronic_acid,panthenol,salicylic_acid,titanium_dioxide,tranexamic_acid,vitamin_c"
+          },
+          {
+            "product_id": "P00094",
+            "product_name": "GlowLab Clear Foaming Cleanser",
+            "brand": "GlowLab",
+            "price_range": "mid",
+            "key_ingredients": "glycerin,green_tea,hyaluronic_acid,titanium_dioxide,urea"
+          },
+          {
+            "product_id": "P00170",
+            "product_name": "DermaGlow Calming Foaming Cleanser",
+            "brand": "DermaGlow",
+            "price_range": "budget",
+            "key_ingredients": "benzoyl_peroxide,essential_oils,glycerin,hyaluronic_acid,titanium_dioxide"
+          }
+        ]
+      },
+      {
+        "category": "treatment_acne",
+        "products": [
+          {
+            "product_id": "P00127",
+            "product_name": "ClearTone Daily BHA Treatment",
+            "brand": "ClearTone",
+            "price_range": "premium",
+            "key_ingredients": "alcohol_denat,centella_asiatica,ferulic_acid,glycolic_acid,hyaluronic_acid,urea"
+          },
+          {
+            "product_id": "P00166",
+            "product_name": "GlowLab Clear Acne Serum",
+            "brand": "GlowLab",
+            "price_range": "mid",
+            "key_ingredients": "azelaic_acid,centella_asiatica,essential_oils,ferulic_acid,glycolic_acid,green_tea,retinol,salicylic_acid,titanium_dioxide,tranexamic_acid"
+          },
+          {
+            "product_id": "P00197",
+            "product_name": "CalmCare Gentle BHA Treatment",
+            "brand": "CalmCare",
+            "price_range": "premium",
+            "key_ingredients": "adapalene,alcohol_denat,glycolic_acid,green_tea,mandelic_acid,retinol,squalane,titanium_dioxide"
+          }
+        ]
+      },
+      {
+        "category": "moisturizer",
+        "products": [
+          {
+            "product_id": "P00052",
+            "product_name": "DermaGlow Pure Gel Cream",
+            "brand": "DermaGlow",
+            "price_range": "premium",
+            "key_ingredients": "adapalene,alcohol_denat,azelaic_acid,centella_asiatica,ceramides,niacinamide,panthenol,retinol,squalane,tranexamic_acid,vitamin_c,zinc_pca"
+          },
+          {
+            "product_id": "P00067",
+            "product_name": "SunShield Gentle Barrier Cream",
+            "brand": "SunShield",
+            "price_range": "mid",
+            "key_ingredients": "adapalene,benzoyl_peroxide,centella_asiatica,ferulic_acid,hyaluronic_acid,niacinamide,zinc_pca"
+          },
+          {
+            "product_id": "P00114",
+            "product_name": "ClearTone Calming Barrier Cream",
+            "brand": "ClearTone",
+            "price_range": "mid",
+            "key_ingredients": "adapalene,alcohol_denat,azelaic_acid,ceramides,ferulic_acid"
+          }
+        ]
+      }
+    ]
+  }
+}

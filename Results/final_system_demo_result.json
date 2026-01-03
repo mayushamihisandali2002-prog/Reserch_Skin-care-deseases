@@ -1,0 +1,27 @@
+{
+  "image_path": "/content/drive/MyDrive/SkinCare_AI_Component/data/11_skin_type/splits/test/oily/e6fef51143f660a865aa46ada857b430_jpg.rf.ff3cbf4d39aac162319e5abdf80fe8fa.jpg",
+  "true_label": "oily",
+  "image_only_probs": {
+    "oily": 0.9965196847915649,
+    "dry": 0.003437186125665903,
+    "combination": 4.315355545259081e-05
+  },
+  "image_only_pred": "oily",
+  "questionnaire_answers": {
+    "oily_within_2_3_hours": "Yes",
+    "dry_tight_flaky_after_washing": "Not asked",
+    "tzone_oily_while_cheeks_normal_or_dry": "No"
+  },
+  "P_q": {
+    "oily": 0.8181818181818181,
+    "dry": 0.09090909090909091,
+    "combination": 0.09090909090909091
+  },
+  "fusion_alpha": 0.75,
+  "P_final": {
+    "oily": 0.9519352019893101,
+    "dry": 0.02530516121639811,
+    "combination": 0.022759636794291733
+  },
+  "final_fused_pred": "oily"
+}
