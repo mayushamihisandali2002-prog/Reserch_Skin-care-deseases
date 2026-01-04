@@ -41,33 +41,6 @@ This approach ensures that diagnostic outcomes are not biased toward any specifi
 
 ---
 
-## 🧠 Methodology
-
-### Image Input & Lesion Detection
-- Users upload or capture skin images  
-- CNN-based lesion detection identifies the region of interest  
-- Low-quality images are rejected to maintain diagnostic reliability  
-
-### Domain-Adaptive Feature Extraction
-- A shared CNN feature extractor learns visual representations  
-- **Unsupervised Domain Adaptation** aligns feature distributions between:  
-  - **Source domain**: well-annotated light-skin datasets  
-  - **Target domain**: underrepresented dark-skin datasets  
-- **Adversarial training (DANN-style)** enforces domain-invariant feature learning  
-
-### Subtype-Aware Fair Classification
-- Dark skin samples are further categorized into:  
-  - **Oily skin**  
-  - **Dry skin**  
-- Subtype-sensitive embeddings are incorporated into the classifier  
-- Ensures fairness both **across skin tones** and **within darker skin subgroups**  
-
-### Explainability
-- **Grad-CAM visualizations** highlight lesion-focused regions  
-- Improves transparency, trust, and clinical interpretability  
-
----
-
 ## 🏗️ System Architecture
 
 Input Skin Image
