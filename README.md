@@ -1,4 +1,124 @@
 # Reserch_Skin-care-deseases
+ Personalized Treatment Support & Monitoring System
+
+**Student Name:** Mihisandali W.K.M  
+**Registration No:** IT22246400  
+
+## 1. Project Overview
+This project focuses on providing **personalized treatment support and monitoring** for skin-related conditions.
+Unlike traditional systems that stop at diagnosis, this system continues to support users through safe self-care recommendations and scheduled follow-up monitoring.
+
+The system uses **rule-augmented NLP**, **machine learning**, and a **knowledge graph** to deliver explainable, safe, and personalized skin care guidance.
+
+## 2. Problem Statement
+Many skin-care AI solutions provide only one-time diagnosis or advice.
+There is a lack of:
+- Follow-up monitoring
+- Treatment adherence support
+- Safety escalation mechanisms
+
+This project addresses these gaps by introducing a **notification-based monitoring system (Day 1 / Day 3 / Day 7)**.
+
+---
+
+## 3. Key Features
+- Text-based skin symptom analysis
+- Safe OTC and self-care recommendations
+- Notification-based follow-ups (Day 1 / 3 / 7)
+- Red-flag detection using rule-augmented NLP
+- Explainable recommendations using a Knowledge Graph
+- Personalized treatment pathways
+- Multilingual support (Sinhala / English – planned)
+- Lifetime patient record storage (planned)
+
+- ## 4. System Architecture
+### High-Level Architecture
+
+User Input (Text/Image)
+→ Preprocessing
+→ TF-IDF Feature Extraction
+→ Disease Classification (ML Models)
+→ Red-Flag Detection (Rules)
+→ Knowledge Graph Explanation
+→ Treatment Recommendation
+→ Follow-up Monitoring (Day 1 / 3 / 7)
+
+---
+
+## 5. Technologies Used
+
+### Programming & Environment
+- Python
+- Google Colab
+- Git & GitHub
+
+### Data Processing
+- Pandas
+- NumPy
+### NLP & Machine Learning
+- TF-IDF Vectorizer
+- Logistic Regression
+- SGDClassifier (log_loss)
+- Calibrated Linear SVM
+
+### Explainability
+- NetworkX (Knowledge Graph)
+
+### Model Evaluation
+- Accuracy
+- Precision / Recall / F1-score
+- Confusion Matrix
+- Macro-F1
+
+---
+
+## 6. Model Comparison
+Three models were trained and compared using the same TF-IDF features:
+
+| Model | Strengths | Limitations |
+|-----|----------|------------|
+| Logistic Regression | Simple, interpretable | Lower confidence |
+| SGDClassifier | Fast, scalable | Poor calibration |
+| Calibrated Linear SVM | Best accuracy & confidence | Slightly slower |
+
+**Selected Model:** Calibrated Linear SVM  
+**Reason:** Best macro-F1 score and reliable confidence estimation.
+
+---
+
+## 7. Project Structure
+data/
+├── raw/
+├── processed/
+└── synthetic/
+
+models/notebooks/
+README.md
+
+## 8. Version Control
+This repository maintains:
+- Full commit history
+- Feature branches
+- Merges between development stages
+
+This reflects real-world industry version control practices.
+
+---
+
+## 9. Ethical Considerations
+- Uses synthetic data to protect privacy
+- Provides decision support, not diagnosis
+- Advises professional consultation when red flags are detected
+
+---
+
+## 10. Future Enhancements
+- Image-based skin analysis
+- Transformer-based NLP models (SBERT, BERT)
+- Cloud deployment
+- Mobile notifications
+- Advanced patient record management
+
 
 Personalies treatment suggesion function
 
