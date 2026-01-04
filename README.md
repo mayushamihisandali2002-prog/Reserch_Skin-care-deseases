@@ -21,27 +21,19 @@ The system allows users to upload a skin image and record their symptoms, then p
 A final disease prediction
 
 Confidence score
-
 Interpretable symptom-based explanation
 
 This repository demonstrates real-world software engineering practices, including:
-
 Proper Git version control
-
 Branching and merging
-
 Collaborative development
-
 Reproducible experiments
 
 🎯 Main Objectives
 
 Build a CNN-based image classifier for skin diseases
-
 Build a voice/text-based classifier using ASR + NLP
-
 Design a fusion mechanism to combine both predictions
-
 Provide explainable outputs using a knowledge base
 
 Maintain industry-level Git version control
@@ -79,11 +71,8 @@ models/asr_text_baseline/best_model/
 Late Fusion approach
 
 Combines image confidence and text confidence
-
 Uses dynamic weighting (alpha)
-
 Enhanced with knowledge-based symptom matching
-
 Avoids hard overrides → safer predictions
 
 📚 Knowledge-Based Interpretation (Optional but Used)
@@ -93,9 +82,7 @@ Disease ↔ Symptom mapping
 Used to:
 
 Validate predictions
-
 Improve confidence estimation
-
 Provide explainability
 
 📁 Project Folder Structure
@@ -133,37 +120,29 @@ Notebook	Purpose
 03d_asr_text_semantic_baseline.ipynb	Train voice/text model
 04_multimodal_fusion.ipynb	Fusion strategy & evaluation
 05_demo_inference_PERFECT_v3.ipynb	Final demo & UI integration
+
 ⚙️ Dependencies
+
 Core Libraries
 
 Python 3.9+
-
 PyTorch
-
 TorchVision
-
 Transformers (HuggingFace)
-
 NumPy
-
 Pandas
-
 Scikit-learn
-
 Matplotlib
 
 ASR & Audio
 
 Faster-Whisper / Whisper
-
 FFmpeg
-
 Librosa
 
 Environment
 
 Google Colab
-
 Google Drive (model storage)
 
 🔁 Version Control & Collaboration (Checklist 1 Requirement)
@@ -171,61 +150,36 @@ Google Drive (model storage)
 This repository includes:
 
 ✅ Full commit history
-
 ✅ Multiple commits over time
-
 ✅ Branch usage (feature development)
-
 ✅ Merges into main branch
-
 ✅ Clear progression of work
 
 Evaluators:
 Please review the commit history, branches, and merge records to verify collaboration and continuous development.
 
-🔗 Repository Access (PP1 Submission)
-
-A shareable Git repository link is provided
-
-Evaluators have read access
-
-Repository link is uploaded to:
-
-OneDrive → Checklist 1 folder
 
 📊 Project Management (Checklist 2 – Planned)
 
 MS Planner used for task tracking
-
 Roles & responsibilities documented
-
 Planner report will be exported and uploaded for Checklist 2
 
 ✅ PP1 Checklist Summary
 
  Git repository created
-
  README.md completed
-
  Architecture documented
-
  Dependencies listed
-
  Version control history visible
-
  Shareable repo link provided
 
 👤 Author : Oshidee Prarthana Wijesinghe
-
 Role: Multimodal Modeling & Fusion
 Contributions:
 
 Image model training
-
 Voice/ASR integration
-
 Fusion logic design
-
 Explainability via KB
-
 End-to-end demo pipeline
