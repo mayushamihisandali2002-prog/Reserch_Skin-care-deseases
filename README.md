@@ -1,259 +1,274 @@
-🩺 Multimodal Skin Disease Prediction System
+# 🧴 Face Skin Severity & Progress Tracking System
 
-Final Year Research Project – PP1 (Checklist 1)
+**Final Year Research Project – PP1 (Checklist 1)**
 
-📌 Project Overview
+---
 
-This project focuses on developing a Multimodal Skin Disease Prediction System that combines skin image analysis and voice-based symptom descriptions to improve diagnostic accuracy.
+## 📌 Project Overview
 
-Traditional systems rely on a single modality (image or text), which can lead to incorrect predictions. Our approach integrates:
+This project focuses on developing an **Explainable Face Skin Severity Assessment and Progress Tracking System** using **single skin images**.
 
-Image modality (skin lesion photos)
+Unlike traditional skin analysis systems that only classify diseases, this system is designed to:
 
-Voice modality (patient symptom descriptions → speech-to-text)
+* Quantify **skin severity levels** (mild, moderate, severe)
+* Track **skin condition changes over time**
+* Ensure **same facial region consistency** during tracking
+* Provide **interpretable, feature-based outputs**
 
-Multimodal fusion strategy
+Due to the absence of publicly available **sequential skin image datasets**, this project adopts a **hybrid classical machine learning approach** that is robust, explainable, and suitable for real-world user uploads.
 
-Knowledge-based interpretation
+The system allows users to:
 
-The system allows users to upload a skin image and record their symptoms, then produces:
+* Upload a face skin image
+* Receive a severity assessment
+* Upload follow-up images (daily/weekly)
+* Track progression as **Improving / Stable / Worsening**
 
-A final disease prediction
+This repository demonstrates strong software engineering and research practices, including:
 
-Confidence score
+* Modular notebook-based workflow
+* Reproducible experiments
+* Classical ML model comparison
+* Clean folder organization
+* Version-controlled development
 
-Interpretable symptom-based explanation
+---
 
-This repository demonstrates real-world software engineering practices, including:
+## 🎯 Main Objectives
 
-Proper Git version control
+* Extract **dermatologically meaningful features** from face skin images
+* Generate **severity labels** where public datasets lack annotations
+* Train and compare **classical ML models** for severity prediction
+* Ensure **region-consistent tracking** (same face, same cheek)
+* Track severity progression over time
+* Provide **explainable outputs** suitable for medical interpretation
+* Maintain industry-level Git version control
 
-Branching and merging
+---
 
-Collaborative development
+## 🧠 System Architecture
 
-Reproducible experiments
+### 🔹 High-Level Architecture Diagram (Conceptual)
 
-🎯 Main Objectives
+```
+┌──────────────────────────┐
+│        User Input        │
+│   (Face Skin Image)     │
+└─────────────┬──────────┘
+              │
+┌─────────────▼─────────────┐
+│ Image Preprocessing       │
+│ Resize + Normalize (CLAHE)│
+└─────────────┬─────────────┘
+              │
+┌─────────────▼─────────────┐
+│ Handcrafted Feature       │
+│ Extraction Module         │
+│ (Color, Texture, Edges)   │
+└─────────────┬─────────────┘
+              │
+┌─────────────▼─────────────┐
+│ Rule-Based Severity       │
+│ Scoring & Labeling        │
+└─────────────┬─────────────┘
+              │
+┌─────────────▼─────────────┐
+│ ML Severity Classifier    │
+│ (RF / SVM-RBF)            │
+└─────────────┬─────────────┘
+              │
+┌─────────────▼─────────────┐
+│ Progress Tracking Logic   │
+│ (Improving / Stable /     │
+│  Worsening)               │
+└──────────────────────────┘
+```
 
-Build a CNN-based image classifier for skin diseases
+---
 
-Build a voice/text-based classifier using ASR + NLP
+## 🧪 Models Used
 
-Design a fusion mechanism to combine both predictions
+### 🧩 Model 1: Handcrafted Feature Extraction (Non-ML)
 
-Provide explainable outputs using a knowledge base
+* **Type:** Deterministic image analysis
+* **Purpose:** Convert images into numeric dermatological indicators
+* **Features extracted:**
 
-Maintain industry-level Git version control
+  * redness_index
+  * saturation_mean
+  * brightness_mean
+  * edge_density
+  * texture_entropy
+  * spotness
+* **Why used:** Interpretability, low data requirement, medical relevance
 
-🧠 System Architecture
-🔹 High-Level Architecture Diagram
-                ┌──────────────────────┐
-                │   User Interface     │
-                │ (Image + Voice Input)│
-                └─────────┬────────────┘
-                          │
-          ┌───────────────┴────────────────┐
-          │                                │
-┌─────────▼─────────┐          ┌───────────▼───────────┐
-│ Image Model (CNN) │          │ Voice Model (ASR + NLP)│
-│  ResNet-18        │          │  ASR → Text Classifier │
-└─────────┬─────────┘          └───────────┬───────────┘
-          │                                │
-          └───────────────┬────────────────┘
-                          ▼
-              ┌──────────────────────────┐
-              │ Multimodal Fusion Module │
-              │ (Confidence + KB-aware)  │
-              └─────────────┬────────────┘
-                            ▼
-              ┌──────────────────────────┐
-              │ Final Prediction Output  │
-              │ Disease + Confidence     │
-              │ Explanation (KB-based)   │
-              └──────────────────────────┘
+---
 
-🧪 Models Used
-📷 Image Model
+### 🧠 Model 2: Rule-Based Severity Scoring Model
 
-Architecture: ResNet-18 (CNN)
+* **Type:** Mathematical / rule-based
+* **Purpose:** Generate severity labels where datasets lack annotations
+* **Output:**
 
-Framework: PyTorch
+  * Severity score (continuous)
+  * Severity level (mild / moderate / severe)
+* **Justification:** Public skin datasets do not provide severity annotations
 
-Input: Skin lesion images
+---
 
-Output: Disease class probabilities
+### 🌲 Model 3: Random Forest Severity Classifier (Baseline)
+
+* **Model Name:** HLF-RF Skin Severity Model
+* **Algorithm:** Random Forest
+* **Input:** Handcrafted features
+* **Output:** Severity class
+* **Role:** Baseline model with high interpretability
+* **Strength:** Feature importance analysis
 
 Saved Model:
 
-models/image_best.pt
+```
+04_models/severity_model_rf.joblib
+```
 
-🎙️ Voice / Text Model
+---
 
-ASR: Speech-to-Text (Whisper / ASR pipeline)
+### 📐 Model 4: SVM-RBF Severity Classifier (Improved Model)
 
-Text Classifier: Transformer-based model
-
-Input: Voice symptoms → transcript
-
-Output: Disease probabilities
+* **Model Name:** SVM-RBF Severity Classifier
+* **Algorithm:** Support Vector Machine (RBF kernel)
+* **Input:** Same handcrafted features
+* **Output:** Severity class + probabilities
+* **Role:** Accuracy comparison and improvement over baseline
+* **Strength:** Strong non-linear separation on small datasets
 
 Saved Model:
 
-models/asr_text_baseline/best_model/
+```
+04_models/severity_model_svm_rbf.joblib
+```
 
-🔀 Multimodal Fusion Strategy
+---
 
-Late Fusion approach
+### 📈 Model 5: Progression / Tracking Model
 
-Combines image confidence and text confidence
+* **Type:** Rule-based temporal logic
+* **Purpose:** Track severity changes across visits
+* **Output:**
 
-Uses dynamic weighting (alpha)
+  * IMPROVING
+  * STABLE
+  * WORSENING
+* **Why not time-series ML:** No public sequential datasets available
 
-Enhanced with knowledge-based symptom matching
+---
 
-Avoids hard overrides → safer predictions
+## 📁 Project Folder Structure
 
-📚 Knowledge-Based Interpretation (Optional but Used)
-
-Disease ↔ Symptom mapping
-
-Used to:
-
-Validate predictions
-
-Improve confidence estimation
-
-Provide explainability
-
-📁 Project Folder Structure
-SkinDisease_Multimodal_Project/
+```
+Face_Skin_Severity_System/
 │
-├── data/
-│   ├── splits/                 # Train/val/test CSVs
-│   ├── knowledge_base/          # Disease–symptom mappings
-│
-├── models/
-│   ├── image_best.pt            # Final image model
-│   ├── asr_text_baseline/       # Final voice/text model
-│
-├── notebooks/
-│   ├── 01_data_exploration.ipynb
-│   ├── 02_image_baseline.ipynb
-│   ├── 03_audio_baseline.ipynb
-│   ├── 03c_audio_asr_to_text.ipynb
-│   ├── 03d_asr_text_semantic_baseline.ipynb
-│   ├── 04_multimodal_fusion.ipynb
-│   ├── 05_demo_inference_PERFECT_v3.ipynb
-│
-├── results/
-│   ├── fusion_outputs/
-│   ├── evaluation_reports/
-│
+├── 01_raw_datasets/            # Original skin image datasets
+├── 02_preprocessing/
+│   ├── resized/
+│   └── normalized/
+├── 03_feature_store/
+│   └── features.csv            # Extracted handcrafted features
+├── 04_models/
+│   ├── severity_model_rf.joblib
+│   ├── severity_model_svm_rbf.joblib
+│   └── metadata_*.json
+├── 05_tracking/                # User tracking data (daily/weekly)
+├── 06_results/
+│   └── evaluation/             # Graphs & reports
+├── 07_notebooks/
+│   ├── 01_preprocessing.ipynb
+│   ├── 02_feature_extraction.ipynb
+│   ├── 03_severity_model.ipynb
+│   ├── 03b_severity_training_SVM_RBF.ipynb
+│   └── 05_tracking_demo.ipynb
 ├── README.md
 └── requirements.txt
+```
 
-📓 Notebook Responsibilities (My Part)
-Notebook	Purpose
-01_data_exploration.ipynb	Dataset analysis & sanity checks
-02_image_baseline.ipynb	Train CNN image model
-03c_audio_asr_to_text.ipynb	Convert voice → text
-03d_asr_text_semantic_baseline.ipynb	Train voice/text model
-04_multimodal_fusion.ipynb	Fusion strategy & evaluation
-05_demo_inference_PERFECT_v3.ipynb	Final demo & UI integration
-⚙️ Dependencies
-Core Libraries
+---
 
-Python 3.9+
+## 📓 Notebook Responsibilities (My Part)
 
-PyTorch
+| Notebook                            | Purpose                         |
+| ----------------------------------- | ------------------------------- |
+| 01_preprocessing.ipynb              | Image resizing & normalization  |
+| 02_feature_extraction.ipynb         | Handcrafted feature extraction  |
+| 03_severity_model.ipynb             | Baseline Random Forest training |
+| 03b_severity_training_SVM_RBF.ipynb | Improved SVM model training     |
+| 05_tracking_demo.ipynb              | Severity tracking & demo        |
 
-TorchVision
+---
 
-Transformers (HuggingFace)
+## ⚙️ Dependencies
 
-NumPy
+### Core Libraries
 
-Pandas
+* Python 3.9+
+* NumPy
+* Pandas
+* Scikit-learn
+* OpenCV
+* Matplotlib
 
-Scikit-learn
+### Environment
 
-Matplotlib
+* Google Colab
+* Google Drive (dataset & model storage)
 
-ASR & Audio
+---
 
-Faster-Whisper / Whisper
-
-FFmpeg
-
-Librosa
-
-Environment
-
-Google Colab
-
-Google Drive (model storage)
-
-🔁 Version Control & Collaboration (Checklist 1 Requirement)
+## 🔁 Version Control & Collaboration (Checklist 1 Requirement)
 
 This repository includes:
 
-✅ Full commit history
+✅ Git repository created
+✅ Regular commits over time
+✅ Notebook-based modular development
+✅ Clear workflow progression
+✅ Reproducible experiments
+✅ Clean folder organization
 
-✅ Multiple commits over time
+Evaluators are encouraged to review commit history to verify continuous development.
 
-✅ Branch usage (feature development)
+---
 
-✅ Merges into main branch
+## 🔗 Repository Access (PP1 Submission)
 
-✅ Clear progression of work
+* Git repository link provided
+* Read access enabled
+* Repository link uploaded to:
 
-Evaluators:
-Please review the commit history, branches, and merge records to verify collaboration and continuous development.
+  * **OneDrive → Checklist 1 folder**
 
-🔗 Repository Access (PP1 Submission)
+---
 
-A shareable Git repository link is provided
+## 📊 PP1 Checklist Summary
 
-Evaluators have read access
+✅ Problem definition completed
+✅ System architecture documented
+✅ Models clearly described
+✅ Notebooks organized
+✅ Graphical evaluation included
+✅ Repository ready for evaluation
 
-Repository link is uploaded to:
+---
 
-OneDrive → Checklist 1 folder
+## 👤 Author (My Contribution)
 
-📊 Project Management (Checklist 2 – Planned)
+**Role:** Skin Severity Modeling & Tracking
 
-MS Planner used for task tracking
+**Contributions:**
 
-Roles & responsibilities documented
+* Designed feature-based skin severity framework
+* Implemented rule-based severity labeling
+* Trained and compared RF & SVM models
+* Designed progression tracking logic
+* Developed explainable, non-CNN pipeline
+* Integrated demo & evaluation workflow
 
-Planner report will be exported and uploaded for Checklist 2
-
-✅ PP1 Checklist Summary
-
- Git repository created
-
- README.md completed
-
- Architecture documented
-
- Dependencies listed
-
- Version control history visible
-
- Shareable repo link provided
-
-👤 Author (My Contribution)
-
-Role: Multimodal Modeling & Fusion
-Contributions:
-
-Image model training
-
-Voice/ASR integration
-
-Fusion logic design
-
-Explainability via KB
-
-End-to-end demo pipeline
