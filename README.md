@@ -1,259 +1,296 @@
-🩺 Multimodal Skin Disease Prediction System
+🧠 Multimodal, Explainable & Fair AI Framework for Skin Disease Diagnosis, Severity Tracking, and Personalized Treatment Support
 
 Final Year Research Project – PP1 (Checklist 1)
+Sri Lanka Institute of Information Technology (SLIIT)
 
 📌 Project Overview
 
-This project focuses on developing a Multimodal Skin Disease Prediction System that combines skin image analysis and voice-based symptom descriptions to improve diagnostic accuracy.
+This research presents a comprehensive AI-driven framework for skin disease analysis, combining diagnosis, severity assessment, fairness-aware modeling, and personalized treatment support.
 
-Traditional systems rely on a single modality (image or text), which can lead to incorrect predictions. Our approach integrates:
+Unlike traditional dermatology AI systems that focus only on single-image disease classification, this framework integrates:
 
-Image modality (skin lesion photos)
+Multimodal skin disease prediction (Image + Voice/Text)
 
-Voice modality (patient symptom descriptions → speech-to-text)
+Explainable face skin severity assessment & progress tracking
 
-Multimodal fusion strategy
+Personalized treatment recommendation & follow-up monitoring
 
-Knowledge-based interpretation
+Cross-cultural fairness & domain adaptation to reduce skin-tone bias
 
-The system allows users to upload a skin image and record their symptoms, then produces:
+The system is designed as a decision-support tool, prioritizing:
 
-A final disease prediction
+Explainability
+
+Safety
+
+Fairness
+
+Real-world usability
+
+⚠️ This system does not replace medical professionals.
+
+🧩 Integrated Research Components
+1️⃣ Multimodal Skin Disease Prediction System
+
+(Image + Voice-Based Diagnosis)
+
+Objective: Improve diagnostic accuracy by combining multiple modalities.
+
+Key Features
+
+Skin lesion image analysis using CNNs
+
+Voice-based symptom input (Speech-to-Text)
+
+Late fusion strategy with dynamic confidence weighting
+
+Knowledge-based symptom validation
+
+Explainable disease predictions
+
+Models & Tools
+
+Image Model: ResNet-18 (PyTorch)
+
+ASR: Whisper / Faster-Whisper
+
+Text Model: Transformer-based NLP
+
+Fusion: Confidence-based late fusion
+
+Outputs
+
+Final disease prediction
 
 Confidence score
 
-Interpretable symptom-based explanation
+Symptom-based explanation
 
-This repository demonstrates real-world software engineering practices, including:
+2️⃣ 🧴 Face Skin Severity & Progress Tracking System
 
-Proper Git version control
+(Explainable & Non-CNN Approach)
 
-Branching and merging
+Author: Laksopan
+Role: Skin Severity Modeling & Progress Tracking
 
-Collaborative development
+📌 Overview
 
-Reproducible experiments
+This component focuses on quantifying face skin severity and tracking progression over time using single skin images.
 
-🎯 Main Objectives
+Unlike disease classifiers, this system:
 
-Build a CNN-based image classifier for skin diseases
+Quantifies severity (mild / moderate / severe)
 
-Build a voice/text-based classifier using ASR + NLP
+Tracks condition changes over time
 
-Design a fusion mechanism to combine both predictions
+Ensures same facial region consistency
 
-Provide explainable outputs using a knowledge base
+Provides interpretable, feature-based outputs
 
-Maintain industry-level Git version control
+Due to the lack of public sequential datasets, a hybrid classical ML approach is used.
 
-🧠 System Architecture
-🔹 High-Level Architecture Diagram
-                ┌──────────────────────┐
-                │   User Interface     │
-                │ (Image + Voice Input)│
-                └─────────┬────────────┘
-                          │
-          ┌───────────────┴────────────────┐
-          │                                │
-┌─────────▼─────────┐          ┌───────────▼───────────┐
-│ Image Model (CNN) │          │ Voice Model (ASR + NLP)│
-│  ResNet-18        │          │  ASR → Text Classifier │
-└─────────┬─────────┘          └───────────┬───────────┘
-          │                                │
-          └───────────────┬────────────────┘
-                          ▼
-              ┌──────────────────────────┐
-              │ Multimodal Fusion Module │
-              │ (Confidence + KB-aware)  │
-              └─────────────┬────────────┘
-                            ▼
-              ┌──────────────────────────┐
-              │ Final Prediction Output  │
-              │ Disease + Confidence     │
-              │ Explanation (KB-based)   │
-              └──────────────────────────┘
+🎯 Objectives
+
+Extract dermatologically meaningful handcrafted features
+
+Generate severity labels via rule-based scoring
+
+Train & compare classical ML models
+
+Track severity progression (Improving / Stable / Worsening)
+
+Maintain explainability & reproducibility
+
+🧠 Architecture (Conceptual)
+User Image
+   ↓
+Preprocessing (CLAHE)
+   ↓
+Handcrafted Feature Extraction
+   ↓
+Rule-Based Severity Scoring
+   ↓
+RF / SVM-RBF Classifier
+   ↓
+Progress Tracking Logic
 
 🧪 Models Used
-📷 Image Model
 
-Architecture: ResNet-18 (CNN)
+Handcrafted Feature Extractor
 
-Framework: PyTorch
+Rule-Based Severity Labeling
 
-Input: Skin lesion images
+Random Forest (Baseline)
 
-Output: Disease class probabilities
+SVM-RBF (Improved Model)
 
-Saved Model:
+Rule-Based Progress Tracking
 
-models/image_best.pt
+📁 Folder Structure
+Face_Skin_Severity_System/
+├── 01_raw_datasets/
+├── 02_preprocessing/
+├── 03_feature_store/
+├── 04_models/
+├── 05_tracking/
+├── 06_results/
+├── 07_notebooks/
+└── README.md
 
-🎙️ Voice / Text Model
+🧑‍💻 Contributions – Laksopan
 
-ASR: Speech-to-Text (Whisper / ASR pipeline)
+Designed feature-based severity framework
 
-Text Classifier: Transformer-based model
+Implemented rule-based severity labeling
 
-Input: Voice symptoms → transcript
+Trained & compared RF and SVM-RBF models
 
-Output: Disease probabilities
+Developed progression tracking logic
 
-Saved Model:
+Built explainable, non-CNN pipeline
 
-models/asr_text_baseline/best_model/
+Integrated demo & evaluation workflow
 
-🔀 Multimodal Fusion Strategy
+3️⃣ Personalized Skin Treatment Support & Monitoring System
 
-Late Fusion approach
+Author: Mihisandali W.K.M
+Registration No: IT22246400
 
-Combines image confidence and text confidence
+📌 Overview
 
-Uses dynamic weighting (alpha)
+This system extends beyond diagnosis to provide:
 
-Enhanced with knowledge-based symptom matching
+Safe OTC/self-care treatment recommendations
 
-Avoids hard overrides → safer predictions
+Knowledge-graph-based explanations
 
-📚 Knowledge-Based Interpretation (Optional but Used)
+Red-flag detection
 
-Disease ↔ Symptom mapping
+Notification-based follow-ups (Day 1 / 3 / 7)
 
-Used to:
+🧠 Core Functionality
 
-Validate predictions
+A single integrated function:
 
-Improve confidence estimation
+Predicts disease from symptom text
 
-Provide explainability
+Normalizes disease names
 
-📁 Project Folder Structure
-SkinDisease_Multimodal_Project/
-│
-├── data/
-│   ├── splits/                 # Train/val/test CSVs
-│   ├── knowledge_base/          # Disease–symptom mappings
-│
-├── models/
-│   ├── image_best.pt            # Final image model
-│   ├── asr_text_baseline/       # Final voice/text model
-│
-├── notebooks/
-│   ├── 01_data_exploration.ipynb
-│   ├── 02_image_baseline.ipynb
-│   ├── 03_audio_baseline.ipynb
-│   ├── 03c_audio_asr_to_text.ipynb
-│   ├── 03d_asr_text_semantic_baseline.ipynb
-│   ├── 04_multimodal_fusion.ipynb
-│   ├── 05_demo_inference_PERFECT_v3.ipynb
-│
-├── results/
-│   ├── fusion_outputs/
-│   ├── evaluation_reports/
-│
-├── README.md
-└── requirements.txt
+Recommends safe treatments
 
-📓 Notebook Responsibilities (My Part)
-Notebook	Purpose
-01_data_exploration.ipynb	Dataset analysis & sanity checks
-02_image_baseline.ipynb	Train CNN image model
-03c_audio_asr_to_text.ipynb	Convert voice → text
-03d_asr_text_semantic_baseline.ipynb	Train voice/text model
-04_multimodal_fusion.ipynb	Fusion strategy & evaluation
-05_demo_inference_PERFECT_v3.ipynb	Final demo & UI integration
-⚙️ Dependencies
-Core Libraries
+Explains decisions using a medical knowledge graph
+
+Produces structured, explainable output
+
+🧪 Models Used
+
+TF-IDF Vectorizer
+
+Logistic Regression
+
+SGDClassifier
+
+Calibrated Linear SVM (Selected Model)
+
+🛡️ Ethical Design
+
+Uses synthetic data
+
+Provides decision support, not diagnosis
+
+Advises professional care when red flags are detected
+
+4️⃣ 🧬 Cross-Cultural Skin Disease Classification via Domain Adaptation
+
+Author: Devindi K. T. P
+
+📌 Overview
+
+This component addresses skin-tone bias in dermatology AI systems.
+
+💡 Key Contributions
+
+Unsupervised Domain Adaptation (UDA)
+
+Adversarial domain-invariant feature learning
+
+Subtype-aware fairness (oily vs dry skin within darker tones)
+
+Fair performance across demographics
+
+🧠 Architecture
+Skin Image
+   ↓
+CNN Feature Extractor
+   ↓
+Domain-Invariant Feature Space
+   ↓
+Disease Classifier + Domain Discriminator
+
+🌍 Impact
+
+Reduces healthcare disparities
+
+Improves diagnostic reliability
+
+Supports culturally aware AI
+
+Highly relevant to Sri Lankan populations
+
+⚙️ Technologies & Dependencies
+
+Languages & Frameworks
 
 Python 3.9+
-
 PyTorch
-
-TorchVision
-
-Transformers (HuggingFace)
-
-NumPy
-
-Pandas
-
 Scikit-learn
-
-Matplotlib
-
-ASR & Audio
-
-Faster-Whisper / Whisper
-
-FFmpeg
-
+HuggingFace Transformers
+Vision & Audio
+OpenCV
+Whisper / Faster-Whisper
 Librosa
+Explainability
+Knowledge Graphs (NetworkX)
+Grad-CAM
+
+Feature Importance
 
 Environment
 
 Google Colab
+Google Drive
+Git & GitHub
 
-Google Drive (model storage)
+🔁 Version Control & Collaboration (PP1 – Checklist 1)
 
-🔁 Version Control & Collaboration (Checklist 1 Requirement)
+This project demonstrates industry-level Git practices:
 
-This repository includes:
-
-✅ Full commit history
-
-✅ Multiple commits over time
-
-✅ Branch usage (feature development)
-
+✅ Git repository created
+✅ Regular commits over time
+✅ Feature branches used
 ✅ Merges into main branch
+✅ Modular notebook workflow
+✅ Reproducible experiments
 
-✅ Clear progression of work
+Evaluators are encouraged to review commit history, branches, and merge records.
 
-Evaluators:
-Please review the commit history, branches, and merge records to verify collaboration and continuous development.
+📊 PP1 Checklist Summary
 
-🔗 Repository Access (PP1 Submission)
+✅ Problem definition completed
+✅ System architecture documented
+✅ Models clearly described
+✅ Dependencies listed
+✅ Notebooks organized
+✅ Version control history visible
+✅ Repository ready for evaluation
 
-A shareable Git repository link is provided
+👥 Authors & Roles
 
-Evaluators have read access
+Name	                        Role
+Oshidee Prarthana Wijesinghe	Multimodal Disease Prediction & Fusion
+Laksopan	                    Face Skin Severity Modeling & Progress Tracking
+Mihisandali W.K.M            	Personalized Treatment Support System
+Devindi K. T. P	              Fairness & Domain Adaptation
 
-Repository link is uploaded to:
-
-OneDrive → Checklist 1 folder
-
-📊 Project Management (Checklist 2 – Planned)
-
-MS Planner used for task tracking
-
-Roles & responsibilities documented
-
-Planner report will be exported and uploaded for Checklist 2
-
-✅ PP1 Checklist Summary
-
- Git repository created
-
- README.md completed
-
- Architecture documented
-
- Dependencies listed
-
- Version control history visible
-
- Shareable repo link provided
-
-👤 Author (My Contribution)
-
-Role: Multimodal Modeling & Fusion
-Contributions:
-
-Image model training
-
-Voice/ASR integration
-
-Fusion logic design
-
-Explainability via KB
-
-End-to-end demo pipeline
+⚠️ Disclaimer
+This system is developed strictly for academic and research purposes and is not a substitute for professional medical diagnosis or treatment.
