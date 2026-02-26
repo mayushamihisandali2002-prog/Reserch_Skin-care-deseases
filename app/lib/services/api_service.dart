@@ -2,31 +2,34 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
+import '../config/app_config.dart';
 
 class ApiService {
-  // Use 10.0.2.2 for Android Emulator
-  // Use 172.28.1.12 (Your PC IP) for Physical Device
-  static String get baseUrl {
-    if (kIsWeb) return 'http://localhost:5000';
-    if (Platform.isAndroid) {
-       // CHANGE THIS to your PC's IP address if running on a real phone
-       // Run 'ipconfig' in terminal to find your IPv4 address
-       return 'http://172.28.1.12:5000'; 
-       // return 'http://10.0.2.2:5000'; // Keep this for Emulator
-    }
-    return 'http://localhost:5000';
-  }
+  // Session ID for tracking conversations across the app lifetime
+  static final String sessionId = const Uuid().v4();
 
+  // Use centralized config for API URL
+  static String get baseUrl => AppConfig.apiBaseUrl;
+
+  /// Analyze skin image only (image-based diagnosis)
   static Future<Map<String, dynamic>> analyzeSkin(String imagePath) async {
     try {
-      // For a real app, we'd upload the file. 
-      // Here we just hit the endpoint to get dummy data.
-      final response = await http.post(Uri.parse('$baseUrl/api/analyze'));
-      
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/analyze'),
+      );
+
+      // Add the image file
+      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
-        throw Exception('Failed to analyze skin');
+        throw Exception('Failed to analyze skin: ${response.body}');
       }
     } catch (e) {
       print("Error analyzing skin: $e");
@@ -34,10 +37,43 @@ class ApiService {
     }
   }
 
+  /// Analyze skin with both image and text symptoms (fused multimodal diagnosis)
+  static Future<Map<String, dynamic>> analyzeFused(
+    String imagePath,
+    String symptoms,
+  ) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/analyze-fused'),
+      );
+
+      // Add the image file
+      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+
+      // Add the symptom text
+      request.fields['text'] = symptoms;
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to analyze: ${response.body}');
+      }
+    } catch (e) {
+      print("Error in fused analysis: $e");
+      rethrow;
+    }
+  }
+
   static Future<Map<String, dynamic>> analyzeSkinCare(String imagePath) async {
     try {
-      final response = await http.post(Uri.parse('$baseUrl/api/analyze-skin-care'));
-      
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/analyze-skin-care'),
+      );
+
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
@@ -52,7 +88,7 @@ class ApiService {
   static Future<Map<String, dynamic>> addProgress(String imagePath) async {
     try {
       final response = await http.post(Uri.parse('$baseUrl/api/progress'));
-      
+
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
@@ -67,7 +103,7 @@ class ApiService {
   static Future<List<dynamic>> getHistory() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/api/history'));
-      
+
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
@@ -82,7 +118,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getStats() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/api/stats'));
-      
+
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
@@ -94,23 +130,37 @@ class ApiService {
     }
   }
 
-  static Future<String> sendChatMessage(String message) async {
+  static Future<Map<String, dynamic>> sendChatMessage(String message) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/api/chat'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'message': message}),
+        body: json.encode({
+          'message': message,
+          'session_id':
+              sessionId, // Include session ID for conversation tracking
+        }),
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return data['response'];
+        return data;
       } else {
         throw Exception('Failed to send message');
       }
     } catch (e) {
       print("Error chatting: $e");
-      return "Error: Could not connect to assistant.";
+      return {
+        "reply": "Error: Could not connect to assistant.",
+        "predicted_disease": null,
+        "confidence": 0.0,
+        "confidence_level": "none",
+        "needs_more_info": true,
+        "follow_up_questions": [],
+        "recommended_treatments": [],
+        "model_status": "offline",
+        "error": e.toString(),
+      };
     }
   }
 }

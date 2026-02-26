@@ -1,2 +1,28 @@
+# ── Core web framework ────────────────────────────────────────────────────────
 flask
 flask-cors
+
+# ── Environment configuration ─────────────────────────────────────────────────
+python-dotenv
+
+# ── Data / ML utilities ───────────────────────────────────────────────────────
+numpy
+pandas
+scikit-learn
+joblib
+
+# ── Deep Learning — DistilBERT text model ────────────────────────────────────
+# Install CPU-only PyTorch (smaller; GPU version can be installed separately)
+torch
+torchvision
+
+# ── HuggingFace Transformers — loads best_model/best_model/ (DistilBERT) ──────
+transformers
+# safetensors is needed to load model.safetensors weight files
+safetensors
+
+# ── Image handling ────────────────────────────────────────────────────────────
+Pillow
+
+# ── Database (Supabase) ────────────────────────────────────────────────────────
+supabase

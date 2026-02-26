@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart'; // We can use IconData if SVG assets aren't ready
+// We can use IconData if SVG assets aren't ready
 import '../utils/app_styles.dart';
 import 'dashboard_screen.dart';
 import 'analyze_screen.dart';
@@ -29,14 +29,15 @@ class _HomeContainerState extends State<HomeContainer> {
   }
 
   void _openScanner() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const InstructionScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const InstructionScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: _screens[_currentIndex],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
@@ -59,13 +60,16 @@ class _HomeContainerState extends State<HomeContainer> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openScanner,
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.camera_alt),
-        label: const Text('New Scan'),
-      ),
+      // Only show "New Scan" button on Home and Analyze tabs, NOT on Chat tab
+      floatingActionButton: _currentIndex != 2
+          ? FloatingActionButton.extended(
+              onPressed: _openScanner,
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.camera_alt),
+              label: const Text('New Scan'),
+            )
+          : null,
     );
   }
 }

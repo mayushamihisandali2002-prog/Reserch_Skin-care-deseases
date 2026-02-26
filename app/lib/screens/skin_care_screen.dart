@@ -43,18 +43,17 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
 
     try {
       final result = await ApiService.analyzeSkinCare(_selectedImage!.path);
-      
+
       if (!mounted) return;
-      
+
       setState(() {
         _analysisResult = result;
       });
-      
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) {
@@ -86,7 +85,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 20),
-        
+
         // Image Area
         GestureDetector(
           onTap: () => _pickImage(ImageSource.gallery),
@@ -101,7 +100,11 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
                 ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: const [
-                      Icon(Icons.face_retouching_natural, size: 60, color: Colors.green),
+                      Icon(
+                        Icons.face_retouching_natural,
+                        size: 60,
+                        color: Colors.green,
+                      ),
                       SizedBox(height: 8),
                       Text('Tap to select photo'),
                     ],
@@ -110,7 +113,10 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
                     borderRadius: BorderRadius.circular(16),
                     child: kIsWeb
                         ? Image.network(_selectedImage!.path, fit: BoxFit.cover)
-                        : Image.file(File(_selectedImage!.path), fit: BoxFit.cover),
+                        : Image.file(
+                            File(_selectedImage!.path),
+                            fit: BoxFit.cover,
+                          ),
                   ),
           ),
         ),
@@ -147,9 +153,12 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: _isLoading 
+            child: _isLoading
                 ? const CircularProgressIndicator(color: Colors.white)
-                : const Text('Analyze Skin', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                : const Text(
+                    'Analyze Skin',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
           ),
         ),
       ],
@@ -173,40 +182,69 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
           ),
           child: Row(
             children: [
-               const Icon(Icons.check_circle, color: Colors.green, size: 40),
-               const SizedBox(width: 16),
-               Expanded(
-                 child: Column(
-                   crossAxisAlignment: CrossAxisAlignment.start,
-                   children: [
-                     const Text('Skin Type', style: TextStyle(color: Colors.grey)),
-                     Text(skinType, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
-                     const SizedBox(height: 8),
-                     const Text('Skin Tone', style: TextStyle(color: Colors.grey)),
-                     Text(skinColor, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                   ],
-                 ),
-               )
+              const Icon(Icons.check_circle, color: Colors.green, size: 40),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Skin Type',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    Text(
+                      skinType,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Skin Tone',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    Text(
+                      skinColor,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
         const SizedBox(height: 24),
-        
-        const Text('Natural Treatments & Advice', style: AppTextStyles.subHeading),
+
+        const Text(
+          'Natural Treatments & Advice',
+          style: AppTextStyles.subHeading,
+        ),
         const SizedBox(height: 12),
-        
-        ...recommendations.map((rec) => Padding(
-          padding: const EdgeInsets.only(bottom: 12.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.eco, color: Colors.green),
-              const SizedBox(width: 12),
-              Expanded(child: Text(rec.toString(), style: const TextStyle(fontSize: 16))),
-            ],
+
+        ...recommendations.map(
+          (rec) => Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.eco, color: Colors.green),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    rec.toString(),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
+              ],
+            ),
           ),
-        )).toList(),
-        
+        ),
+
         const SizedBox(height: 30),
         SizedBox(
           width: double.infinity,
@@ -220,7 +258,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
             },
             child: const Text('Analyze Another Photo'),
           ),
-        )
+        ),
       ],
     );
   }

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'progress_screen.dart';
 import '../services/api_service.dart';
+import '../services/supabase_service.dart';
 import '../utils/app_styles.dart';
 import 'skin_care_screen.dart';
+import 'login_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -36,6 +37,126 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  String _getUserInitials() {
+    final user = SupabaseService.currentUser;
+    if (user == null) return '?';
+
+    final name = user.userMetadata?['full_name'] as String?;
+    if (name != null && name.isNotEmpty) {
+      final parts = name.split(' ');
+      if (parts.length >= 2) {
+        return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+      }
+      return name[0].toUpperCase();
+    }
+
+    final email = user.email ?? '';
+    return email.isNotEmpty ? email[0].toUpperCase() : '?';
+  }
+
+  String _getUserName() {
+    final user = SupabaseService.currentUser;
+    if (user == null) return 'User';
+    return user.userMetadata?['full_name'] as String? ?? 'User';
+  }
+
+  String _getUserEmail() {
+    return SupabaseService.currentUser?.email ?? '';
+  }
+
+  Future<void> _showLogoutConfirmation() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await SupabaseService.signOut();
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    }
+  }
+
+  void _showProfileDialog() {
+    final user = SupabaseService.currentUser;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Profile'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 40,
+              backgroundColor: AppColors.primary.withOpacity(0.1),
+              child: Text(
+                _getUserInitials(),
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _getUserName(),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _getUserEmail(),
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 8),
+            if (user?.createdAt != null)
+              Text(
+                'Member since ${_formatDate(user!.createdAt)}',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,7 +166,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(onPressed: _loadData, icon: const Icon(Icons.refresh, color: AppColors.primary)),
+          IconButton(
+            onPressed: _loadData,
+            icon: const Icon(Icons.refresh, color: AppColors.primary),
+          ),
+          PopupMenuButton<String>(
+            icon: CircleAvatar(
+              backgroundColor: AppColors.primary.withOpacity(0.1),
+              child: Text(
+                _getUserInitials(),
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            onSelected: (value) async {
+              if (value == 'logout') {
+                await _showLogoutConfirmation();
+              } else if (value == 'profile') {
+                _showProfileDialog();
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    const Icon(Icons.person_outline, size: 20),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _getUserName(),
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        Text(
+                          _getUserEmail(),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, size: 20, color: Colors.red),
+                    SizedBox(width: 12),
+                    Text('Logout', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: _isLoading
@@ -58,19 +240,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   // Overall Progress Card
                   _buildProgressCard(),
                   const SizedBox(height: 20),
-                  
+
                   // Skin Care Assistant Card
                   _buildSkinCareCard(context),
                   const SizedBox(height: 30),
 
                   // Skin Health Score Chart
-                  const Text('Skin Health Score', style: AppTextStyles.subHeading),
+                  const Text(
+                    'Skin Health Score',
+                    style: AppTextStyles.subHeading,
+                  ),
                   const SizedBox(height: 16),
                   _buildScoreChart(),
                   const SizedBox(height: 30),
 
                   // Symptom Distribution Chart
-                  const Text('Symptom Distribution', style: AppTextStyles.subHeading),
+                  const Text(
+                    'Symptom Distribution',
+                    style: AppTextStyles.subHeading,
+                  ),
                   const SizedBox(height: 16),
                   _buildSymptomPieChart(),
                   const SizedBox(height: 30),
@@ -79,11 +267,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Weekly Progress', style: AppTextStyles.subHeading),
+                      const Text(
+                        'Weekly Progress',
+                        style: AppTextStyles.subHeading,
+                      ),
                       TextButton(
                         onPressed: () {
                           Navigator.of(context).push(
-                            MaterialPageRoute(builder: (context) => const ProgressScreen()),
+                            MaterialPageRoute(
+                              builder: (context) => const ProgressScreen(),
+                            ),
                           );
                         },
                         child: const Text('View All'),
@@ -122,9 +315,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
-              Text('Overall Progress', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(
+                'Overall Progress',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               SizedBox(height: 8),
-              Text('Healing Well', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+              Text(
+                'Healing Well',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
           Container(
@@ -148,7 +355,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5)),
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
         ],
       ),
       child: _history.isEmpty
@@ -157,18 +368,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
               LineChartData(
                 gridData: FlGridData(show: false),
                 titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
                         int index = value.toInt();
-                         if (index >= 0 && index < _history.length && index % 2 == 0) {
-                            return Text(_history[index]['week']!.replaceAll('Week ', 'W'), style: const TextStyle(fontSize: 10));
-                         }
-                         return const SizedBox.shrink();
+                        if (index >= 0 &&
+                            index < _history.length &&
+                            index % 2 == 0) {
+                          return Text(
+                            _history[index]['week']!.replaceAll('Week ', 'W'),
+                            style: const TextStyle(fontSize: 10),
+                          );
+                        }
+                        return const SizedBox.shrink();
                       },
                     ),
                   ),
@@ -177,13 +399,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 lineBarsData: [
                   LineChartBarData(
                     spots: _history.asMap().entries.map((e) {
-                      return FlSpot(e.key.toDouble(), (e.value['score'] ?? 0).toDouble());
+                      return FlSpot(
+                        e.key.toDouble(),
+                        (e.value['score'] ?? 0).toDouble(),
+                      );
                     }).toList(),
                     isCurved: true,
                     color: AppColors.primary,
                     barWidth: 3,
                     dotData: FlDotData(show: false),
-                    belowBarData: BarAreaData(show: true, color: AppColors.primary.withOpacity(0.1)),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: AppColors.primary.withOpacity(0.1),
+                    ),
                   ),
                 ],
               ),
@@ -194,7 +422,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildSymptomPieChart() {
     List<String> labels = List<String>.from(_stats['labels'] ?? []);
     List<dynamic> values = _stats['values'] ?? [];
-    
+
     if (labels.isEmpty) return const SizedBox();
 
     return Container(
@@ -204,7 +432,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5)),
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
         ],
       ),
       child: Row(
@@ -219,9 +451,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   final fontSize = isTouched ? 25.0 : 16.0;
                   final radius = isTouched ? 60.0 : 50.0;
                   const shadows = [Shadow(color: Colors.black, blurRadius: 2)];
-                  
+
                   return PieChartSectionData(
-                    color: [Colors.blue, Colors.red, Colors.orange, Colors.green][i % 4],
+                    color: [
+                      Colors.blue,
+                      Colors.red,
+                      Colors.orange,
+                      Colors.green,
+                    ][i % 4],
                     value: (values[i] as num).toDouble(),
                     title: '${values[i]}%',
                     radius: radius,
@@ -239,26 +476,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: List.generate(labels.length, (i) {
-               return Padding(
-                 padding: const EdgeInsets.symmetric(vertical: 4),
-                 child: Row(
-                   children: [
-                     Container(width: 12, height: 12, color: [Colors.blue, Colors.red, Colors.orange, Colors.green][i % 4]),
-                     const SizedBox(width: 8),
-                     Text(labels[i], style: const TextStyle(fontSize: 12)),
-                   ],
-                 ),
-               );
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      color: [
+                        Colors.blue,
+                        Colors.red,
+                        Colors.orange,
+                        Colors.green,
+                      ][i % 4],
+                    ),
+                    const SizedBox(width: 8),
+                    Text(labels[i], style: const TextStyle(fontSize: 12)),
+                  ],
+                ),
+              );
             }),
-          )
+          ),
         ],
       ),
     );
   }
 
   Widget _buildWeeklyImages() {
-    if (_history.isEmpty) return const Center(child: Text("No history found.", style: AppTextStyles.body));
-    
+    if (_history.isEmpty) {
+      return const Center(
+        child: Text("No history found.", style: AppTextStyles.body),
+      );
+    }
+
     return SizedBox(
       height: 180,
       child: ListView.separated(
@@ -273,7 +523,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
-                BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2)),
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
               ],
             ),
             child: Column(
@@ -296,16 +550,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(item['week'] ?? 'Week ${index+1}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        item['week'] ?? 'Week ${index + 1}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       const SizedBox(height: 4),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                           Text(item['status'] ?? '', style: const TextStyle(fontSize: 12, color: AppColors.success)),
-                           if (item['score'] != null)
-                              Text('${item['score']}%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                          Text(
+                            item['status'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.success,
+                            ),
+                          ),
+                          if (item['score'] != null)
+                            Text(
+                              '${item['score']}%',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
                         ],
-                      )
+                      ),
                     ],
                   ),
                 ),
@@ -316,12 +586,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
   Widget _buildSkinCareCard(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const SkinCareScreen()),
-        );
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const SkinCareScreen()));
       },
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -343,9 +614,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
-                Text('Skin Care Assistant', style: TextStyle(color: Colors.green, fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  'Skin Care Assistant',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 SizedBox(height: 8),
-                Text('Get Personalized Advice', style: TextStyle(color: Colors.black87, fontSize: 14)),
+                Text(
+                  'Get Personalized Advice',
+                  style: TextStyle(color: Colors.black87, fontSize: 14),
+                ),
               ],
             ),
             Container(
@@ -354,7 +635,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: Colors.green.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.face_retouching_natural, color: Colors.green, size: 30),
+              child: const Icon(
+                Icons.face_retouching_natural,
+                color: Colors.green,
+                size: 30,
+              ),
             ),
           ],
         ),

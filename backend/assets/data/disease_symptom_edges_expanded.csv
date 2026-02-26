@@ -1,0 +1,396 @@
+disease_name,symptom_name
+Acne vulgaris,pimples
+Acne vulgaris,blackheads
+Acne vulgaris,whiteheads
+Acne vulgaris,oily skin
+Atopic dermatitis (Eczema),itching
+Atopic dermatitis (Eczema),dry skin
+Atopic dermatitis (Eczema),red patches
+Atopic dermatitis (Eczema),flexural rash
+Psoriasis vulgaris,red plaques
+Psoriasis vulgaris,silvery scale
+Psoriasis vulgaris,itching
+Psoriasis vulgaris,elbows
+Psoriasis vulgaris,knees
+Seborrheic dermatitis,scalp flaking
+Seborrheic dermatitis,dandruff
+Seborrheic dermatitis,greasy scale
+Seborrheic dermatitis,itchy scalp
+Contact dermatitis (Irritant),burning
+Contact dermatitis (Irritant),stinging
+Contact dermatitis (Irritant),rash at contact site
+Contact dermatitis (Allergic),itchy rash
+Contact dermatitis (Allergic),blisters
+Contact dermatitis (Allergic),delayed onset after exposure
+Urticaria (Hives),raised wheals
+Urticaria (Hives),itchy bumps
+Urticaria (Hives),sudden onset
+Chronic urticaria,recurrent wheals
+Chronic urticaria,daily itching
+Chronic urticaria,angioedema
+Rosacea,facial redness
+Rosacea,flushing
+Rosacea,visible blood vessels
+Acne rosacea,facial papules
+Acne rosacea,pustules
+Acne rosacea,redness
+Vitiligo,white patches
+Vitiligo,loss of pigment
+Tinea corporis (Ringworm),ring-shaped rash
+Tinea corporis (Ringworm),scaly edge
+Tinea corporis (Ringworm),central clearing
+Tinea pedis (Athlete's foot),itchy feet
+Tinea pedis (Athlete's foot),scaling between toes
+Tinea pedis (Athlete's foot),fissures
+Tinea cruris (Jock itch),itchy groin
+Tinea cruris (Jock itch),red rash
+Tinea cruris (Jock itch),scaly border
+Tinea capitis (Scalp ringworm),scalp scaling
+Tinea capitis (Scalp ringworm),hair loss
+Tinea capitis (Scalp ringworm),broken hairs
+Pityriasis versicolor,discolored patches
+Pityriasis versicolor,fine scale
+Pityriasis versicolor,trunk involvement
+Impetigo,honey-colored crusts
+Impetigo,weeping sores
+Folliculitis,pustules
+Folliculitis,around hair follicles
+Folliculitis,tender bumps
+Cellulitis,redness
+Cellulitis,heat
+Cellulitis,swelling
+Cellulitis,pain
+Cellulitis,fever
+Scabies,intense itching at night
+Scabies,burrows
+Scabies,web spaces of fingers
+Herpes zoster (Shingles),band-like pain
+Herpes zoster (Shingles),blisters
+Herpes zoster (Shingles),dermatomal distribution
+Herpes simplex (Cold sores),tingling
+Herpes simplex (Cold sores),grouped vesicles
+Herpes simplex (Cold sores),lip lesions
+Warts (Verruca vulgaris),rough papules
+Warts (Verruca vulgaris),hands
+Warts (Verruca vulgaris),feet
+Molluscum contagiosum,umbilicated papules
+Molluscum contagiosum,smooth bumps
+Lichen planus,purple papules
+Lichen planus,Wickham striae
+Lichen planus,wrist lesions
+Photodermatitis,sun-exposed rash
+Photodermatitis,burning
+Photodermatitis,itching after sun
+Perioral dermatitis,papules around mouth
+Perioral dermatitis,spares vermilion border
+Nummular eczema,coin-shaped plaques
+Nummular eczema,itching
+Nummular eczema,legs
+Dyshidrotic eczema,small blisters on hands
+Dyshidrotic eczema,itchy vesicles
+Contact dermatitis (Irritant),i ve had a burning rash where a product touched my skin
+Contact dermatitis (Irritant),triggers like fragranced products seem to make it worse
+Lichen planus,i ve had purple-ish itchy bumps on my forearms
+Lichen planus,triggers like unknown triggers seem to make it worse
+Seborrheic dermatitis,i ve had redness
+Seborrheic dermatitis,scaling around my scalp
+Seborrheic dermatitis,hairline
+Seborrheic dermatitis,triggers like not washing hair regularly seem to make it worse
+Tinea corporis (Ringworm),i ve had a circular rash
+Tinea corporis (Ringworm),a clearer center on my arm
+Tinea corporis (Ringworm),triggers like sweating seem to make it worse
+Lichen planus,i ve had itchy raised spots on my legs
+Lichen planus,very itchy
+Contact dermatitis (Irritant),i ve had redness
+Contact dermatitis (Irritant),itching in the area of contact
+Impetigo,i ve had sores
+Impetigo,honey-colored crust on a small area that spread
+Impetigo,triggers like sharing towels seem to make it worse
+Nummular eczema,i ve had round dry patches on my legs
+Nummular eczema,dryness
+Nummular eczema,triggers like harsh soaps seem to make it worse
+Urticaria (Hives),i ve had itchy raised welts on my legs
+Urticaria (Hives),back
+Urticaria (Hives),triggers like foods seem to make it worse
+Urticaria (Hives),intense itching
+Psoriasis vulgaris,i ve had raised red patches
+Psoriasis vulgaris,silvery scale on my scalp
+Psoriasis vulgaris,triggers like skin injury seem to make it worse
+Tinea corporis (Ringworm),i ve had an itchy round patch on my arm
+Tinea corporis (Ringworm),mild stinging
+Tinea corporis (Ringworm),triggers like sharing towels seem to make it worse
+Dyshidrotic eczema,i ve had tiny itchy blisters on my palms
+Dyshidrotic eczema,triggers like sweating seem to make it worse
+Molluscum contagiosum,i ve had pearly bumps
+Molluscum contagiosum,a dimple on my skin in a cluster
+Molluscum contagiosum,usually not painful
+Molluscum contagiosum,triggers like skin-to-skin contact seem to make it worse
+Dyshidrotic eczema,triggers like frequent hand washing seem to make it worse
+Seborrheic dermatitis,mild burning
+Seborrheic dermatitis,i ve had greasy flaky patches around my scalp
+Molluscum contagiosum,mild itching
+Molluscum contagiosum,triggers like sharing towels seem to make it worse
+Acne rosacea,i ve had flushing
+Acne rosacea,pimples around my nose
+Acne rosacea,chin
+Acne rosacea,triggers like sun exposure seem to make it worse
+Rosacea,i ve had persistent redness on my face
+Rosacea,especially cheeks
+Rosacea,sun or hot drinks
+Rosacea,triggers like sun exposure seem to make it worse
+Dyshidrotic eczema,i ve had itchy bumps filled
+Dyshidrotic eczema,fluid on my hands
+Dyshidrotic eczema,sometimes feet
+Dyshidrotic eczema,intense itching
+Urticaria (Hives),i ve had swollen itchy patches on my legs
+Dyshidrotic eczema,i ve had tiny itchy blisters on the sides of my fingers
+Perioral dermatitis,i ve had small bumps
+Perioral dermatitis,redness around my mouth
+Perioral dermatitis,chin
+Perioral dermatitis,triggers like heavy creams seem to make it worse
+Psoriasis vulgaris,i ve had thick scaly plaques on my elbows
+Psoriasis vulgaris,triggers like cold weather seem to make it worse
+Herpes simplex (Cold sores),i ve had a cluster of blisters near my lip line
+Herpes simplex (Cold sores),triggers like fever
+Herpes simplex (Cold sores),cold seem to make it worse
+Rosacea,i ve had redness
+Rosacea,flushing around my nose
+Rosacea,cheeks
+Rosacea,triggers like hot drinks like coffee seem to make it worse
+Perioral dermatitis,i ve had a rash
+Perioral dermatitis,tiny bumps around my mouth
+Lichen planus,i ve had flat-topped itchy bumps on my forearms
+Lichen planus,triggers like certain medications seem to make it worse
+Molluscum contagiosum,a dimple on my body
+Molluscum contagiosum,i ve had tiny dome-shaped bumps on my body
+Molluscum contagiosum,i ve had small skin-colored bumps on my skin in a cluster
+Molluscum contagiosum,triggers like scratching seem to make it worse
+Pityriasis versicolor,i ve had lighter or darker patches on my chest
+Pityriasis versicolor,back
+Pityriasis versicolor,mild itching
+Pityriasis versicolor,triggers like oily skin seem to make it worse
+Dyshidrotic eczema,fluid on my palms
+Lichen planus,i ve had purple-ish itchy bumps on my wrists
+Lichen planus,ankles
+Chronic urticaria,i ve had recurring hives on my arms
+Chronic urticaria,legs
+Chronic urticaria,itching without pain
+Lichen planus,i ve had itchy raised spots on my forearms
+Acne rosacea,i ve had redness
+Acne rosacea,small bumps across my cheeks
+Acne rosacea,triggers like heat seem to make it worse
+Tinea corporis (Ringworm),triggers like close contact seem to make it worse
+Perioral dermatitis,i ve had redness
+Perioral dermatitis,little pimples around my mouth
+Perioral dermatitis,triggers like steroid creams seem to make it worse
+Dyshidrotic eczema,i ve had small blisters on the sides of my fingers
+Pityriasis versicolor,triggers like sweating seem to make it worse
+Molluscum contagiosum,i ve had small skin-colored bumps on my arms
+Molluscum contagiosum,torso
+Tinea corporis (Ringworm),i ve had an itchy round patch on my leg
+Tinea capitis (Scalp ringworm),i ve had scaly patches on my scalp on my scalp
+Tinea capitis (Scalp ringworm),triggers like close contact seem to make it worse
+Rosacea,i ve had persistent redness mostly on my cheeks
+Rosacea,nose
+Tinea cruris (Jock itch),i ve had a red itchy rash around the groin
+Tinea cruris (Jock itch),triggers like hot weather seem to make it worse
+Contact dermatitis (Irritant),i ve had a burning rash in the area of contact
+Contact dermatitis (Irritant),triggers like a new soap or detergent seem to make it worse
+Tinea corporis (Ringworm),i ve had an itchy round patch on my body
+Psoriasis vulgaris,i ve had thick scaly plaques on my scalp
+Chronic urticaria,i ve had itchy welts that come
+Chronic urticaria,go on different areas of my body
+Chronic urticaria,triggers like pressure on the skin seem to make it worse
+Contact dermatitis (Irritant),itching on my hands
+Contact dermatitis (Irritant),arms
+Contact dermatitis (Irritant),using something new
+Impetigo,honey-colored crust on my face
+Impetigo,mild pain
+Impetigo,triggers like close contact seem to make it worse
+Urticaria (Hives),triggers like new medication seem to make it worse
+Rosacea,flushing on my face
+Rosacea,triggers like heat
+Rosacea,stress seem to make it worse
+Seborrheic dermatitis,scaling on my scalp
+Pityriasis versicolor,i ve had discolored patches
+Pityriasis versicolor,fine scale on my chest
+Pityriasis versicolor,slight itch
+Perioral dermatitis,tiny bumps around my nose
+Perioral dermatitis,mouth
+Chronic urticaria,i ve had recurring hives on different areas of my body
+Chronic urticaria,triggers like heat seem to make it worse
+Herpes simplex (Cold sores),i ve had tingling then blisters around my mouth
+Lichen planus,i ve had purple-ish itchy bumps on my legs
+Urticaria (Hives),i ve had itchy raised welts on my arms
+Urticaria (Hives),torso
+Tinea corporis (Ringworm),i ve had a ring-shaped itchy rash on my body
+Chronic urticaria,go across my body
+Tinea capitis (Scalp ringworm),i ve had flaky itchy scalp spots near my hairline
+Tinea capitis (Scalp ringworm),mild pain
+Contact dermatitis (Irritant),itching where a product touched my skin
+Cellulitis,i ve had a tender swollen patch on my arm
+Cellulitis,triggers like
+Cellulitis,a small cut seem to make it worse
+Tinea corporis (Ringworm),i ve had a ring-shaped itchy rash on my leg
+Cellulitis,i ve had a painful red swollen area on my leg
+Cellulitis,warmth
+Rosacea,warmth
+Rosacea,sensitivity
+Rosacea,triggers like spicy food seem to make it worse
+Rosacea,i ve had flushing
+Rosacea,warmth mostly on my cheeks
+Cellulitis,i ve had redness
+Cellulitis,warmth around a cut or scratch
+Cellulitis,insect bite seem to make it worse
+Psoriasis vulgaris,i ve had thick scaly plaques on my knees
+Psoriasis vulgaris,silvery scale on my knees
+Contact dermatitis (Irritant),i ve had a burning rash on my hands
+Impetigo,i ve had blisters that crust over on my face
+Impetigo,triggers like scratching seem to make it worse
+Acne rosacea,i ve had facial redness
+Acne rosacea,bumps on my cheeks
+Acne rosacea,nose
+Pityriasis versicolor,fine scale on my upper back
+Seborrheic dermatitis,i ve had greasy flaky patches on my scalp
+Perioral dermatitis,triggers like fluoridated toothpaste seem to make it worse
+Tinea cruris (Jock itch),i ve had itchy redness
+Tinea cruris (Jock itch),scaling in the groin area
+Tinea cruris (Jock itch),irritation
+Tinea capitis (Scalp ringworm),i ve had itchy scalp
+Tinea capitis (Scalp ringworm),scaling in one area of my scalp
+Tinea capitis (Scalp ringworm),triggers like sharing combs
+Tinea capitis (Scalp ringworm),hats seem to make it worse
+Tinea corporis (Ringworm),a clearer center on my leg
+Contact dermatitis (Irritant),i ve had itchy irritated skin where a product touched my skin
+Acne rosacea,small bumps around my nose
+Impetigo,i ve had small blisters that break
+Impetigo,crust on my face
+Tinea cruris (Jock itch),scaling around the groin
+Tinea cruris (Jock itch),triggers like sweating seem to make it worse
+Acne vulgaris,i ve had breakouts
+Acne vulgaris,bumps on my forehead
+Acne vulgaris,chin
+Acne vulgaris,tender spots
+Impetigo,crust on a small area that spread
+Molluscum contagiosum,i ve had tiny dome-shaped bumps on my arms
+Nummular eczema,i ve had circular itchy spots on my arms
+Nummular eczema,triggers like hot showers seem to make it worse
+Tinea corporis (Ringworm),i ve had a ring-shaped itchy rash on my arm
+Tinea cruris (Jock itch),scaling between my thighs
+Urticaria (Hives),triggers like heat seem to make it worse
+Chronic urticaria,i ve had hives that keep returning on different areas of my body
+Lichen planus,i ve had itchy raised spots on my wrists
+Cellulitis,warmth on my arm
+Tinea capitis (Scalp ringworm),i ve had scaly patches on my scalp near my hairline
+Rosacea,i ve had persistent redness around my nose
+Chronic urticaria,i ve had hives that keep returning across my body
+Chronic urticaria,triggers like unknown triggers seem to make it worse
+Acne rosacea,triggers like hot drinks seem to make it worse
+Psoriasis vulgaris,cracking
+Contact dermatitis (Irritant),triggers like hand sanitizer seem to make it worse
+Lichen planus,i ve had flat-topped itchy bumps on my wrists
+Urticaria (Hives),itching without pain
+Tinea capitis (Scalp ringworm),i ve had scaly patches on my scalp in one area of my scalp
+Tinea capitis (Scalp ringworm),triggers like sweating seem to make it worse
+Seborrheic dermatitis,i ve had dandruff-like flakes on my eyebrows
+Seborrheic dermatitis,sides of the nose
+Tinea cruris (Jock itch),triggers like tight clothing seem to make it worse
+Acne rosacea,bumps across my cheeks
+Acne rosacea,skin sensitivity
+Acne vulgaris,i ve had pimples
+Acne vulgaris,clogged pores on my cheeks
+Acne vulgaris,mild pain in some pimples
+Acne vulgaris,triggers like hormonal changes seem to make it worse
+Acne vulgaris,triggers like heavy creams seem to make it worse
+Tinea capitis (Scalp ringworm),scaling near my hairline
+Impetigo,i ve had blisters that crust over around my nose
+Impetigo,mouth
+Tinea cruris (Jock itch),i ve had an itchy rash around the groin
+Herpes simplex (Cold sores),i ve had tingling then blisters near my lip line
+Herpes simplex (Cold sores),triggers like sun exposure seem to make it worse
+Seborrheic dermatitis,triggers like cold weather seem to make it worse
+Cellulitis,i ve had a tender swollen patch on my leg
+Cellulitis,increasing pain
+Cellulitis,scratching seem to make it worse
+Dyshidrotic eczema,i ve had small blisters on my palms
+Acne vulgaris,bumps on my face
+Acne vulgaris,triggers like sweating seem to make it worse
+Contact dermatitis (Irritant),i ve had itchy irritated skin in the area of contact
+Contact dermatitis (Irritant),i ve had itchy irritated skin on my hands
+Acne rosacea,small bumps on my cheeks
+Pityriasis versicolor,i ve had patches
+Pityriasis versicolor,different color on my shoulders
+Pityriasis versicolor,triggers like hot humid weather seem to make it worse
+Cellulitis,i ve had a painful red swollen area around a cut or scratch
+Nummular eczema,i ve had circular itchy spots on my legs
+Acne vulgaris,clogged pores on my forehead
+Acne vulgaris,oiliness
+Nummular eczema,i ve had coin-shaped itchy patches on my arms
+Nummular eczema,triggers like dry weather seem to make it worse
+Seborrheic dermatitis,i ve had dandruff-like flakes around my scalp
+Urticaria (Hives),i ve had hives that come
+Urticaria (Hives),go on different parts of my body
+Psoriasis vulgaris,i ve had scaly red patches on my scalp
+Nummular eczema,scratching
+Psoriasis vulgaris,i ve had scaly red patches on my elbows
+Herpes simplex (Cold sores),i ve had small painful blisters near my lip line
+Impetigo,crust around my nose
+Chronic urticaria,go on my arms
+Lichen planus,i ve had flat-topped itchy bumps on my legs
+Urticaria (Hives),go on my legs
+Molluscum contagiosum,a dimple on my arms
+Herpes simplex (Cold sores),i ve had small painful blisters around my mouth
+Tinea corporis (Ringworm),a clearer center on my body
+Urticaria (Hives),i ve had swollen itchy patches on different parts of my body
+Seborrheic dermatitis,i ve had greasy flaky patches on my eyebrows
+Psoriasis vulgaris,i ve had scaly red patches on my knees
+Tinea capitis (Scalp ringworm),i ve had flaky itchy scalp spots in one area of my scalp
+Acne vulgaris,i ve had whiteheads
+Acne vulgaris,blackheads on my forehead
+Tinea cruris (Jock itch),i ve had an itchy rash in the groin area
+Impetigo,honey-colored crust around my nose
+Acne vulgaris,bumps on my cheeks
+Dyshidrotic eczema,i ve had tiny itchy blisters on my hands
+Cellulitis,warmth on my leg
+Molluscum contagiosum,i ve had tiny dome-shaped bumps on my skin in a cluster
+Herpes simplex (Cold sores),i ve had tingling then blisters on my lip
+Rosacea,warmth around my nose
+Rosacea,warmth on my face
+Nummular eczema,i ve had round dry patches on my arms
+Pityriasis versicolor,different color on my chest
+Pityriasis versicolor,fine scale on my shoulders
+Urticaria (Hives),i ve had swollen itchy patches on my arms
+Impetigo,i ve had blisters that crust over on a small area that spread
+Nummular eczema,i ve had coin-shaped itchy patches on my legs
+Perioral dermatitis,redness around my nose
+Pityriasis versicolor,i ve had lighter or darker patches on my upper back
+Tinea cruris (Jock itch),i ve had an itchy rash between my thighs
+Pityriasis versicolor,i ve had lighter or darker patches on my shoulders
+Acne vulgaris,blackheads on my cheeks
+Tinea capitis (Scalp ringworm),i ve had flaky itchy scalp spots on my scalp
+Dyshidrotic eczema,i ve had small blisters on my hands
+Chronic urticaria,i ve had recurring hives across my body
+Herpes simplex (Cold sores),i ve had small painful blisters on my lip
+Seborrheic dermatitis,scaling on my eyebrows
+Seborrheic dermatitis,i ve had dandruff-like flakes on my scalp
+Molluscum contagiosum,i ve had small skin-colored bumps on my body
+Urticaria (Hives),i ve had itchy raised welts on different parts of my body
+Psoriasis vulgaris,silvery scale on my elbows
+Acne vulgaris,blackheads on my face
+Acne rosacea,pimples across my cheeks
+Cellulitis,i ve had a painful red swollen area on my arm
+Urticaria (Hives),go on my arms
+Tinea cruris (Jock itch),i ve had a red itchy rash in the groin area
+Rosacea,flushing mostly on my cheeks
+Tinea capitis (Scalp ringworm),scaling on my scalp
+Chronic urticaria,i ve had hives that keep returning on my arms
+Herpes simplex (Cold sores),i ve had a cluster of blisters on my lip
+Tinea cruris (Jock itch),i ve had a red itchy rash between my thighs
+Dyshidrotic eczema,fluid on the sides of my fingers
+Acne rosacea,bumps around my nose
+Acne vulgaris,clogged pores on my face
+Pityriasis versicolor,different color on my upper back
+Perioral dermatitis,little pimples around my nose
+Cellulitis,i ve had a tender swollen patch around a cut or scratch
+Acne rosacea,pimples on my cheeks
+Herpes simplex (Cold sores),i ve had a cluster of blisters around my mouth

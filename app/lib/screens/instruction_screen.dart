@@ -13,12 +13,17 @@ class InstructionScreen extends StatefulWidget {
   State<InstructionScreen> createState() => _InstructionScreenState();
 }
 
-
-
 class _InstructionScreenState extends State<InstructionScreen> {
   XFile? _selectedImage; // Change File to XFile
   bool _isRecording = false;
   bool _isLoading = false;
+  final TextEditingController _symptomController = TextEditingController();
+
+  @override
+  void dispose() {
+    _symptomController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
@@ -60,18 +65,31 @@ class _InstructionScreenState extends State<InstructionScreen> {
     });
 
     try {
-      final result = await ApiService.analyzeSkin(_selectedImage!.path);
-      
+      // Use fused analysis if text is provided, otherwise image-only
+      final symptomText = _symptomController.text.trim();
+      final Map<String, dynamic> result;
+
+      if (symptomText.isNotEmpty) {
+        // Multimodal fusion: Image + Text
+        result = await ApiService.analyzeFused(
+          _selectedImage!.path,
+          symptomText,
+        );
+      } else {
+        // Image-only analysis
+        result = await ApiService.analyzeSkin(_selectedImage!.path);
+      }
+
       if (!mounted) return;
-      
+
       Navigator.of(context).push(
         MaterialPageRoute(builder: (context) => ResultScreen(data: result)),
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) {
@@ -97,7 +115,7 @@ class _InstructionScreenState extends State<InstructionScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
-            
+
             // Image Area
             GestureDetector(
               onTap: () => _pickImage(ImageSource.gallery),
@@ -120,8 +138,14 @@ class _InstructionScreenState extends State<InstructionScreen> {
                     : ClipRRect(
                         borderRadius: BorderRadius.circular(16),
                         child: kIsWeb
-                            ? Image.network(_selectedImage!.path, fit: BoxFit.cover)
-                            : Image.file(File(_selectedImage!.path), fit: BoxFit.cover),
+                            ? Image.network(
+                                _selectedImage!.path,
+                                fit: BoxFit.cover,
+                              )
+                            : Image.file(
+                                File(_selectedImage!.path),
+                                fit: BoxFit.cover,
+                              ),
                       ),
               ),
             ),
@@ -144,39 +168,66 @@ class _InstructionScreenState extends State<InstructionScreen> {
 
             const SizedBox(height: 40),
 
-            // Voice Section
+            // Symptom Description Section
             const Text(
-              'Describe your symptoms (Voice)',
+              'Describe your symptoms (Optional)',
               style: AppTextStyles.subHeading,
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 8),
+            const Text(
+              'Adding symptoms improves diagnosis accuracy',
+              style: TextStyle(color: Colors.grey, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 16),
-            Center(
-              child: GestureDetector(
-                onTap: _toggleRecording,
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _isRecording ? Colors.red : AppColors.secondary,
-                    boxShadow: [
-                      BoxShadow(
-                        color: (_isRecording ? Colors.red : AppColors.secondary).withOpacity(0.4),
-                        blurRadius: 10,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    _isRecording ? Icons.stop : Icons.mic,
-                    color: Colors.white,
-                    size: 40,
-                  ),
+
+            // Text Input Field
+            TextField(
+              controller: _symptomController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText:
+                    'e.g., "itchy red patches, dry skin, burning sensation"',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                filled: true,
+                fillColor: Colors.grey[100],
+                prefixIcon: const Icon(Icons.edit_note),
               ),
             ),
-            
-            const SizedBox(height: 40),
+            const SizedBox(height: 16),
+
+            // Voice Recording (Alternative)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'Or use voice: ',
+                  style: TextStyle(color: Colors.grey),
+                ),
+                GestureDetector(
+                  onTap: _toggleRecording,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isRecording
+                          ? Colors.red
+                          : AppColors.secondary.withOpacity(0.8),
+                    ),
+                    child: Icon(
+                      _isRecording ? Icons.stop : Icons.mic,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 30),
 
             // Analyze Button
             SizedBox(
@@ -190,9 +241,15 @@ class _InstructionScreenState extends State<InstructionScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: _isLoading 
+                child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Send & Analyze', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    : const Text(
+                        'Send & Analyze',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
           ],
