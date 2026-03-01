@@ -24,5 +24,13 @@ safetensors
 # ── Image handling ────────────────────────────────────────────────────────────
 Pillow
 
+# ── Audio/Speech Recognition ──────────────────────────────────────────────────
+# SpeechRecognition for transcribing uploaded audio files
+SpeechRecognition
+# Pydub for audio format conversion (requires ffmpeg installed on system)
+pydub
+# Bundled ffmpeg binary fallback used by pydub when system ffmpeg is unavailable
+imageio-ffmpeg
+
 # ── Database (Supabase) ────────────────────────────────────────────────────────
 supabase

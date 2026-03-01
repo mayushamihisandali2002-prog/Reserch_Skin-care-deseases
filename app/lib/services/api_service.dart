@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
@@ -13,15 +13,21 @@ class ApiService {
   static String get baseUrl => AppConfig.apiBaseUrl;
 
   /// Analyze skin image only (image-based diagnosis)
-  static Future<Map<String, dynamic>> analyzeSkin(String imagePath) async {
+  /// Works on both web and mobile/desktop platforms
+  static Future<Map<String, dynamic>> analyzeSkin(
+    Uint8List imageBytes,
+    String fileName,
+  ) async {
     try {
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl/api/analyze'),
       );
 
-      // Add the image file
-      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+      // Add the image file using bytes (works on all platforms)
+      request.files.add(
+        http.MultipartFile.fromBytes('image', imageBytes, filename: fileName),
+      );
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
@@ -38,21 +44,43 @@ class ApiService {
   }
 
   /// Analyze skin with both image and text symptoms (fused multimodal diagnosis)
+  /// Optionally includes audio voice note for speech-to-text processing
+  /// Works on both web and mobile/desktop platforms
   static Future<Map<String, dynamic>> analyzeFused(
-    String imagePath,
-    String symptoms,
-  ) async {
+    Uint8List imageBytes,
+    String imageFileName,
+    String symptoms, {
+    Uint8List? audioBytes,
+    String? audioFileName,
+  }) async {
     try {
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl/api/analyze-fused'),
       );
 
-      // Add the image file
-      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+      // Add the image file using bytes (works on all platforms)
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'image',
+          imageBytes,
+          filename: imageFileName,
+        ),
+      );
 
       // Add the symptom text
       request.fields['text'] = symptoms;
+
+      // Add audio file if provided
+      if (audioBytes != null && audioFileName != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'audio',
+            audioBytes,
+            filename: audioFileName,
+          ),
+        );
+      }
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
@@ -64,6 +92,55 @@ class ApiService {
       }
     } catch (e) {
       print("Error in fused analysis: $e");
+      rethrow;
+    }
+  }
+
+  /// Analyze skin with image and audio file (audio will be transcribed on server)
+  /// Works on both web and mobile/desktop platforms
+  static Future<Map<String, dynamic>> analyzeFusedWithAudio(
+    Uint8List imageBytes,
+    String imageFileName,
+    Uint8List audioBytes,
+    String audioFileName,
+  ) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/analyze-fused'),
+      );
+
+      // Add the image file using bytes (works on all platforms)
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'image',
+          imageBytes,
+          filename: imageFileName,
+        ),
+      );
+
+      // Add audio file for server-side transcription
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'audio',
+          audioBytes,
+          filename: audioFileName,
+        ),
+      );
+
+      // Empty text - server will transcribe audio
+      request.fields['text'] = '';
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to analyze: ${response.body}');
+      }
+    } catch (e) {
+      print("Error in fused analysis with audio: $e");
       rethrow;
     }
   }

@@ -16,11 +16,19 @@ class HomeContainer extends StatefulWidget {
 class _HomeContainerState extends State<HomeContainer> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const DashboardScreen(),
-    const AnalyzeScreen(),
-    const ChatScreen(),
-  ];
+  // Lazy-load screens to improve startup performance
+  Widget _getScreen(int index) {
+    switch (index) {
+      case 0:
+        return const DashboardScreen();
+      case 1:
+        return const AnalyzeScreen();
+      case 2:
+        return const ChatScreen();
+      default:
+        return const DashboardScreen();
+    }
+  }
 
   void _onTabTapped(int index) {
     setState(() {
@@ -38,7 +46,7 @@ class _HomeContainerState extends State<HomeContainer> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      body: _screens[_currentIndex],
+      body: _getScreen(_currentIndex),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: _onTabTapped,

@@ -58,6 +58,15 @@ def _softmax(x: np.ndarray) -> np.ndarray:
 # ── Main Pipeline ──────────────────────────────────────────────────────────────
 
 class InferencePipeline:
+    def _get_disease_explanation(self, disease):
+        explanations = {
+            "Eczema": "Eczema is a chronic skin condition characterized by dry, itchy, and inflamed skin. It often appears in childhood and can be triggered by environmental factors, stress, or allergens.",
+            "Dermatitis": "Dermatitis refers to inflammation of the skin, often caused by contact with irritants or allergens. Symptoms include redness, swelling, and itching.",
+            "Psoriasis": "Psoriasis is an autoimmune condition that causes rapid skin cell growth, leading to thick, scaly patches. It can be triggered by stress, infections, or certain medications.",
+            "Acne": "Acne is a common skin disorder resulting from blocked hair follicles and oil glands. It presents as pimples, blackheads, and sometimes cysts, often on the face, chest, and back.",
+            "Urticaria": "Urticaria, or hives, is a skin reaction that causes itchy welts. It is often triggered by allergies, stress, or infections and usually resolves within hours to days.",
+        }
+        return explanations.get(disease, "No explanation available for this disease.")
     """
     Central inference hub for SkinAI.
 
@@ -67,23 +76,23 @@ class InferencePipeline:
     Call predict_disease(message)    → public alias (used by app.py chat route)
     """
 
-    def __init__(self) -> None:
+    def __init__(self):
         # DistilBERT text model (primary)
-        self.distilbert: Any = None
+        self.distilbert = None
         self.distilbert_loaded = False
 
         # ResNet-18 image model
-        self.image_model: Any = None
+        self.image_model = None
         self.image_model_loaded = False
 
         # Legacy sklearn fallback
-        self.sklearn_model: Any = None
-        self.sklearn_vectorizer: Any = None
+        self.sklearn_model = None
+        self.sklearn_vectorizer = None
         self.sklearn_loaded = False
 
         # CSV knowledge-base (optional enrichment)
-        self.disease_symptom_df: Optional[pd.DataFrame] = None
-        self.treatment_df: Optional[pd.DataFrame] = None
+        self.disease_symptom_df = None
+        self.treatment_df = None
         self.data_loaded = False
 
         self._load_models()
@@ -190,22 +199,77 @@ class InferencePipeline:
             return self.image_model.predict_from_bytes(image_bytes)
         return None, 0.0, np.zeros(len(DISEASE_LABELS))
 
+    def _confidence_level(self, confidence: float) -> str:
+        """
+        Convert confidence score into stable UI-friendly confidence bands.
+        """
+        if confidence >= 0.75:
+            return "high"
+        if confidence >= 0.50:
+            return "moderate"
+        return "low"
+
+    def _compute_dynamic_alpha(
+        self, img_conf: float, txt_conf: float, have_img: bool, have_txt: bool
+    ) -> float:
+        """
+        Compute dynamic fusion weight for image modality.
+        """
+        if have_img and have_txt:
+            alpha = FUSION_ALPHA + 0.30 * (img_conf - txt_conf)
+            return float(np.clip(alpha, 0.30, 0.80))
+        if have_img:
+            return 1.0
+        return 0.0
+
+    def _top_predictions(self, probs: np.ndarray, k: int = 3) -> List[Dict[str, Any]]:
+        """
+        Build top-k predictions from a probability vector.
+        """
+        if probs is None or len(probs) == 0:
+            return []
+
+        top_indices = np.argsort(probs)[::-1][:k]
+        return [
+            {
+                "disease": DISEASE_LABELS.get(int(idx), f"Disease_{idx}"),
+                "probability": float(probs[idx]),
+            }
+            for idx in top_indices
+        ]
+
+    def _agreement_score(self, image_probs: np.ndarray, text_probs: np.ndarray) -> Optional[float]:
+        """
+        Estimate agreement between modalities as cosine similarity on probabilities.
+        """
+        if image_probs is None or text_probs is None:
+            return None
+        if len(image_probs) == 0 or len(text_probs) == 0:
+            return None
+
+        img_norm = float(np.linalg.norm(image_probs))
+        txt_norm = float(np.linalg.norm(text_probs))
+        if img_norm <= 0 or txt_norm <= 0:
+            return None
+        return float(np.dot(image_probs, text_probs) / (img_norm * txt_norm))
+
     def _fuse(
         self,
         img_probs: np.ndarray,
         txt_probs: np.ndarray,
         img_loaded: bool,
         txt_loaded: bool,
+        image_alpha: float,
     ) -> np.ndarray:
         """
         Weighted linear fusion of image and text probability vectors.
 
-          P_final = α · P_image + (1-α) · P_text   where α = FUSION_ALPHA
+          P_final = α · P_image + (1-α) · P_text
 
         Falls back to single modality if only one is available.
         """
         if img_loaded and txt_loaded:
-            return FUSION_ALPHA * img_probs + (1 - FUSION_ALPHA) * txt_probs
+            return image_alpha * img_probs + (1 - image_alpha) * txt_probs
         elif img_loaded:
             return img_probs
         else:
@@ -311,34 +375,113 @@ class InferencePipeline:
             "model_used" : "resnet" | "unavailable",
         }
         """
-        disease, confidence, _ = self._image_probs(image_bytes)
+        disease, confidence, probs = self._image_probs(image_bytes)
+        top3 = self._top_predictions(probs, k=3)
 
         return {
             "disease":    disease or "Unable to determine",
             "confidence": float(confidence),
+            "confidence_level": self._confidence_level(float(confidence)),
+            "top3_predictions": top3,
+            "disease_explanation": self._get_disease_explanation(disease or "Unknown"),
+            "expected_symptoms": self._get_expected_symptoms(disease or ""),
             "treatments": self._get_treatments(disease) if disease else [],
             "model_used": "resnet" if self.image_model_loaded else "unavailable",
         }
 
-    def predict_fused(self, text: str, image_bytes: bytes) -> Dict[str, Any]:
+    def _extract_symptoms(self, text: str) -> List[str]:
+        """
+        Extract canonical symptom keywords from user text/transcript.
+        """
+        symptom_keywords = [
+            "itching", "itchy", "itch", "redness", "red", "dry", "dryness",
+            "scaling", "scaly", "flaky", "burning", "pain", "painful",
+            "swelling", "swollen", "bumps", "pimples", "blisters", "rash",
+            "patches", "spots", "cracked", "peeling", "oozing", "crusty",
+            "inflammation", "irritation", "sore", "tender", "thickened",
+            "discoloration", "whiteheads", "blackheads", "oily", "greasy"
+        ]
+        
+        # Normalize keywords to canonical forms
+        keyword_map = {
+            "itchy": "itching", "itch": "itching",
+            "red": "redness", "scaly": "scaling", "flaky": "scaling",
+            "dry": "dryness", "swollen": "swelling",
+            "painful": "pain", "sore": "pain",
+        }
+        
+        text_lower = text.lower()
+        found = []
+        for kw in symptom_keywords:
+            if kw in text_lower:
+                canonical = keyword_map.get(kw, kw)
+                if canonical not in found:
+                    found.append(canonical)
+        return found
+
+    def _get_expected_symptoms(self, disease: str) -> List[str]:
+        """
+        Get expected symptoms for a disease from knowledge base.
+        """
+        kb_symptoms = {
+            "Eczema": ["itching", "dryness", "redness", "scaling", "cracked", "inflammation"],
+            "Dermatitis": ["redness", "itching", "swelling", "blisters", "rash", "irritation"],
+            "Psoriasis": ["scaling", "redness", "itching", "dryness", "patches", "thickened"],
+            "Acne": ["pimples", "blackheads", "whiteheads", "oily", "inflammation", "bumps"],
+            "Urticaria": ["swelling", "redness", "itching", "bumps", "rash", "welts"],
+        }
+        return kb_symptoms.get(disease, [])
+
+    def _compute_symptom_match(self, extracted: List[str], expected: List[str]) -> Tuple[float, List[str]]:
+        """
+        Compute symptom match score using F1 between extracted and expected symptoms.
+        Returns (score, matched_symptoms)
+        """
+        if not expected:
+            return 0.0, []
+
+        matched = sorted(set(s for s in extracted if s in expected))
+        if not extracted:
+            return 0.0, matched
+
+        precision = len(matched) / len(set(extracted))
+        recall = len(matched) / len(set(expected))
+        score = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+        return score, matched
+
+    def _determine_decision_mode(
+        self, img_conf: float, txt_conf: float, have_img: bool, have_txt: bool, image_alpha: float
+    ) -> str:
+        """
+        Determine the fusion decision mode based on confidence levels.
+        """
+        if have_img and have_txt:
+            if abs(img_conf - txt_conf) < 0.10:
+                return "BALANCED_FUSION"
+            if image_alpha >= 0.65:
+                return "IMAGE_DOMINANT_FUSION"
+            if image_alpha <= 0.45:
+                return "TEXT_DOMINANT_FUSION"
+            return "CONFIDENCE_WEIGHTED_FUSION"
+        if have_img:
+            return "IMAGE_ONLY"
+        if have_txt:
+            return "TEXT_ONLY"
+        return "UNCERTAIN_LOW_CONFIDENCE"
+
+    def predict_fused(self, text: str, image_bytes: bytes, transcript: str = None) -> Dict[str, Any]:
         """
         Full multimodal prediction: ResNet-18 image + DistilBERT text → fusion.
 
         Fusion formula:
             P_final = 0.6 · P_image + 0.4 · P_text
 
-        Returns
-        -------
-        {
-            "disease"            : str,
-            "confidence"         : float,
-            "image_disease"      : str,
-            "image_confidence"   : float,
-            "text_disease"       : str,
-            "text_confidence"    : float,
-            "treatments"         : list,
-            "model_used"         : "fusion" | "image_only" | "text_only",
-        }
+        Returns comprehensive structured output with:
+        - Final diagnosis and confidence
+        - ASR transcript
+        - Extracted vs expected symptoms with match score
+        - Top-3 predictions
+        - Decision mode explanation
         """
         img_name, img_conf, img_probs = self._image_probs(image_bytes)
         txt_name, txt_conf, txt_probs = self._text_probs(text)
@@ -346,10 +489,32 @@ class InferencePipeline:
         have_img = self.image_model_loaded and img_conf > 0
         have_txt = (self.distilbert_loaded or self.sklearn_loaded) and txt_conf > 0
 
-        fused = self._fuse(img_probs, txt_probs, have_img, have_txt)
-        final_class = int(np.argmax(fused))
-        final_conf = float(fused[final_class])
+        image_alpha = self._compute_dynamic_alpha(img_conf, txt_conf, have_img, have_txt)
+        text_alpha = 1.0 - image_alpha
+        fused = self._fuse(img_probs, txt_probs, have_img, have_txt, image_alpha)
+
+        top3_predictions = self._top_predictions(fused, k=3)
+        top3_indices = np.argsort(fused)[::-1][:3]
+        final_class = int(top3_indices[0])
+        base_conf = float(fused[final_class])
+        second_conf = float(fused[top3_indices[1]]) if len(top3_indices) > 1 else 0.0
+        top_probability_gap = max(0.0, base_conf - second_conf)
+        calibrated_conf = min(1.0, base_conf * (0.80 + 0.60 * top_probability_gap))
+        final_conf = float(calibrated_conf)
         final_disease = DISEASE_LABELS.get(final_class, "Unknown")
+
+        # Decision mode
+        decision_mode = self._determine_decision_mode(
+            img_conf, txt_conf, have_img, have_txt, image_alpha
+        )
+
+        # Symptom analysis
+        extracted_symptoms = self._extract_symptoms(text)
+        expected_symptoms = self._get_expected_symptoms(final_disease)
+        symptom_match_score, matched_symptoms = self._compute_symptom_match(
+            extracted_symptoms, expected_symptoms
+        )
+        agreement_score = self._agreement_score(img_probs, txt_probs) if have_img and have_txt else None
 
         model_used = (
             "fusion"     if (have_img and have_txt) else
@@ -358,12 +523,40 @@ class InferencePipeline:
         )
 
         return {
+            # Core prediction
             "disease":          final_disease,
             "confidence":       final_conf,
+            "confidence_level": self._confidence_level(final_conf),
+
+            # ASR transcript
+            "transcript":       transcript if transcript else text if text else None,
+
+            # Disease explanation
+            "disease_explanation": self._get_disease_explanation(final_disease),
+
+            # Symptom analysis
+            "extracted_symptoms": extracted_symptoms,
+            "expected_symptoms":  expected_symptoms,
+            "symptom_match_score": symptom_match_score,
+            "matched_symptoms":   matched_symptoms,
+
+            # Top-3 predictions
+            "top3_predictions":   top3_predictions,
+
+            # Decision explanation
+            "decision_mode":      decision_mode,
+            "image_weight":       float(image_alpha),
+            "text_weight":        float(text_alpha),
+            "agreement_score":    agreement_score,
+            "top_probability_gap": float(top_probability_gap),
+
+            # Component outputs
             "image_disease":    img_name,
             "image_confidence": img_conf,
             "text_disease":     txt_name,
             "text_confidence":  txt_conf,
+
+            # Treatments & model info
             "treatments":       self._get_treatments(final_disease),
             "model_used":       model_used,
         }

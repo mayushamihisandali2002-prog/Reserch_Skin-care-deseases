@@ -17,14 +17,46 @@ import datetime
 import os
 import sys
 import logging
+import tempfile
+import shutil
+import subprocess
 from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
+# Force UTF-8 console output on Windows to prevent Unicode logging crashes
+# (emoji/box characters in startup logs can fail under cp1252).
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+
+# Speech recognition for audio file transcription
+try:
+    import speech_recognition as sr
+    SPEECH_RECOGNITION_AVAILABLE = True
+except ImportError:
+    SPEECH_RECOGNITION_AVAILABLE = False
+
+# Pydub for audio format conversion (requires ffmpeg)
+try:
+    from pydub import AudioSegment
+    PYDUB_AVAILABLE = True
+except ImportError:
+    PYDUB_AVAILABLE = False
+
+# imageio-ffmpeg can provide a bundled ffmpeg binary if system ffmpeg is missing.
+try:
+    import imageio_ffmpeg
+    IMAGEIO_FFMPEG_AVAILABLE = True
+except ImportError:
+    IMAGEIO_FFMPEG_AVAILABLE = False
 
 # ── Configuration from environment ────────────────────────────────────────────
 FLASK_ENV = os.getenv('FLASK_ENV', 'development')
@@ -55,6 +87,160 @@ CORS(
     allow_headers=["Content-Type", "Authorization"],
     methods=["GET", "POST", "OPTIONS"],
 )
+
+# Selected ffmpeg binary path (if discovered by _configure_pydub_ffmpeg)
+FFMPEG_BINARY_PATH = None
+
+def _configure_pydub_ffmpeg() -> None:
+    """
+    Best-effort ffmpeg discovery for audio conversion.
+    """
+    global FFMPEG_BINARY_PATH
+
+    candidates = []
+    env_path = os.getenv("FFMPEG_BINARY")
+    if env_path:
+        candidates.append(Path(env_path))
+
+    local_ffmpeg_dir = Path(__file__).parent / "ffmpeg"
+    candidates.extend([
+        local_ffmpeg_dir / "ffmpeg.exe",
+        local_ffmpeg_dir / "bin" / "ffmpeg.exe",
+        local_ffmpeg_dir / "ffmpeg",
+        local_ffmpeg_dir / "bin" / "ffmpeg",
+    ])
+
+    system_ffmpeg = shutil.which("ffmpeg")
+    if system_ffmpeg:
+        candidates.append(Path(system_ffmpeg))
+
+    if IMAGEIO_FFMPEG_AVAILABLE:
+        try:
+            bundled_ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+            if bundled_ffmpeg:
+                candidates.append(Path(bundled_ffmpeg))
+        except Exception as exc:
+            logger.debug(f"imageio-ffmpeg lookup failed: {exc}")
+
+    try:
+        for found in local_ffmpeg_dir.rglob("ffmpeg.exe"):
+            candidates.append(found)
+            break
+    except Exception:
+        pass
+
+    selected = next((p for p in candidates if p and p.exists()), None)
+    FFMPEG_BINARY_PATH = str(selected) if selected else None
+
+    if selected:
+        if PYDUB_AVAILABLE:
+            AudioSegment.converter = str(selected)
+            ffprobe_candidate = selected.with_name(
+                "ffprobe.exe" if selected.suffix.lower() == ".exe" else "ffprobe"
+            )
+            if ffprobe_candidate.exists():
+                AudioSegment.ffprobe = str(ffprobe_candidate)
+        logger.info(f"Configured ffmpeg binary: {selected}")
+    else:
+        logger.warning(
+            "ffmpeg binary not found. Non-WAV audio transcription may fail. "
+            "Install ffmpeg or set FFMPEG_BINARY."
+        )
+
+
+def _transcribe_uploaded_audio(audio_file) -> tuple[str, str, str | None]:
+    """
+    Returns: (transcript, transcription_status, transcription_error)
+    """
+    if not audio_file:
+        return "", "not_requested", None
+
+    if not SPEECH_RECOGNITION_AVAILABLE:
+        return "", "speech_recognition_unavailable", (
+            "SpeechRecognition is not available on the backend."
+        )
+
+    tmp_original_path = None
+    wav_path = None
+    created_paths = set()
+
+    try:
+        original_filename = audio_file.filename or "audio.wav"
+        file_ext = os.path.splitext(original_filename)[1].lower() or ".wav"
+
+        with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp_original:
+            audio_file.save(tmp_original.name)
+            tmp_original_path = tmp_original.name
+            created_paths.add(tmp_original_path)
+
+        wav_path = tmp_original_path
+        if file_ext not in [".wav", ".wave"]:
+            if not FFMPEG_BINARY_PATH and not PYDUB_AVAILABLE:
+                return "", "unsupported_format", (
+                    f"Unsupported audio format '{file_ext}'. Upload a WAV file or enable ffmpeg conversion."
+                )
+
+            try:
+                logger.info(f"Converting {file_ext} audio to WAV")
+                wav_path = tmp_original_path.rsplit(".", 1)[0] + ".wav"
+                if FFMPEG_BINARY_PATH:
+                    # Use ffmpeg directly so conversion works even when ffprobe is unavailable.
+                    cmd = [
+                        FFMPEG_BINARY_PATH,
+                        "-y",
+                        "-i",
+                        tmp_original_path,
+                        "-ac",
+                        "1",
+                        "-ar",
+                        "16000",
+                        wav_path,
+                    ]
+                    proc = subprocess.run(
+                        cmd,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                    )
+                    if proc.returncode != 0:
+                        err_text = (proc.stderr or "").strip()
+                        raise RuntimeError(err_text or "ffmpeg conversion failed")
+                else:
+                    audio = AudioSegment.from_file(tmp_original_path)
+                    audio.export(wav_path, format="wav")
+                created_paths.add(wav_path)
+            except Exception as conv_err:
+                return "", "conversion_failed", (
+                    f"Failed to convert {file_ext} audio: {conv_err}"
+                )
+
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(wav_path) as source:
+            audio_data = recognizer.record(source)
+
+        transcript = recognizer.recognize_google(audio_data, language="en-US").strip()
+        if transcript:
+            return transcript, "transcribed", None
+        return "", "empty_transcript", "No words were detected in the audio."
+
+    except sr.UnknownValueError:
+        return "", "not_understood", (
+            "Could not understand the voice note. Please speak clearly or try another recording."
+        )
+    except sr.RequestError as exc:
+        return "", "service_error", f"Speech recognition service error: {exc}"
+    except Exception as exc:
+        return "", "transcription_error", f"Audio transcription failed: {exc}"
+    finally:
+        for path in created_paths:
+            try:
+                if path and os.path.exists(path):
+                    os.unlink(path)
+            except Exception as cleanup_exc:
+                logger.debug(f"Temp file cleanup warning ({path}): {cleanup_exc}")
+
+
+_configure_pydub_ffmpeg()
 
 # ── Boot inference pipeline ───────────────────────────────────────────────────
 try:
@@ -113,6 +299,52 @@ def status():
     })
 
 
+def _normalize_confidence_level(confidence: float, provided: str | None = None) -> str:
+    """
+    Normalize confidence band for consistent UI handling.
+    """
+    if provided:
+        val = str(provided).strip().lower()
+        if val in {"high", "moderate", "medium", "low"}:
+            return "moderate" if val == "medium" else val
+
+    if confidence >= 0.75:
+        return "high"
+    if confidence >= 0.50:
+        return "moderate"
+    return "low"
+
+
+def _build_next_steps(
+    confidence_level: str,
+    symptom_match_score: float | None = None,
+    has_transcript: bool = False,
+) -> list[str]:
+    """
+    Provide concise actionable next steps based on signal quality.
+    """
+    steps = [
+        "Track symptoms daily and monitor spread, pain, or discharge.",
+        "Follow the routine consistently for 7-14 days unless irritation worsens.",
+    ]
+
+    if confidence_level == "low":
+        steps.insert(0, "Retake a clearer close-up photo in natural light and re-run analysis.")
+    elif confidence_level == "moderate":
+        steps.insert(0, "Cross-check diagnosis with symptom progression over the next few days.")
+    else:
+        steps.insert(0, "Current pattern is consistent with the predicted condition.")
+
+    if symptom_match_score is not None and symptom_match_score < 0.35:
+        steps.append("Add a clearer symptom description or voice note for stronger multimodal matching.")
+
+    if not has_transcript:
+        steps.append("Optional: include a short symptom note to improve contextual accuracy.")
+
+    steps.append("Seek dermatology care urgently for fever, spreading redness, severe pain, or infection signs.")
+    return steps
+
+
 # ── Image analysis (ResNet-18) ────────────────────────────────────────────────
 
 @app.route("/api/analyze", methods=["POST", "OPTIONS"])
@@ -148,27 +380,123 @@ def analyze():
     confidence = result.get("confidence", 0.0)
     treatments = result.get("treatments", [])
 
-    return jsonify({
-        "prediction": disease,
-        "confidence": confidence,
-        "symptoms":   ["Redness", "Itching", "Dryness"],
-        "triggers":   ["Stress", "Dry Air", "Soap"],
-        "routine": {
-            "morning":   "Gentle Cleanser, Moisturizer",
-            "night":     "Topical treatment as prescribed",
-            "treatment": f"Apply {treatments[0]['medicine'] if treatments else 'prescribed ointment'} as directed.",
+    # Build disease-specific symptom info
+    disease_symptoms = {
+        "Eczema": ["Itchy skin", "Dry, scaly patches", "Redness", "Cracked skin"],
+        "Dermatitis": ["Red rash", "Itching", "Swelling", "Blisters"],
+        "Psoriasis": ["Red patches with scales", "Dry cracked skin", "Itching/burning", "Thickened nails"],
+        "Acne": ["Pimples", "Blackheads", "Whiteheads", "Oily skin"],
+        "Urticaria": ["Raised welts", "Itching", "Swelling", "Redness"],
+    }
+    
+    disease_triggers = {
+        "Eczema": ["Stress", "Dry weather", "Harsh soaps", "Allergens"],
+        "Dermatitis": ["Contact irritants", "Allergens", "Stress", "Weather changes"],
+        "Psoriasis": ["Stress", "Infections", "Skin injury", "Cold weather"],
+        "Acne": ["Hormones", "Stress", "Diet", "Oily products"],
+        "Urticaria": ["Allergens", "Stress", "Temperature", "Medications"],
+    }
+    
+    disease_routines = {
+        "Eczema": {
+            "morning": "Gentle cleanser, thick moisturizer, SPF 30+ sunscreen",
+            "night": "Lukewarm bath, pat dry, apply emollient, topical steroid if prescribed",
+            "treatment": "Apply hydrocortisone cream or prescribed ointment to affected areas",
         },
-        "warnings":    ["If symptoms worsen or spread, see a dermatologist."],
-        "treatments":  treatments,
-        "model_used":  result.get("model_used", "resnet"),
+        "Dermatitis": {
+            "morning": "Fragrance-free cleanser, barrier cream, sunscreen",
+            "night": "Gentle cleanse, cool compress if inflamed, apply prescribed cream",
+            "treatment": "Identify and avoid triggers, use antihistamines for itch relief",
+        },
+        "Psoriasis": {
+            "morning": "Gentle soap, moisturize immediately, vitamin D cream if prescribed",
+            "night": "Coal tar or salicylic acid treatment, heavy moisturizer",
+            "treatment": "Apply topical steroids or vitamin D analogs as directed",
+        },
+        "Acne": {
+            "morning": "Salicylic acid cleanser, oil-free moisturizer, non-comedogenic SPF",
+            "night": "Double cleanse, benzoyl peroxide or retinoid treatment",
+            "treatment": "Apply benzoyl peroxide or prescribed retinoid to affected areas",
+        },
+        "Urticaria": {
+            "morning": "Cool shower, fragrance-free products, antihistamine if needed",
+            "night": "Avoid hot water, loose clothing, calamine lotion for itch",
+            "treatment": "Take antihistamines, apply cool compresses, avoid known triggers",
+        },
+    }
+
+    symptoms = disease_symptoms.get(disease, ["Skin irritation", "Discomfort"])
+    triggers = disease_triggers.get(disease, ["Environmental factors", "Stress"])
+    routine = disease_routines.get(disease, {
+        "morning": "Gentle cleanser, moisturizer",
+        "night": "Cleanse and apply treatment as prescribed",
+        "treatment": f"Apply {treatments[0]['medicine'] if treatments else 'prescribed ointment'} as directed.",
     })
+
+    confidence_level = _normalize_confidence_level(
+        confidence, result.get("confidence_level")
+    )
+    expected_symptoms = result.get("expected_symptoms", symptoms)
+    top3_predictions = result.get("top3_predictions", [])
+    disease_explanation = result.get("disease_explanation")
+    next_steps = _build_next_steps(
+        confidence_level=confidence_level,
+        symptom_match_score=None,
+        has_transcript=False,
+    )
+
+    return jsonify({
+        "prediction":         disease,
+        "final_diagnosis":    disease,
+        "confidence":         confidence,
+        "confidence_percent": f"{confidence * 100:.1f}%",
+        "confidence_level":   confidence_level,
+        "symptoms":           symptoms,
+        "expected_symptoms":  expected_symptoms,
+        "extracted_symptoms": [],
+        "matched_symptoms":   [],
+        "symptom_match_score": 0.0,
+        "symptom_match_percent": "0%",
+        "top3_predictions":   top3_predictions,
+        "decision_mode":      "IMAGE_ONLY",
+        "triggers":           triggers,
+        "routine":            routine,
+        "warnings":           ["If symptoms worsen or spread, see a dermatologist."],
+        "next_steps":         next_steps,
+        "treatments":         treatments,
+        "model_used":         result.get("model_used", "resnet"),
+        "image_disease":      disease,
+        "image_confidence":   confidence,
+        "text_disease":       None,
+        "text_confidence":    0.0,
+        "image_weight":       1.0,
+        "text_weight":        0.0,
+        "agreement_score":    None,
+        "top_probability_gap": result.get("top_probability_gap", 0.0),
+        "disease_explanation": disease_explanation,
+        "transcript":          None,
+        "transcription_status": "not_requested",
+        "transcription_error":  None,
+    })
+
+
+# ── Speech-to-Text Helper ─────────────────────────────────────────────────────
+
+def transcribe_audio(audio_file) -> str:
+    """
+    Speech-to-text is now handled on the frontend.
+    This function is kept for backwards compatibility but returns empty string.
+    """
+    logger.info("Audio transcription handled on frontend - backend receives text directly")
+    return ""
 
 
 @app.route("/api/analyze-fused", methods=["POST", "OPTIONS"])
 def analyze_fused():
     """
     Multimodal diagnosis: image (ResNet-18) + text (DistilBERT) → fused result.
-    Accepts multipart/form-data: 'image' file + optional 'text' field.
+    Accepts multipart/form-data: 'image' file + 'text' field (transcribed speech from frontend).
+    Optionally accepts 'audio' file for server-side transcription.
     """
     if request.method == "OPTIONS":
         return "", 204
@@ -177,24 +505,157 @@ def analyze_fused():
         return jsonify({"error": "Inference pipeline unavailable"}), 503
 
     image_file = request.files.get("image") or request.files.get("file")
-    text = request.form.get("text", "skin condition")
+    text = request.form.get("text", "").strip()
+    audio_file = request.files.get("audio")
 
     if not image_file:
         return jsonify({"error": "No image provided"}), 400
 
-    image_bytes = image_file.read()
-    result = inference_pipeline.predict_fused(text, image_bytes)
+    transcript = text
+    transcription_status = "frontend_text" if text else "not_requested"
+    transcription_error = None
 
-    return jsonify({
-        "disease":          result["disease"],
-        "confidence":       result["confidence"],
-        "image_disease":    result["image_disease"],
-        "image_confidence": result["image_confidence"],
-        "text_disease":     result["text_disease"],
-        "text_confidence":  result["text_confidence"],
-        "treatments":       result["treatments"],
-        "model_used":       result["model_used"],
+    # Handle server-side audio transcription only if text is empty
+    if audio_file and not text:
+        logger.info(f"Received audio file for transcription: {audio_file.filename}")
+        transcript, transcription_status, transcription_error = _transcribe_uploaded_audio(audio_file)
+        if transcript:
+            logger.info(f"Transcribed audio: '{transcript}'")
+        else:
+            logger.warning(
+                f"Audio transcription unavailable (status={transcription_status}): {transcription_error}"
+            )
+    elif audio_file and text:
+        transcription_status = "frontend_text_with_audio"
+
+    # If transcription is unavailable, keep text empty so inference falls back to image-only.
+    combined_text = transcript if transcript else text
+
+    logger.info(f"Resolved transcript for fused analysis: '{transcript}'")
+
+    image_bytes = image_file.read()
+    
+    # Pass transcript to inference pipeline for structured output
+    result = inference_pipeline.predict_fused(
+        combined_text, 
+        image_bytes, 
+        transcript=transcript if transcript else None
+    )
+
+    # Return transcript only if available (avoid placeholder text such as "skin condition")
+    transcript_value = transcript if transcript else None
+    disease_explanation = result.get("disease_explanation")
+
+    disease = result["disease"]
+    confidence = result["confidence"]
+    confidence_level = _normalize_confidence_level(
+        confidence, result.get("confidence_level")
+    )
+    symptom_match_score = float(result.get("symptom_match_score", 0.0))
+    treatments = result["treatments"]
+    top3 = result.get("top3_predictions", [])
+    next_steps = _build_next_steps(
+        confidence_level=confidence_level,
+        symptom_match_score=symptom_match_score,
+        has_transcript=bool(transcript_value),
+    )
+
+    # Build disease-specific routine info
+    disease_routines = {
+        "Eczema": {
+            "morning": "Gentle cleanser, thick moisturizer, SPF 30+ sunscreen",
+            "night": "Lukewarm bath, pat dry, apply emollient, topical steroid if prescribed",
+            "treatment": "Apply hydrocortisone cream or prescribed ointment to affected areas",
+        },
+        "Dermatitis": {
+            "morning": "Fragrance-free cleanser, barrier cream, sunscreen",
+            "night": "Gentle cleanse, cool compress if inflamed, apply prescribed cream",
+            "treatment": "Identify and avoid triggers, use antihistamines for itch relief",
+        },
+        "Psoriasis": {
+            "morning": "Gentle soap, moisturize immediately, vitamin D cream if prescribed",
+            "night": "Coal tar or salicylic acid treatment, heavy moisturizer",
+            "treatment": "Apply topical steroids or vitamin D analogs as directed",
+        },
+        "Acne": {
+            "morning": "Salicylic acid cleanser, oil-free moisturizer, non-comedogenic SPF",
+            "night": "Double cleanse, benzoyl peroxide or retinoid treatment",
+            "treatment": "Apply benzoyl peroxide or prescribed retinoid to affected areas",
+        },
+        "Urticaria": {
+            "morning": "Cool shower, fragrance-free products, antihistamine if needed",
+            "night": "Avoid hot water, loose clothing, calamine lotion for itch",
+            "treatment": "Take antihistamines, apply cool compresses, avoid known triggers",
+        },
+    }
+
+    routine = disease_routines.get(disease, {
+        "morning": "Gentle cleanser, moisturizer, sunscreen",
+        "night": "Cleanse skin, apply treatment as directed",
+        "treatment": f"Apply {treatments[0]['medicine'] if treatments else 'prescribed medication'} as directed.",
     })
+
+    warnings = ["If symptoms worsen or persist, consult a dermatologist."]
+    if transcription_error:
+        warnings.insert(0, f"Voice note transcription issue: {transcription_error}")
+
+    # Build full structured response (exact output format)
+    response_data = {
+        # ── 1. Final Diagnosis ──
+        "prediction":           disease,
+        "final_diagnosis":      disease,
+
+        # ── 2. Confidence Score ──
+        "confidence":           confidence,
+        "confidence_percent":   f"{confidence * 100:.1f}%",
+        "confidence_level":     confidence_level,
+
+        # ── 3. ASR Transcript ──
+        "transcript":           transcript_value,
+
+        # ── Disease Explanation ──
+        "disease_explanation":  disease_explanation,
+
+        # ── 4. Extracted Symptoms ──
+        "extracted_symptoms":   result.get("extracted_symptoms", []),
+
+        # ── 5. Expected Symptoms (KB) ──
+        "expected_symptoms":    result.get("expected_symptoms", []),
+
+        # ── 6. Symptom Match Score ──
+        "symptom_match_score":  symptom_match_score,
+        "symptom_match_percent": f"{symptom_match_score * 100:.0f}%",
+        "matched_symptoms":     result.get("matched_symptoms", []),
+
+        # ── 7. Top-3 Predictions ──
+        "top3_predictions":     top3,
+
+        # ── 8. Decision Mode ──
+        "decision_mode":        result.get("decision_mode", "UNKNOWN"),
+
+        # ── Additional UI data ──
+        "symptoms":             result.get("expected_symptoms", []),
+        "triggers":             ["Stress", "Environmental factors", "Allergens"],
+        "routine":              routine,
+        "warnings":             warnings,
+        "next_steps":           next_steps,
+        "treatments":           treatments,
+
+        # ── Model diagnostics ──
+        "model_used":           result["model_used"],
+        "image_disease":        result["image_disease"],
+        "image_confidence":     result["image_confidence"],
+        "text_disease":         result["text_disease"],
+        "text_confidence":      result["text_confidence"],
+        "image_weight":         result.get("image_weight"),
+        "text_weight":          result.get("text_weight"),
+        "agreement_score":      result.get("agreement_score"),
+        "top_probability_gap":  result.get("top_probability_gap", 0.0),
+        "transcription_status": transcription_status,
+        "transcription_error":  transcription_error,
+    }
+    
+    return jsonify(response_data)
 
 
 @app.route("/api/analyze-skin-care", methods=["POST", "OPTIONS"])

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'utils/app_styles.dart';
@@ -11,12 +12,15 @@ import 'screens/home_container.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Optimize system UI overlay style
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
+  );
+
   // Configure Google Fonts to allow fetching from network but with fallbacks
   GoogleFonts.config.allowRuntimeFetching = true;
 
-  // Initialize Supabase
-  await SupabaseService.initialize();
-
+  // Run app immediately with splash, initialize in background
   runApp(const MyApp());
 }
 
@@ -59,20 +63,29 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
-  bool _isLoading = true;
+  bool _isInitializing = true;
   bool _isLoggedIn = false;
 
   @override
   void initState() {
     super.initState();
-    _checkAuthState();
-    _listenToAuthChanges();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    // Initialize Supabase in background
+    await SupabaseService.initialize();
+
+    if (mounted) {
+      _checkAuthState();
+      _listenToAuthChanges();
+    }
   }
 
   void _checkAuthState() {
     setState(() {
       _isLoggedIn = SupabaseService.isLoggedIn;
-      _isLoading = false;
+      _isInitializing = false;
     });
   }
 
@@ -92,8 +105,29 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_isInitializing) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.health_and_safety, size: 80, color: AppColors.primary),
+              const SizedBox(height: 24),
+              Text(
+                'Skin Care Assistant',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textMain,
+                ),
+              ),
+              const SizedBox(height: 16),
+              CircularProgressIndicator(color: AppColors.primary),
+            ],
+          ),
+        ),
+      );
     }
 
     return _isLoggedIn ? const HomeContainer() : const LoginScreen();

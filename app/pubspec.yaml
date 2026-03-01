@@ -45,6 +45,15 @@ dependencies:
   # Database & Authentication
   supabase_flutter: ^2.3.0
   google_sign_in: ^6.2.1
+  
+  # Voice Recording
+  record: ^6.0.0
+  file_picker: ^8.0.0
+  path_provider: ^2.1.2
+  permission_handler: ^11.3.0
+  
+  # Speech-to-Text (real-time transcription)
+  speech_to_text: ^6.6.0
 
 dev_dependencies:
   flutter_test:
