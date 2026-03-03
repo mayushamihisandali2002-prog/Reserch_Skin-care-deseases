@@ -29,17 +29,20 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: AppColors.primary,
+      primary: AppColors.primary,
+      secondary: AppColors.secondary,
+      surface: AppColors.surface,
+      error: AppColors.error,
+      brightness: Brightness.light,
+    );
+
     return MaterialApp(
       title: 'Skin Care Assistant',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.primary,
-          primary: AppColors.primary,
-          secondary: AppColors.secondary,
-          background: AppColors.background,
-          surface: AppColors.surface,
-        ),
+        colorScheme: colorScheme,
         useMaterial3: true,
         // Use system fonts as fallback to avoid network font loading issues
         textTheme: kIsWeb
@@ -48,6 +51,107 @@ class MyApp extends StatelessWidget {
               )
             : GoogleFonts.outfitTextTheme(),
         scaffoldBackgroundColor: AppColors.background,
+        appBarTheme: AppBarTheme(
+          centerTitle: false,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          backgroundColor: AppColors.surface.withValues(alpha: 0.95),
+          foregroundColor: AppColors.textMain,
+          titleTextStyle:
+              (kIsWeb
+                      ? Typography.material2021().black
+                      : GoogleFonts.outfitTextTheme())
+                  .titleLarge
+                  ?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textMain,
+                  ),
+        ),
+        cardTheme: CardThemeData(
+          color: AppColors.surface,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: AppColors.border),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: AppColors.surface,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 12,
+          ),
+          labelStyle: const TextStyle(color: AppColors.textSecondary),
+          hintStyle: const TextStyle(color: AppColors.textSecondary),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            elevation: 0,
+            foregroundColor: Colors.white,
+            backgroundColor: AppColors.primary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            foregroundColor: Colors.white,
+            backgroundColor: AppColors.primary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.primaryDark,
+            side: const BorderSide(color: AppColors.border),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        snackBarTheme: const SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.textMain,
+          contentTextStyle: TextStyle(color: Colors.white),
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: AppColors.surface,
+          indicatorColor: AppColors.primary.withValues(alpha: 0.15),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            return TextStyle(
+              fontWeight: states.contains(WidgetState.selected)
+                  ? FontWeight.w700
+                  : FontWeight.w500,
+              color: states.contains(WidgetState.selected)
+                  ? AppColors.primaryDark
+                  : AppColors.textSecondary,
+            );
+          }),
+          iconTheme: WidgetStateProperty.resolveWith((states) {
+            return IconThemeData(
+              color: states.contains(WidgetState.selected)
+                  ? AppColors.primaryDark
+                  : AppColors.textSecondary,
+            );
+          }),
+        ),
       ),
       home: const AuthWrapper(),
     );

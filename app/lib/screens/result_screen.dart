@@ -77,119 +77,124 @@ class ResultScreen extends StatelessWidget {
     final double agreementScore = _toDouble(data['agreement_score']);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Analysis Result'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeroCard(
-              prediction: prediction,
-              confidencePercent: confidencePercent,
-              confidenceLevel: confidenceLevel,
-              confidenceColor: confidenceColor,
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                _buildMetricChip(
-                  label: 'Confidence',
-                  value: confidencePercent,
-                  color: confidenceColor,
-                  icon: Icons.analytics_outlined,
-                ),
-                _buildMetricChip(
-                  label: 'Symptom Match',
-                  value: symptomMatchPercent,
-                  color: Colors.teal,
-                  icon: Icons.fact_check_outlined,
-                ),
-                _buildMetricChip(
-                  label: 'Decision',
-                  value: _friendlyDecisionMode(decisionMode),
-                  color: Colors.deepPurple,
-                  icon: Icons.account_tree_outlined,
-                ),
-                _buildMetricChip(
-                  label: 'Model',
-                  value: modelUsed,
-                  color: Colors.indigo,
-                  icon: Icons.memory_outlined,
-                ),
+      appBar: AppBar(title: const Text('Analysis Result')),
+      body: Container(
+        decoration: const BoxDecoration(gradient: AppGradients.page),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeroCard(
+                prediction: prediction,
+                confidencePercent: confidencePercent,
+                confidenceLevel: confidenceLevel,
+                confidenceColor: confidenceColor,
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _buildMetricChip(
+                    label: 'Confidence',
+                    value: confidencePercent,
+                    color: confidenceColor,
+                    icon: Icons.analytics_outlined,
+                  ),
+                  _buildMetricChip(
+                    label: 'Symptom Match',
+                    value: symptomMatchPercent,
+                    color: AppColors.accent,
+                    icon: Icons.fact_check_outlined,
+                  ),
+                  _buildMetricChip(
+                    label: 'Decision',
+                    value: _friendlyDecisionMode(decisionMode),
+                    color: AppColors.secondary,
+                    icon: Icons.account_tree_outlined,
+                  ),
+                  _buildMetricChip(
+                    label: 'Model',
+                    value: modelUsed,
+                    color: AppColors.primaryDark,
+                    icon: Icons.memory_outlined,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              if (top3.isNotEmpty) ...[
+                _buildPredictionSection(top3),
+                const SizedBox(height: 14),
               ],
-            ),
-            const SizedBox(height: 16),
-            if (top3.isNotEmpty) ...[
-              _buildPredictionSection(top3),
-              const SizedBox(height: 16),
-            ],
-            if (imageDisease != null || textDisease != null) ...[
-              _buildModelDiagnostics(
-                imageDisease: imageDisease,
-                imageConfidence: imageConfidence,
-                textDisease: textDisease,
-                textConfidence: textConfidence,
-                imageWeight: imageWeight,
-                textWeight: textWeight,
-                agreementScore: agreementScore,
-              ),
-              const SizedBox(height: 16),
-            ],
-            if (hasTranscript) ...[
-              _buildSectionCard(
-                title: 'Voice Transcript',
-                icon: Icons.mic,
-                iconColor: Colors.blue,
-                child: Text(
-                  normalizedTranscript,
-                  style: const TextStyle(fontSize: 15, color: Colors.black87),
+              if (imageDisease != null || textDisease != null) ...[
+                _buildModelDiagnostics(
+                  imageDisease: imageDisease,
+                  imageConfidence: imageConfidence,
+                  textDisease: textDisease,
+                  textConfidence: textConfidence,
+                  imageWeight: imageWeight,
+                  textWeight: textWeight,
+                  agreementScore: agreementScore,
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            if (showTranscriptIssue) ...[
-              _buildSectionCard(
-                title: 'Voice Transcript',
-                icon: Icons.mic_off,
-                iconColor: Colors.orange,
-                child: Text(
-                  transcriptionError ??
-                      (isPlaceholderTranscript
-                          ? 'Voice note was not transcribed by the server. Try uploading a WAV file or check ffmpeg setup.'
-                          : 'Voice note could not be transcribed. Try a clearer recording or upload a WAV file.'),
-                  style: const TextStyle(fontSize: 15, color: Colors.black87),
+                const SizedBox(height: 14),
+              ],
+              if (hasTranscript) ...[
+                _buildSectionCard(
+                  title: 'Voice Transcript',
+                  icon: Icons.mic,
+                  iconColor: AppColors.primary,
+                  child: Text(
+                    normalizedTranscript,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: AppColors.textMain,
+                    ),
+                  ),
                 ),
+                const SizedBox(height: 14),
+              ],
+              if (showTranscriptIssue) ...[
+                _buildSectionCard(
+                  title: 'Voice Transcript',
+                  icon: Icons.mic_off,
+                  iconColor: AppColors.warning,
+                  child: Text(
+                    transcriptionError ??
+                        (isPlaceholderTranscript
+                            ? 'Voice note was not transcribed by the server. Try uploading a WAV file or check ffmpeg setup.'
+                            : 'Voice note could not be transcribed. Try a clearer recording or upload a WAV file.'),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: AppColors.textMain,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
+              _buildSymptomsSection(
+                diseaseExplanation: diseaseExplanation,
+                extractedSymptoms: extractedSymptoms,
+                matchedSymptoms: matchedSymptoms,
+                expectedSymptoms: expectedSymptoms,
+                symptomMatchScore: symptomMatchScore,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
+              if (treatments.isNotEmpty) ...[
+                _buildTreatmentSection(treatments),
+                const SizedBox(height: 14),
+              ],
+              if (routine.isNotEmpty) ...[
+                _buildRoutineSection(routine),
+                const SizedBox(height: 14),
+              ],
+              if (nextSteps.isNotEmpty) ...[
+                _buildActionSection(nextSteps),
+                const SizedBox(height: 14),
+              ],
+              if (warnings.isNotEmpty) _buildWarningSection(warnings),
             ],
-            _buildSymptomsSection(
-              diseaseExplanation: diseaseExplanation,
-              extractedSymptoms: extractedSymptoms,
-              matchedSymptoms: matchedSymptoms,
-              expectedSymptoms: expectedSymptoms,
-              symptomMatchScore: symptomMatchScore,
-            ),
-            const SizedBox(height: 16),
-            if (treatments.isNotEmpty) ...[
-              _buildTreatmentSection(treatments),
-              const SizedBox(height: 16),
-            ],
-            if (routine.isNotEmpty) ...[
-              _buildRoutineSection(routine),
-              const SizedBox(height: 16),
-            ],
-            if (nextSteps.isNotEmpty) ...[
-              _buildActionSection(nextSteps),
-              const SizedBox(height: 16),
-            ],
-            if (warnings.isNotEmpty) _buildWarningSection(warnings),
-          ],
+          ),
         ),
       ),
     );
@@ -203,22 +208,15 @@ class ResultScreen extends StatelessWidget {
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary,
-            AppColors.primary.withValues(alpha: 0.82),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
+        gradient: AppGradients.hero,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.24),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
+            color: AppColors.primaryDark.withValues(alpha: 0.24),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -227,14 +225,18 @@ class ResultScreen extends StatelessWidget {
         children: [
           const Text(
             'Final Diagnosis',
-            style: TextStyle(color: Colors.white70, fontSize: 13),
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             prediction,
             style: AppTextStyles.heading.copyWith(
               color: Colors.white,
-              fontSize: 32,
+              fontSize: 30,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -264,7 +266,7 @@ class ResultScreen extends StatelessWidget {
     return _buildSectionCard(
       title: 'Top Predictions',
       icon: Icons.insights_outlined,
-      iconColor: Colors.indigo,
+      iconColor: AppColors.primaryDark,
       child: Column(
         children: top3.map((entry) {
           final String disease = entry['disease']?.toString() ?? 'Unknown';
@@ -299,9 +301,9 @@ class ResultScreen extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: probability.clamp(0.0, 1.0),
                     minHeight: 9,
-                    backgroundColor: Colors.grey.withValues(alpha: 0.2),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppColors.primary,
+                    backgroundColor: AppColors.border.withValues(alpha: 0.7),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      AppColors.primaryDark,
                     ),
                   ),
                 ),
@@ -366,7 +368,7 @@ class ResultScreen extends StatelessWidget {
     return _buildSectionCard(
       title: 'Model Diagnostics',
       icon: Icons.tune,
-      iconColor: Colors.blueGrey,
+      iconColor: AppColors.primaryDark,
       child: Column(children: rows),
     );
   }
@@ -381,7 +383,7 @@ class ResultScreen extends StatelessWidget {
     return _buildSectionCard(
       title: 'Disease Information',
       icon: Icons.info_outline,
-      iconColor: Colors.deepPurple,
+      iconColor: AppColors.primary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -402,8 +404,8 @@ class ResultScreen extends StatelessWidget {
             child: LinearProgressIndicator(
               value: symptomMatchScore.clamp(0.0, 1.0),
               minHeight: 8,
-              backgroundColor: Colors.grey.withValues(alpha: 0.2),
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.teal),
+              backgroundColor: AppColors.border.withValues(alpha: 0.6),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
             ),
           ),
           const SizedBox(height: 12),
@@ -451,7 +453,7 @@ class ResultScreen extends StatelessWidget {
     return _buildSectionCard(
       title: 'Treatment Suggestions',
       icon: Icons.medication_outlined,
-      iconColor: Colors.green,
+      iconColor: AppColors.success,
       child: Column(
         children: treatments.map((item) {
           final String medicine = item['medicine']?.toString() ?? 'Medication';
@@ -461,9 +463,11 @@ class ResultScreen extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.06),
+              color: AppColors.success.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.green.withValues(alpha: 0.25)),
+              border: Border.all(
+                color: AppColors.success.withValues(alpha: 0.28),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -502,7 +506,7 @@ class ResultScreen extends StatelessWidget {
     return _buildSectionCard(
       title: 'Daily Routine',
       icon: Icons.calendar_today_outlined,
-      iconColor: Colors.deepOrange,
+      iconColor: AppColors.secondary,
       child: Column(
         children: [
           if (morning.isNotEmpty)
@@ -519,7 +523,7 @@ class ResultScreen extends StatelessWidget {
     return _buildSectionCard(
       title: 'Recommended Next Steps',
       icon: Icons.checklist_rtl,
-      iconColor: Colors.blue,
+      iconColor: AppColors.primary,
       child: Column(
         children: nextSteps
             .map(
@@ -533,7 +537,7 @@ class ResultScreen extends StatelessWidget {
                       child: Icon(
                         Icons.chevron_right,
                         size: 18,
-                        color: Colors.blue,
+                        color: AppColors.primary,
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -561,7 +565,7 @@ class ResultScreen extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.error.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.error.withValues(alpha: 0.45)),
       ),
       child: Row(
@@ -597,17 +601,7 @@ class ResultScreen extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.10),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: AppDecor.softCard(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -617,7 +611,7 @@ class ResultScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: iconColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: iconColor, size: 20),
               ),
@@ -627,7 +621,7 @@ class ResultScreen extends StatelessWidget {
                   title,
                   style: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -650,7 +644,7 @@ class ResultScreen extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 120),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
@@ -664,7 +658,10 @@ class ResultScreen extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(fontSize: 11, color: Colors.black54),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
               ),
               Text(
                 value,
@@ -697,7 +694,7 @@ class ResultScreen extends StatelessWidget {
         style: TextStyle(
           color: textColor,
           fontWeight: FontWeight.w700,
-          fontSize: 11,
+          fontSize: 11.5,
         ),
       ),
     );
@@ -734,7 +731,7 @@ class ResultScreen extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
-                color: Colors.black54,
+                color: AppColors.textSecondary,
               ),
             ),
           ),
@@ -742,7 +739,7 @@ class ResultScreen extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(color: Colors.black87, height: 1.35),
+              style: const TextStyle(color: AppColors.textMain, height: 1.35),
             ),
           ),
         ],
@@ -755,13 +752,13 @@ class ResultScreen extends StatelessWidget {
       text,
       style: const TextStyle(
         fontWeight: FontWeight.w700,
-        color: Colors.black87,
+        color: AppColors.textMain,
       ),
     );
   }
 
   Widget _buildMutedText(String text) {
-    return Text(text, style: const TextStyle(color: Colors.black54));
+    return Text(text, style: const TextStyle(color: AppColors.textSecondary));
   }
 
   static double _toDouble(dynamic value) {

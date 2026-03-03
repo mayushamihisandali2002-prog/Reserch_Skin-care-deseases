@@ -1,0 +1,39 @@
+{
+  "feature_cols": [
+    "redness_index",
+    "saturation_mean",
+    "edge_density",
+    "texture_entropy",
+    "spotness"
+  ],
+  "mins": {
+    "redness_index": 0.28845348954200745,
+    "saturation_mean": 0.0002640368891697304,
+    "edge_density": 0.0,
+    "texture_entropy": -0.0,
+    "spotness": 0.49562835693359375
+  },
+  "maxs": {
+    "redness_index": 0.6867871284484863,
+    "saturation_mean": 0.809237611060049,
+    "edge_density": 0.37293243408203125,
+    "texture_entropy": 4.89849853515625,
+    "spotness": 21.497196197509766
+  },
+  "weights": {
+    "redness_index": 0.28,
+    "edge_density": 0.2,
+    "texture_entropy": 0.22,
+    "spotness": 0.2,
+    "saturation_mean": 0.1
+  },
+  "severity_thresholds": {
+    "q1": 39.87109916687012,
+    "q2": 47.332201461791996
+  },
+  "severity_levels": [
+    "mild",
+    "moderate",
+    "severe"
+  ]
+}

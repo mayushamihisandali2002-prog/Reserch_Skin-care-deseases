@@ -145,19 +145,83 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> analyzeSkinCare(String imagePath) async {
+  static Future<Map<String, dynamic>> analyzeSkinCare(
+    Uint8List imageBytes,
+    String fileName, {
+    List<String> allergies = const [],
+    List<String> goals = const [],
+    String routineLevel = 'simple',
+    String budget = 'medium',
+    bool? tightAfterWash,
+    bool? shinyAfter23h,
+  }) async {
     try {
-      final response = await http.post(
+      var request = http.MultipartRequest(
+        'POST',
         Uri.parse('$baseUrl/api/analyze-skin-care'),
       );
+
+      request.files.add(
+        http.MultipartFile.fromBytes('image', imageBytes, filename: fileName),
+      );
+
+      if (allergies.isNotEmpty) {
+        request.fields['allergies'] = allergies.join(',');
+      }
+      if (goals.isNotEmpty) {
+        request.fields['goals'] = goals.join(',');
+      }
+      request.fields['routine_level'] = routineLevel;
+      request.fields['budget'] = budget;
+      if (tightAfterWash != null) {
+        request.fields['tight_after_wash'] = tightAfterWash ? 'yes' : 'no';
+      }
+      if (shinyAfter23h != null) {
+        request.fields['shiny_after_2_3h'] = shinyAfter23h ? 'yes' : 'no';
+      }
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
-        throw Exception('Failed to analyze skin care');
+        throw Exception('Failed to analyze skin care: ${response.body}');
       }
     } catch (e) {
       print("Error analyzing skin care: $e");
+      rethrow;
+    }
+  }
+
+  static Future<Map<String, dynamic>> analyzeSeverity(
+    Uint8List imageBytes,
+    String fileName, {
+    bool track = false,
+    String userId = 'anonymous',
+  }) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/analyze-severity'),
+      );
+
+      request.files.add(
+        http.MultipartFile.fromBytes('image', imageBytes, filename: fileName),
+      );
+      request.fields['track'] = track ? 'true' : 'false';
+      request.fields['user_id'] = userId;
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to analyze severity: ${response.body}');
+      }
+    } catch (e) {
+      print("Error analyzing severity: $e");
       rethrow;
     }
   }

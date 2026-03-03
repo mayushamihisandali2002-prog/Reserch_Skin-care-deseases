@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // import for kIsWeb
-import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
@@ -140,6 +139,7 @@ class _InstructionScreenState extends State<InstructionScreen> {
         _hasTranscription = false;
       });
 
+      final options = stt.SpeechListenOptions(partialResults: true);
       await _speech.listen(
         onResult: (result) {
           setState(() {
@@ -151,8 +151,8 @@ class _InstructionScreenState extends State<InstructionScreen> {
         },
         listenFor: const Duration(seconds: 30),
         pauseFor: const Duration(seconds: 3),
-        partialResults: true,
         localeId: 'en_US',
+        listenOptions: options,
       );
 
       if (mounted) {
@@ -193,12 +193,12 @@ class _InstructionScreenState extends State<InstructionScreen> {
         if (!isWav) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'WAV files are recommended. If transcription fails, convert the voice note to WAV and try again.',
-                  ),
-                  duration: Duration(seconds: 3),
+              const SnackBar(
+                content: Text(
+                  'WAV files are recommended. If transcription fails, convert the voice note to WAV and try again.',
                 ),
+                duration: Duration(seconds: 3),
+              ),
             );
           }
         }
@@ -309,326 +309,457 @@ class _InstructionScreenState extends State<InstructionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('New Scan')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Upload a clear photo of the affected area.',
-              style: AppTextStyles.subHeading,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
+    final Color voiceStateColor = _hasUploadedAudio || _hasTranscription
+        ? AppColors.success
+        : _isRecording
+        ? AppColors.error
+        : AppColors.secondary;
 
-            // Image Area
-            GestureDetector(
-              onTap: () => _pickImage(ImageSource.gallery),
-              child: Container(
-                height: 250,
+    return Scaffold(
+      appBar: AppBar(title: const Text('New Skin Scan')),
+      body: Container(
+        decoration: const BoxDecoration(gradient: AppGradients.page),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey[300]!),
+                  gradient: AppGradients.hero,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                child: _selectedImage == null
-                    ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.add_a_photo, size: 50, color: Colors.grey),
-                          SizedBox(height: 8),
-                          Text('Tap to select image'),
-                        ],
-                      )
-                    : ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: kIsWeb
-                            ? Image.network(
-                                _selectedImage!.path,
-                                fit: BoxFit.cover,
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Capture A Clear Skin Photo',
+                      style: TextStyle(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Use natural light and keep the affected area centered. '
+                      'You can optionally add voice symptoms for better analysis.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.45,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: AppDecor.softCard(
+                  color: Colors.white.withValues(alpha: 0.88),
+                  borderColor: AppColors.border.withValues(alpha: 0.9),
+                ),
+                child: Row(
+                  children: [
+                    _tip(icon: Icons.wb_sunny_outlined, label: 'Good lighting'),
+                    const SizedBox(width: 10),
+                    _tip(
+                      icon: Icons.face_retouching_natural,
+                      label: 'No filters',
+                    ),
+                    const SizedBox(width: 10),
+                    _tip(
+                      icon: Icons.center_focus_strong,
+                      label: 'Focused view',
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: AppDecor.softCard(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Face Image', style: AppTextStyles.subHeading),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Upload one clear selfie or skin-area photo.',
+                      style: AppTextStyles.body,
+                    ),
+                    const SizedBox(height: 14),
+                    GestureDetector(
+                      onTap: () => _pickImage(ImageSource.gallery),
+                      child: Container(
+                        height: 250,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: AppColors.backgroundAlt,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: _selectedImage == null
+                            ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.add_photo_alternate_outlined,
+                                    size: 44,
+                                    color: AppColors.primaryDark.withValues(
+                                      alpha: 0.85,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  const Text(
+                                    'Tap to select image',
+                                    style: AppTextStyles.bodyStrong,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'JPG / PNG recommended',
+                                    style: AppTextStyles.caption,
+                                  ),
+                                ],
                               )
-                            : Image.file(
-                                File(_selectedImage!.path),
-                                fit: BoxFit.cover,
+                            : ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: kIsWeb
+                                    ? Image.network(
+                                        _selectedImage!.path,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Image.file(
+                                        File(_selectedImage!.path),
+                                        fit: BoxFit.cover,
+                                      ),
                               ),
                       ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () => _pickImage(ImageSource.camera),
-                  icon: const Icon(Icons.camera),
-                  label: const Text('Camera'),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () => _pickImage(ImageSource.gallery),
-                  icon: const Icon(Icons.photo_library),
-                  label: const Text('Gallery'),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 40),
-
-            // Voice Symptom Description Section
-            const Text(
-              'Describe your symptoms (Optional)',
-              style: AppTextStyles.subHeading,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Tap the mic and speak to describe your symptoms',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-
-            // Voice Recording Section
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: (_hasTranscription || _hasUploadedAudio)
-                    ? Colors.green.withOpacity(0.1)
-                    : _isRecording
-                    ? Colors.red.withOpacity(0.1)
-                    : Colors.grey.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: (_hasTranscription || _hasUploadedAudio)
-                      ? Colors.green.withOpacity(0.3)
-                      : _isRecording
-                      ? Colors.red.withOpacity(0.3)
-                      : Colors.grey.withOpacity(0.2),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    _hasUploadedAudio
-                        ? 'Voice note uploaded: $_uploadedAudioName'
-                        : _hasTranscription
-                        ? 'Symptoms captured'
-                        : _isRecording
-                        ? 'Listening...'
-                        : 'Tap the mic to speak or upload a voice note',
-                    style: TextStyle(
-                      color: (_hasTranscription || _hasUploadedAudio)
-                          ? Colors.green
-                          : _isRecording
-                          ? Colors.red
-                          : Colors.grey,
-                      fontWeight: FontWeight.w500,
                     ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Live transcript display or uploaded audio info
-                  if (_transcribedText.isNotEmpty ||
-                      _isRecording ||
-                      _hasUploadedAudio)
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () => _pickImage(ImageSource.camera),
+                            icon: const Icon(Icons.photo_camera_outlined),
+                            label: const Text('Camera'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _pickImage(ImageSource.gallery),
+                            icon: const Icon(Icons.photo_library_outlined),
+                            label: const Text('Gallery'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: AppDecor.softCard(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: voiceStateColor.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            _hasUploadedAudio
+                                ? Icons.upload_file
+                                : _isRecording
+                                ? Icons.mic
+                                : Icons.keyboard_voice_outlined,
+                            size: 20,
+                            color: voiceStateColor,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'Voice Symptoms (Optional)',
+                            style: AppTextStyles.subHeading,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _voiceStateText(),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: voiceStateColor,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     Container(
+                      width: double.infinity,
                       padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
                       ),
-                      width: double.infinity,
                       child: Text(
-                        _hasUploadedAudio
-                            ? 'Audio file: $_uploadedAudioName\n(Will be transcribed on server)'
-                            : _transcribedText.isEmpty
-                            ? 'Speak now...'
-                            : _transcribedText,
+                        _voiceDetailText(),
                         style: TextStyle(
+                          fontSize: 13,
                           color:
-                              (_hasUploadedAudio || _transcribedText.isNotEmpty)
-                              ? Colors.black87
-                              : Colors.grey,
-                          fontSize: 14,
+                              _hasUploadedAudio || _transcribedText.isNotEmpty
+                              ? AppColors.textMain
+                              : AppColors.textSecondary,
                           fontStyle:
-                              (_hasUploadedAudio || _transcribedText.isNotEmpty)
+                              _hasUploadedAudio || _transcribedText.isNotEmpty
                               ? FontStyle.normal
                               : FontStyle.italic,
                         ),
                       ),
                     ),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Record Button
-                      Column(
-                        children: [
-                          GestureDetector(
-                            onTap: _toggleRecording,
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _isRecording
-                                    ? Colors.red
-                                    : _hasTranscription
-                                    ? Colors.green
-                                    : AppColors.secondary.withOpacity(0.8),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color:
-                                        (_isRecording
-                                                ? Colors.red
-                                                : AppColors.secondary)
-                                            .withOpacity(0.3),
-                                    blurRadius: 10,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                _isRecording
-                                    ? Icons.stop
-                                    : _hasTranscription
-                                    ? Icons.check
-                                    : Icons.mic,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _voiceActionButton(
+                          icon: _isRecording
+                              ? Icons.stop_circle_outlined
+                              : _hasTranscription
+                              ? Icons.check_circle_outline
+                              : Icons.mic_none_rounded,
+                          label: _isRecording
+                              ? 'Stop Recording'
+                              : 'Record Voice',
+                          onTap: _toggleRecording,
+                          color: _isRecording
+                              ? AppColors.error
+                              : _hasTranscription
+                              ? AppColors.success
+                              : AppColors.secondary,
+                        ),
+                        _voiceActionButton(
+                          icon: _hasUploadedAudio
+                              ? Icons.check_circle_outline
+                              : Icons.upload_file_outlined,
+                          label: _hasUploadedAudio
+                              ? 'Audio Uploaded'
+                              : 'Upload Audio',
+                          onTap: _pickAudioFile,
+                          color: _hasUploadedAudio
+                              ? AppColors.success
+                              : AppColors.primary,
+                        ),
+                        if (_hasTranscription || _hasUploadedAudio)
+                          _voiceActionButton(
+                            icon: Icons.delete_outline,
+                            label: 'Clear',
+                            onTap: _deleteTranscription,
+                            color: AppColors.error,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _isRecording ? 'Stop' : 'Speak',
-                            style: TextStyle(
-                              color: _isRecording ? Colors.red : Colors.grey,
-                              fontSize: 11,
-                            ),
+                      ],
+                    ),
+                    if (!_speechAvailable) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: AppColors.warning.withValues(alpha: 0.4),
                           ),
-                        ],
-                      ),
-                      const SizedBox(width: 24),
-                      // Upload Button
-                      Column(
-                        children: [
-                          GestureDetector(
-                            onTap: _pickAudioFile,
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _hasUploadedAudio
-                                    ? Colors.green
-                                    : Colors.blue.withOpacity(0.8),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color:
-                                        (_hasUploadedAudio
-                                                ? Colors.green
-                                                : Colors.blue)
-                                            .withOpacity(0.3),
-                                    blurRadius: 10,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                _hasUploadedAudio
-                                    ? Icons.check
-                                    : Icons.upload_file,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Upload',
-                            style: TextStyle(
-                              color: _hasUploadedAudio
-                                  ? Colors.green
-                                  : Colors.grey,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (_hasTranscription || _hasUploadedAudio) ...[
-                        const SizedBox(width: 24),
-                        // Clear Button
-                        Column(
+                        ),
+                        child: const Row(
                           children: [
-                            GestureDetector(
-                              onTap: _deleteTranscription,
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.red.withOpacity(0.1),
-                                  border: Border.all(
-                                    color: Colors.red.withOpacity(0.3),
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.red,
-                                  size: 24,
+                            Icon(
+                              Icons.info_outline,
+                              size: 16,
+                              color: AppColors.warning,
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Speech recognition not available on this device. Use Upload Audio.',
+                                style: TextStyle(
+                                  color: AppColors.warning,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Clear',
-                              style: TextStyle(color: Colors.red, fontSize: 11),
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (!_speechAvailable)
-                    const Text(
-                      'Speech recognition unavailable. Upload audio file instead.',
-                      style: TextStyle(color: Colors.orange, fontSize: 11),
-                      textAlign: TextAlign.center,
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-
-            const SizedBox(height: 30),
-
-            // Analyze Button
-            SizedBox(
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _analyze,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              const SizedBox(height: 18),
+              SizedBox(
+                height: 54,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: _isLoading
+                        ? LinearGradient(
+                            colors: [
+                              AppColors.textSecondary.withValues(alpha: 0.6),
+                              AppColors.textSecondary.withValues(alpha: 0.5),
+                            ],
+                          )
+                        : const LinearGradient(
+                            colors: [AppColors.primary, AppColors.primaryDark],
+                          ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: _isLoading
+                        ? null
+                        : [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.28),
+                              blurRadius: 14,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: _isLoading ? null : _analyze,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    icon: _isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.4,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.analytics_outlined,
+                            color: Colors.white,
+                          ),
+                    label: Text(
+                      _isLoading ? 'Analyzing...' : 'Analyze Skin Condition',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
                 ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        'Send & Analyze',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tip({required IconData icon, required String label}) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.75),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: AppColors.primaryDark),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMain,
+                ),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _voiceActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required Color color,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _voiceStateText() {
+    if (_hasUploadedAudio) {
+      return 'Audio uploaded: ${_uploadedAudioName ?? "voice note"}';
+    }
+    if (_hasTranscription) {
+      return 'Voice transcription captured';
+    }
+    if (_isRecording) {
+      return 'Listening... speak your symptoms';
+    }
+    return 'Record directly or upload a voice note for symptom context';
+  }
+
+  String _voiceDetailText() {
+    if (_hasUploadedAudio) {
+      return 'Audio file: ${_uploadedAudioName ?? "voice note"}\n'
+          '(transcription happens on the backend)';
+    }
+    if (_transcribedText.isNotEmpty) {
+      return _transcribedText;
+    }
+    if (_isRecording) {
+      return 'Listening for up to 30 seconds...';
+    }
+    return 'No voice content added yet.';
   }
 }

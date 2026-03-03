@@ -29,6 +29,16 @@ DISTILBERT_MODEL_DIR = MODELS_DIR / "distilbert"
 #
 IMAGE_MODEL_PATH = MODELS_DIR / "image_best_finetuned.pt"
 
+#   3) ConvNeXt skin-type model + label map
+#
+SKIN_TYPE_MODEL_PATH = MODELS_DIR / "skin_type" / "skin_type_convnext_cleaned_best.pt"
+SKIN_TYPE_LABEL_MAP_PATH = MODELS_DIR / "skin_type" / "label_map_skin_type.json"
+
+#   4) Face skin severity model + metadata
+#
+SEVERITY_MODEL_PATH = MODELS_DIR / "severity" / "severity_model.joblib"
+SEVERITY_METADATA_PATH = MODELS_DIR / "severity" / "metadata.json"
+
 # ── Legacy Paths (sklearn fallback) ───────────────────────────────────────────
 TEXT_MODEL_PATH    = MODELS_DIR / "text_model.pkl"
 VECTORIZER_PATH    = MODELS_DIR / "vectorizer.pkl"
@@ -159,6 +169,10 @@ def get_model_status() -> dict:
     return {
         "distilbert_model":     DISTILBERT_MODEL_DIR.exists(),
         "image_model":          IMAGE_MODEL_PATH.exists(),
+        "skin_type_model":      SKIN_TYPE_MODEL_PATH.exists(),
+        "skin_type_label_map":  SKIN_TYPE_LABEL_MAP_PATH.exists(),
+        "severity_model":       SEVERITY_MODEL_PATH.exists(),
+        "severity_metadata":    SEVERITY_METADATA_PATH.exists(),
         "text_model_legacy":    TEXT_MODEL_PATH.exists(),
         "vectorizer_legacy":    VECTORIZER_PATH.exists(),
         "disease_symptom_csv":  DISEASE_SYMPTOM_CSV.exists(),

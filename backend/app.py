@@ -7,7 +7,7 @@ Endpoints:
   POST /api/chat            – conversational AI diagnosis (text, session memory)
   POST /api/analyze         – image-only diagnosis (ResNet-18)
   POST /api/analyze-fused   – multimodal diagnosis (image + text, fusion)
-  POST /api/analyze-skin-care  – skin care advice (placeholder)
+  POST /api/analyze-skin-care  – skin-type analysis + routine guidance
   GET  /api/history         – progress history (mock)
   GET  /api/stats           – symptom stats (mock)
   POST /api/progress        – log new progress entry (mock)
@@ -20,6 +20,8 @@ import logging
 import tempfile
 import shutil
 import subprocess
+import csv
+import json
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -77,7 +79,15 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, str(Path(__file__).parent))
 
 from inference import get_inference_pipeline
-from inference.config import get_model_status
+from inference.config import (
+    SEVERITY_METADATA_PATH,
+    SEVERITY_MODEL_PATH,
+    SKIN_TYPE_LABEL_MAP_PATH,
+    SKIN_TYPE_MODEL_PATH,
+    get_model_status,
+)
+from inference.severity_model import get_severity_model
+from inference.skin_type_model import get_skin_type_model
 
 app = Flask(__name__)
 CORS(
@@ -250,6 +260,36 @@ except Exception as exc:
     print(f"❌ Failed to load inference pipeline: {exc}")
     inference_pipeline = None
 
+try:
+    skin_type_model = get_skin_type_model(
+        model_path=SKIN_TYPE_MODEL_PATH,
+        label_map_path=SKIN_TYPE_LABEL_MAP_PATH,
+    )
+    if skin_type_model.loaded:
+        print("Skin-type ConvNeXt model ready")
+    else:
+        print(f"Skin-type model failed to load: {skin_type_model.load_error}")
+except Exception as exc:
+    print(f"Failed to initialize skin-type model: {exc}")
+    skin_type_model = None
+
+try:
+    severity_model = get_severity_model(
+        model_path=SEVERITY_MODEL_PATH,
+        metadata_path=SEVERITY_METADATA_PATH,
+    )
+    if severity_model.loaded:
+        print("Face severity model ready")
+    else:
+        print(f"Face severity model failed to load: {severity_model.load_error}")
+except Exception as exc:
+    print(f"Failed to initialize face severity model: {exc}")
+    severity_model = None
+
+SEVERITY_TRACK_DIR = Path(__file__).parent / "assets" / "data" / "severity_tracking"
+SEVERITY_VISITS_CSV = SEVERITY_TRACK_DIR / "visits.csv"
+SEVERITY_WEEKS_JSON = SEVERITY_TRACK_DIR / "_weeks.json"
+
 # ── Mock data (history / stats) ───────────────────────────────────────────────
 MOCK_HISTORY = [
     {"week": "Week 1", "date": "2025-11-01", "image_url": "assets/images/week1.png",
@@ -295,6 +335,23 @@ def status():
         "service":              "online",
         "models":               get_model_status(),
         "inference_available":  inference_pipeline is not None,
+        "skin_type_inference_available": (
+            skin_type_model is not None and skin_type_model.loaded
+        ),
+        "severity_inference_available": (
+            severity_model is not None and severity_model.loaded
+        ),
+        "python_executable":    sys.executable,
+        "skin_type_model_error": (
+            None
+            if skin_type_model is None or skin_type_model.loaded
+            else skin_type_model.load_error
+        ),
+        "severity_model_error": (
+            None
+            if severity_model is None or severity_model.loaded
+            else severity_model.load_error
+        ),
         "timestamp":            datetime.datetime.now().isoformat(),
     })
 
@@ -343,6 +400,664 @@ def _build_next_steps(
 
     steps.append("Seek dermatology care urgently for fever, spreading redness, severe pain, or infection signs.")
     return steps
+
+
+def _skin_type_profile(skin_type_raw: str) -> dict:
+    key = str(skin_type_raw or "").strip().lower().replace(" ", "_")
+
+    profiles = {
+        "oily": {
+            "display": "Oily",
+            "recommendations": [
+                "Use a gentle gel or foaming cleanser twice daily.",
+                "Choose oil-free, non-comedogenic moisturizer.",
+                "Use broad-spectrum SPF 30+ every morning.",
+                "Use salicylic acid 2-3 times per week if tolerated.",
+            ],
+            "routine": {
+                "morning": "Foaming cleanser, lightweight moisturizer, SPF 30+.",
+                "night": "Cleanser, oil-control serum (optional), light moisturizer.",
+            },
+        },
+        "dry": {
+            "display": "Dry",
+            "recommendations": [
+                "Use a creamy, fragrance-free cleanser.",
+                "Apply rich moisturizer on damp skin after cleansing.",
+                "Use sunscreen SPF 30+ daily.",
+                "Avoid over-exfoliation and very hot water.",
+            ],
+            "routine": {
+                "morning": "Gentle cleanser, hydrating moisturizer, SPF 30+.",
+                "night": "Cleanser, barrier-repair moisturizer, optional occlusive layer.",
+            },
+        },
+        "combination": {
+            "display": "Combination",
+            "recommendations": [
+                "Use a gentle low-foam cleanser twice daily.",
+                "Apply lightweight moisturizer overall, extra on dry areas.",
+                "Use broad-spectrum SPF 30+ daily.",
+                "Target oily zones with mild exfoliation 1-2 times per week.",
+            ],
+            "routine": {
+                "morning": "Gentle cleanser, balanced moisturizer, SPF 30+.",
+                "night": "Cleanser, light moisturizer, spot treatment on oily areas if needed.",
+            },
+        },
+    }
+
+    return profiles.get(
+        key,
+        {
+            "display": "Unknown",
+            "recommendations": [
+                "Use a gentle cleanser and fragrance-free moisturizer.",
+                "Use broad-spectrum SPF 30+ daily.",
+                "Avoid introducing multiple new products at once.",
+            ],
+            "routine": {
+                "morning": "Gentle cleanser, moisturizer, SPF 30+.",
+                "night": "Gentle cleanser and moisturizer.",
+            },
+        },
+    )
+
+
+def _parse_tag_list(raw_value: str | None) -> list[str]:
+    """
+    Parse user-entered list values (comma/semicolon/newline separated).
+    """
+    if raw_value is None:
+        return []
+
+    text = str(raw_value).strip()
+    if not text:
+        return []
+
+    tokens: list[str] = []
+    separators_normalized = (
+        text.replace(";", ",")
+        .replace("|", ",")
+        .replace("\n", ",")
+        .replace("\r", ",")
+    )
+    for token in separators_normalized.split(","):
+        cleaned = token.strip().lower()
+        if cleaned and cleaned not in tokens:
+            tokens.append(cleaned)
+    return tokens
+
+
+def _parse_bool_flag(raw_value: str | None) -> bool:
+    if raw_value is None:
+        return False
+    value = str(raw_value).strip().lower()
+    return value in {"1", "true", "yes", "y", "sensitive", "high"}
+
+
+def _normalize_tags(raw_tags: list[str], synonyms: dict[str, str]) -> list[str]:
+    normalized: list[str] = []
+    for tag in raw_tags:
+        canonical = synonyms.get(tag)
+        if canonical is None:
+            for key, mapped in synonyms.items():
+                if key in tag:
+                    canonical = mapped
+                    break
+        if canonical is None:
+            canonical = tag.replace(" ", "_")
+        if canonical not in normalized:
+            normalized.append(canonical)
+    return normalized
+
+
+def _pretty_label(tag: str) -> str:
+    return tag.replace("_", " ").title()
+
+
+ALLERGY_LABELS = {
+    "fragrance": "fragrance",
+    "alcohol_denat": "alcohol denat.",
+    "essential_oils": "essential oils",
+    "niacinamide": "niacinamide",
+    "salicylic_acid_bha": "salicylic acid (BHA)",
+    "aha": "glycolic/lactic acid (AHA)",
+    "retinoids": "retinoids",
+    "benzoyl_peroxide": "benzoyl peroxide",
+    "sunscreen_filters": "sunscreen filters",
+}
+
+GOAL_LABELS = {
+    "acne_pimples": "acne / pimples",
+    "oil_control": "oil control",
+    "dryness": "dryness",
+    "redness_irritation": "redness/irritation",
+    "dark_spots": "dark spots",
+    "texture_pores": "texture / pores",
+    "wrinkles_anti_aging": "wrinkles / anti-aging",
+}
+
+ROUTINE_LEVELS = {"simple", "full"}
+BUDGET_LEVELS = {"low", "medium", "flexible"}
+SKIN_TYPES = {"oily", "dry", "combination"}
+
+
+def _safe_float(value: object, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return float(default)
+
+
+def _parse_track_flag(raw_value: str | None) -> bool:
+    if raw_value is None:
+        return False
+    value = str(raw_value).strip().lower()
+    return value in {"1", "true", "yes", "y", "on"}
+
+
+def _append_severity_visit(
+    user_id: str,
+    severity_level: str,
+    severity_score: float,
+    confidence: float,
+) -> None:
+    SEVERITY_TRACK_DIR.mkdir(parents=True, exist_ok=True)
+
+    file_exists = SEVERITY_VISITS_CSV.exists()
+    timestamp = datetime.datetime.now().isoformat()
+
+    with open(SEVERITY_VISITS_CSV, "a", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "timestamp",
+                "user_id",
+                "severity_level",
+                "severity_score",
+                "confidence",
+            ],
+        )
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(
+            {
+                "timestamp": timestamp,
+                "user_id": user_id,
+                "severity_level": severity_level,
+                "severity_score": f"{severity_score:.4f}",
+                "confidence": f"{confidence:.6f}",
+            }
+        )
+
+
+def _build_severity_tracking_summary(user_id: str) -> dict:
+    if not SEVERITY_VISITS_CSV.exists():
+        return {
+            "visits_count": 0,
+            "improvement_percent": 0.0,
+            "weekly_trend": [],
+            "latest_visit": None,
+            "files": {
+                "visits_csv": str(SEVERITY_VISITS_CSV),
+                "weeks_json": str(SEVERITY_WEEKS_JSON),
+            },
+        }
+
+    rows: list[dict] = []
+    with open(SEVERITY_VISITS_CSV, "r", encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if (row.get("user_id") or "anonymous") == user_id:
+                rows.append(row)
+
+    if not rows:
+        return {
+            "visits_count": 0,
+            "improvement_percent": 0.0,
+            "weekly_trend": [],
+            "latest_visit": None,
+            "files": {
+                "visits_csv": str(SEVERITY_VISITS_CSV),
+                "weeks_json": str(SEVERITY_WEEKS_JSON),
+            },
+        }
+
+    rows.sort(key=lambda item: item.get("timestamp", ""))
+
+    first_score = _safe_float(rows[0].get("severity_score"), 0.0)
+    latest_score = _safe_float(rows[-1].get("severity_score"), 0.0)
+
+    if first_score > 0:
+        # Positive improvement means severity score reduced over time.
+        improvement_percent = ((first_score - latest_score) / first_score) * 100.0
+    else:
+        improvement_percent = 0.0
+
+    week_scores: dict[str, list[float]] = {}
+    for row in rows:
+        ts = row.get("timestamp", "")
+        score = _safe_float(row.get("severity_score"), 0.0)
+        try:
+            dt = datetime.datetime.fromisoformat(ts)
+            iso = dt.isocalendar()
+            week_key = f"{iso.year}-W{iso.week:02d}"
+        except Exception:
+            week_key = "unknown-week"
+        week_scores.setdefault(week_key, []).append(score)
+
+    weekly_trend = []
+    for week_key in sorted(week_scores.keys()):
+        scores = week_scores[week_key]
+        avg_score = float(sum(scores) / max(1, len(scores)))
+        weekly_trend.append({"week": week_key, "avg_severity_score": round(avg_score, 2)})
+
+    payload = {
+        "updated_at": datetime.datetime.now().isoformat(),
+        "user_id": user_id,
+        "weekly_trend": weekly_trend,
+    }
+    SEVERITY_TRACK_DIR.mkdir(parents=True, exist_ok=True)
+    with open(SEVERITY_WEEKS_JSON, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+
+    latest = rows[-1]
+    return {
+        "visits_count": len(rows),
+        "improvement_percent": round(float(improvement_percent), 2),
+        "weekly_trend": weekly_trend,
+        "latest_visit": {
+            "timestamp": latest.get("timestamp"),
+            "severity_level": latest.get("severity_level"),
+            "severity_score": round(_safe_float(latest.get("severity_score"), 0.0), 2),
+            "confidence": round(_safe_float(latest.get("confidence"), 0.0), 4),
+        },
+        "files": {
+            "visits_csv": str(SEVERITY_VISITS_CSV),
+            "weeks_json": str(SEVERITY_WEEKS_JSON),
+        },
+    }
+
+
+def _parse_optional_bool_flag(raw_value: str | None) -> bool | None:
+    if raw_value is None:
+        return None
+    value = str(raw_value).strip().lower()
+    if value in {"1", "true", "yes", "y"}:
+        return True
+    if value in {"0", "false", "no", "n"}:
+        return False
+    return None
+
+
+def _normalize_choice(raw_value: str | None, allowed: set[str], default: str) -> str:
+    if raw_value is None:
+        return default
+    value = str(raw_value).strip().lower()
+    return value if value in allowed else default
+
+
+def _to_display_terms(values: list[str], label_map: dict[str, str]) -> list[str]:
+    result: list[str] = []
+    for value in values:
+        term = label_map.get(value, value.replace("_", " "))
+        if term not in result:
+            result.append(term)
+    return result
+
+
+def _normalize_probabilities(probabilities: dict) -> dict[str, float]:
+    normalized: dict[str, float] = {}
+    if not isinstance(probabilities, dict):
+        return normalized
+    for key, value in probabilities.items():
+        label = str(key).strip().lower().replace(" ", "_")
+        label = label.replace("-", "_")
+        normalized[label] = float(value)
+    return normalized
+
+
+def _infer_skin_type_from_questions(
+    predicted_skin_type: str,
+    tight_after_wash: bool | None,
+    shiny_after_2_3h: bool | None,
+) -> str:
+    predicted = str(predicted_skin_type or "").strip().lower().replace(" ", "_")
+    if predicted not in SKIN_TYPES:
+        predicted = "combination"
+
+    if tight_after_wash is None or shiny_after_2_3h is None:
+        return predicted
+    if tight_after_wash and not shiny_after_2_3h:
+        return "dry"
+    if shiny_after_2_3h and not tight_after_wash:
+        return "oily"
+    return "combination"
+
+
+def _build_structured_skin_care_output(
+    skin_type: str,
+    goals_input: list[str],
+    allergies_input: list[str],
+    routine_level: str,
+    budget: str,
+) -> dict:
+    key = str(skin_type or "").strip().lower().replace(" ", "_")
+    if key not in SKIN_TYPES:
+        key = "combination"
+
+    base_safe_ingredients = {
+        "oily": [
+            "Niacinamide",
+            "Salicylic Acid (BHA)",
+            "Oil-free lightweight moisturizer",
+            "Gel sunscreen SPF 30+",
+        ],
+        "dry": [
+            "Hyaluronic Acid",
+            "Ceramides",
+            "Glycerin",
+            "Cream moisturizer",
+            "Sunscreen SPF 30+",
+        ],
+        "combination": [
+            "Niacinamide",
+            "Hyaluronic Acid",
+            "Lightweight moisturizer",
+            "Sunscreen SPF 30+",
+        ],
+    }
+
+    goal_safe_additions = {
+        "acne_pimples": ["Benzoyl Peroxide (low strength)"],
+        "oil_control": ["Zinc PCA"],
+        "dryness": ["Panthenol"],
+        "redness_irritation": ["Azelaic Acid"],
+        "dark_spots": ["Vitamin C (low strength)"],
+        "texture_pores": ["PHA exfoliant (gentle)"],
+        "wrinkles_anti_aging": ["Retinoid (low strength)"],
+    }
+
+    allergy_to_avoid_label = {
+        "fragrance": "Fragrance",
+        "alcohol_denat": "Alcohol Denat.",
+        "essential_oils": "Essential Oils",
+        "niacinamide": "Niacinamide",
+        "salicylic_acid_bha": "Salicylic Acid (BHA)",
+        "aha": "Glycolic/Lactic Acid (AHA)",
+        "retinoids": "Retinoids",
+        "benzoyl_peroxide": "Benzoyl Peroxide",
+        "sunscreen_filters": "Chemical Sunscreen Filters",
+    }
+
+    allergy_conflict_tokens = {
+        "fragrance": ["fragrance", "perfume", "essential oil"],
+        "alcohol_denat": ["alcohol"],
+        "essential_oils": ["essential oil"],
+        "niacinamide": ["niacinamide"],
+        "salicylic_acid_bha": ["salicylic"],
+        "aha": ["glycolic", "lactic", "aha", "exfoliant"],
+        "retinoids": ["retinoid", "retinol"],
+        "benzoyl_peroxide": ["benzoyl peroxide"],
+        "sunscreen_filters": ["chemical sunscreen filter"],
+    }
+
+    safe_ingredients = list(base_safe_ingredients.get(key, base_safe_ingredients["combination"]))
+    for goal in goals_input:
+        for ingredient in goal_safe_additions.get(goal, []):
+            if ingredient not in safe_ingredients:
+                safe_ingredients.append(ingredient)
+
+    avoid_ingredients: list[str] = []
+    conflict_tokens: list[str] = []
+    for allergy in allergies_input:
+        label = allergy_to_avoid_label.get(allergy)
+        if label and label not in avoid_ingredients:
+            avoid_ingredients.append(label)
+        conflict_tokens.extend(allergy_conflict_tokens.get(allergy, []))
+
+    if key == "oily" and "Heavy Oils" not in avoid_ingredients:
+        avoid_ingredients.append("Heavy Oils")
+    if key == "dry" and "Harsh Foaming Cleansers" not in avoid_ingredients:
+        avoid_ingredients.append("Harsh Foaming Cleansers")
+
+    filtered_safe: list[str] = []
+    for ingredient in safe_ingredients:
+        lowered = ingredient.lower()
+        if any(token in lowered for token in conflict_tokens):
+            continue
+        if ingredient not in filtered_safe:
+            filtered_safe.append(ingredient)
+    safe_ingredients = filtered_safe or ["Fragrance-free gentle moisturizer"]
+
+    am_steps = ["Gentle cleanser", "Light moisturizer", "Sunscreen SPF 30+"]
+    pm_steps = ["Gentle cleanser", "Treatment", "Moisturizer"]
+
+    if key == "oily":
+        am_steps[0] = "Oil-control cleanser"
+        pm_steps[0] = "Oil-control cleanser"
+    if key == "dry":
+        am_steps[1] = "Ceramide moisturizer"
+        pm_steps[2] = "Barrier-repair moisturizer"
+
+    if routine_level == "full":
+        am_steps.insert(1, "Targeted serum")
+        pm_steps.insert(1, "Targeted serum")
+
+    if "acne_pimples" in goals_input:
+        pm_steps[2 if routine_level == "full" else 1] = "Acne treatment (if tolerated)"
+    if "dark_spots" in goals_input:
+        am_steps[1 if routine_level == "simple" else 2] = "Brightening serum"
+    if "redness_irritation" in goals_input and "Calming serum" not in pm_steps:
+        pm_steps.append("Calming serum")
+
+    note = "Cosmetic guidance only; not a medical diagnosis."
+    if budget == "low":
+        note += " Choose budget-friendly fragrance-free basics."
+    elif budget == "flexible":
+        note += " You can consider premium formulations if tolerated."
+
+    visible_concerns = _to_display_terms(goals_input, GOAL_LABELS)
+    recommendations = [
+        f"Safe ingredients to prioritize: {', '.join(safe_ingredients)}.",
+        f"Avoid ingredients: {', '.join(avoid_ingredients) if avoid_ingredients else 'none specific'}.",
+    ]
+
+    return {
+        "safe_ingredients": safe_ingredients,
+        "avoid_ingredients": avoid_ingredients,
+        "routine": {"AM": am_steps, "PM": pm_steps},
+        "visible_concerns": visible_concerns,
+        "recommendations": recommendations,
+        "disclaimer": note,
+        "note": note,
+    }
+
+
+def _build_skin_care_assistant(
+    skin_type_raw: str,
+    confidence: float,
+    concerns_input: list[str],
+    allergies_input: list[str],
+    goals_input: list[str],
+    sensitive_skin: bool,
+) -> dict:
+    concern_synonyms = {
+        "acne": "acne",
+        "pimples": "acne",
+        "breakout": "acne",
+        "breakouts": "acne",
+        "redness": "redness",
+        "dark spots": "dark_spots",
+        "pigmentation": "dark_spots",
+        "spots": "dark_spots",
+        "dry": "dryness",
+        "dryness": "dryness",
+        "flaky": "dryness",
+        "oiliness": "oiliness",
+        "oily": "oiliness",
+        "large pores": "large_pores",
+        "pores": "large_pores",
+        "dullness": "dullness",
+        "sensitive": "sensitivity",
+        "sensitivity": "sensitivity",
+        "texture": "uneven_texture",
+        "uneven texture": "uneven_texture",
+        "fine lines": "fine_lines",
+    }
+
+    goal_synonyms = {
+        "glow": "glow",
+        "brighten": "brightening",
+        "brightening": "brightening",
+        "hydration": "hydration",
+        "hydrate": "hydration",
+        "oil control": "oil_control",
+        "reduce oil": "oil_control",
+        "reduce acne": "acne_control",
+        "acne control": "acne_control",
+        "clear acne": "acne_control",
+        "reduce redness": "reduce_redness",
+        "calm redness": "reduce_redness",
+        "anti aging": "anti_aging",
+        "anti-aging": "anti_aging",
+        "fine lines": "anti_aging",
+        "dark spots": "spot_fading",
+        "fade spots": "spot_fading",
+        "barrier repair": "barrier_repair",
+        "repair barrier": "barrier_repair",
+    }
+
+    skin_type_defaults = {
+        "oily": ["oiliness", "large_pores"],
+        "dry": ["dryness", "dullness"],
+        "combination": ["oiliness", "dryness", "uneven_texture"],
+    }
+    default_goals = {
+        "oily": ["oil_control", "acne_control"],
+        "dry": ["hydration", "barrier_repair"],
+        "combination": ["oil_control", "hydration", "glow"],
+    }
+
+    key = str(skin_type_raw or "").strip().lower().replace(" ", "_")
+    concerns = _normalize_tags(concerns_input, concern_synonyms)
+    goals = _normalize_tags(goals_input, goal_synonyms)
+    inferred_concerns = skin_type_defaults.get(key, [])
+    for concern in inferred_concerns:
+        if concern not in concerns:
+            concerns.append(concern)
+    if not goals:
+        goals = default_goals.get(key, ["hydration", "glow"])
+
+    ingredient_rules = {
+        "fragrance": ["fragrance", "parfum", "perfume", "essential oil"],
+        "salicylic_acid": ["salicylic", "bha"],
+        "retinoids": ["retinol", "retinoid", "tretinoin", "adapalene"],
+        "benzoyl_peroxide": ["benzoyl peroxide"],
+        "niacinamide": ["niacinamide"],
+        "vitamin_c": ["vitamin c", "ascorbic"],
+        "nuts": ["nut", "almond", "argan"],
+        "sulfates": ["sulfate", "sls", "sles"],
+        "alcohol_denat": ["alcohol", "ethanol", "alcohol denat"],
+    }
+
+    avoid_ingredients: list[str] = []
+    for allergy in allergies_input:
+        for ingredient_key, cues in ingredient_rules.items():
+            if any(cue in allergy for cue in cues):
+                label = _pretty_label(ingredient_key)
+                if label not in avoid_ingredients:
+                    avoid_ingredients.append(label)
+
+    if sensitive_skin:
+        for sensitive_avoid in ["Fragrance", "Alcohol Denat", "High-Strength Exfoliants"]:
+            if sensitive_avoid not in avoid_ingredients:
+                avoid_ingredients.append(sensitive_avoid)
+
+    profile = _skin_type_profile(key)
+    routine = {
+        "morning": profile["routine"]["morning"],
+        "night": profile["routine"]["night"],
+        "weekly": "Exfoliate gently 1-2 times per week only if skin is stable.",
+    }
+
+    if "acne" in concerns or "acne_control" in goals:
+        routine["night"] += " Add acne treatment (salicylic acid or retinoid) on alternate nights if tolerated."
+    if "dark_spots" in concerns or "spot_fading" in goals:
+        routine["morning"] += " Add antioxidant/brightening step (e.g., vitamin C or azelaic acid) if tolerated."
+    if "dryness" in concerns or "hydration" in goals:
+        routine["night"] += " Seal hydration with a ceramide-rich moisturizer."
+    if sensitive_skin or "sensitivity" in concerns:
+        routine["weekly"] = "Skip harsh exfoliation; prioritize barrier-repair products and patch testing."
+
+    product_categories = [
+        {"category": "Cleanser", "purpose": "Gentle cleansing without over-stripping"},
+        {"category": "Moisturizer", "purpose": "Support barrier and hydration balance"},
+        {"category": "Sunscreen SPF 30+", "purpose": "Daily UV protection and spot prevention"},
+    ]
+    if "acne" in concerns:
+        product_categories.append({"category": "Acne Treatment", "purpose": "Control breakouts and reduce inflammation"})
+    if "dark_spots" in concerns:
+        product_categories.append({"category": "Brightening Serum", "purpose": "Fade uneven tone and post-acne marks"})
+    if "fine_lines" in concerns or "anti_aging" in goals:
+        product_categories.append({"category": "Night Active", "purpose": "Support collagen and texture refinement"})
+
+    recommendations = []
+    for item in product_categories[:6]:
+        recommendations.append(
+            f"{item['category']}: {item['purpose']}."
+        )
+    if avoid_ingredients:
+        recommendations.append(
+            "Avoid products containing: " + ", ".join(avoid_ingredients) + "."
+        )
+
+    glow_up_plan = []
+    goal_actions = {
+        "glow": "Focus on consistent SPF use and hydration for 4-6 weeks.",
+        "brightening": "Use one brightening active (vitamin C or azelaic acid) daily if tolerated.",
+        "hydration": "Use humectant + ceramide moisturizer morning and night.",
+        "oil_control": "Use lightweight non-comedogenic products and control over-cleansing.",
+        "acne_control": "Introduce acne active slowly and avoid picking lesions.",
+        "reduce_redness": "Use fragrance-free calming products and avoid high-heat exposure.",
+        "anti_aging": "Use sunscreen daily and start low-frequency retinoid if tolerated.",
+        "spot_fading": "Prioritize sunscreen and brightening actives consistently.",
+        "barrier_repair": "Minimize actives temporarily and rebuild with soothing moisturizers.",
+    }
+    for goal in goals:
+        action = goal_actions.get(goal)
+        if action and action not in glow_up_plan:
+            glow_up_plan.append(action)
+    if not glow_up_plan:
+        glow_up_plan.append("Stay consistent with a simple routine for at least 4 weeks before changing products.")
+
+    cautions = []
+    if sensitive_skin:
+        cautions.append("Use one new product at a time with 48-hour patch testing.")
+    if confidence < 0.50:
+        cautions.append("Model confidence is low. Retake a clear frontal image in natural light.")
+    if avoid_ingredients:
+        cautions.append("Cross-check product ingredient lists before use.")
+
+    return {
+        "visible_concerns": [_pretty_label(item) for item in concerns],
+        "goals": [_pretty_label(item) for item in goals],
+        "routine": routine,
+        "product_categories": product_categories,
+        "recommendations": recommendations,
+        "glow_up_plan": glow_up_plan,
+        "safety_screening": {
+            "allergies_reported": allergies_input,
+            "sensitivity_reported": sensitive_skin,
+            "avoid_ingredients": avoid_ingredients,
+            "cautions": cautions,
+        },
+        "follow_up_questions": [
+            "Any active ingredients currently in your routine?",
+            "Do you want a low-budget or premium routine?",
+        ],
+    }
 
 
 # ── Image analysis (ResNet-18) ────────────────────────────────────────────────
@@ -660,17 +1375,215 @@ def analyze_fused():
 
 @app.route("/api/analyze-skin-care", methods=["POST", "OPTIONS"])
 def analyze_skin_care():
+    global skin_type_model
+
     if request.method == "OPTIONS":
         return "", 204
+
+    if skin_type_model is None or not skin_type_model.loaded:
+        try:
+            skin_type_model = get_skin_type_model(
+                model_path=SKIN_TYPE_MODEL_PATH,
+                label_map_path=SKIN_TYPE_LABEL_MAP_PATH,
+                force_reload=True,
+            )
+        except Exception:
+            skin_type_model = None
+
+    if skin_type_model is None or not skin_type_model.loaded:
+        return jsonify({
+            "error": "Skin-type model unavailable",
+            "detail": (
+                None if skin_type_model is None else skin_type_model.load_error
+            ),
+        }), 503
+
+    image_file = request.files.get("image") or request.files.get("file")
+    if not image_file:
+        return jsonify({"error": "No image provided"}), 400
+
+    try:
+        prediction = skin_type_model.predict_from_bytes(image_file.read())
+    except Exception as exc:
+        logger.exception("Skin-type prediction failed")
+        return jsonify({"error": f"Skin-type prediction failed: {exc}"}), 500
+
+    allergies_input = [
+        item for item in _parse_tag_list(request.form.get("allergies"))
+        if item in ALLERGY_LABELS
+    ]
+    goals_input = [
+        item for item in _parse_tag_list(request.form.get("goals"))
+        if item in GOAL_LABELS
+    ][:3]
+    routine_level = _normalize_choice(
+        request.form.get("routine_level"), ROUTINE_LEVELS, "simple"
+    )
+    budget = _normalize_choice(request.form.get("budget"), BUDGET_LEVELS, "medium")
+    tight_after_wash = _parse_optional_bool_flag(
+        request.form.get("tight_after_wash")
+    )
+    shiny_after_2_3h = _parse_optional_bool_flag(
+        request.form.get("shiny_after_2_3h")
+    )
+
+    predicted_skin_type = str(prediction.get("skin_type_raw", "")).strip().lower().replace(" ", "_")
+    final_skin_type = _infer_skin_type_from_questions(
+        predicted_skin_type=predicted_skin_type,
+        tight_after_wash=tight_after_wash,
+        shiny_after_2_3h=shiny_after_2_3h,
+    )
+
+    confidence = float(prediction.get("confidence", 0.0))
+    if final_skin_type != predicted_skin_type:
+        confidence = max(0.50, confidence * 0.90)
+    confidence_level = _normalize_confidence_level(confidence)
+
+    structured = _build_structured_skin_care_output(
+        skin_type=final_skin_type,
+        goals_input=goals_input,
+        allergies_input=allergies_input,
+        routine_level=routine_level,
+        budget=budget,
+    )
+    probabilities = _normalize_probabilities(prediction.get("probabilities", {}))
+    note = structured["note"]
+
     return jsonify({
-        "skin_type":  "Combination",
-        "skin_color": "Fair - Medium",
-        "recommendations": [
-            "Use a gentle foaming cleanser.",
-            "Apply a lightweight, oil-free moisturizer.",
-            "Use sunscreen with SPF 30+ daily.",
-            "Exfoliate 1–2 times a week with a mild chemical exfoliant.",
-        ],
+        # Required final schema
+        "skin_type": final_skin_type,
+        "skin_type_confidence": confidence,
+        "probabilities": probabilities,
+        "user_inputs": {
+            "allergies": _to_display_terms(allergies_input, ALLERGY_LABELS),
+            "goals": _to_display_terms(goals_input, GOAL_LABELS),
+            "routine_level": routine_level,
+            "budget": budget,
+            "tight_after_wash": tight_after_wash,
+            "shiny_after_2_3h": shiny_after_2_3h,
+        },
+        "recommendations": {
+            "safe_ingredients": structured["safe_ingredients"],
+            "avoid_ingredients": structured["avoid_ingredients"],
+            "routine": structured["routine"],
+        },
+        "note": note,
+
+        # Additional aliases for demo/reporting convenience
+        "recommended_ingredients": structured["safe_ingredients"],
+        "avoid_ingredients": structured["avoid_ingredients"],
+        "routine": structured["routine"],
+        "disclaimer": structured["disclaimer"],
+
+        # Compatibility metadata
+        "confidence": confidence,
+        "confidence_percent": f"{confidence * 100:.1f}%",
+        "confidence_level": confidence_level,
+        "visible_concerns": structured["visible_concerns"],
+        "recommendations_list": structured["recommendations"],
+        "model_used": prediction.get("model_name", "convnext_tiny"),
+    })
+
+
+@app.route("/api/analyze-severity", methods=["POST", "OPTIONS"])
+def analyze_severity():
+    global severity_model
+
+    if request.method == "OPTIONS":
+        return "", 204
+
+    if severity_model is None or not severity_model.loaded:
+        try:
+            severity_model = get_severity_model(
+                model_path=SEVERITY_MODEL_PATH,
+                metadata_path=SEVERITY_METADATA_PATH,
+                force_reload=True,
+            )
+        except Exception:
+            severity_model = None
+
+    if severity_model is None or not severity_model.loaded:
+        return jsonify({
+            "error": "Severity model unavailable",
+            "detail": None if severity_model is None else severity_model.load_error,
+        }), 503
+
+    image_file = request.files.get("image") or request.files.get("file")
+    if not image_file:
+        return jsonify({"error": "No image provided"}), 400
+
+    filename = (image_file.filename or "").strip()
+    suffix = Path(filename).suffix.lower()
+    allowed_suffixes = {".jpg", ".jpeg", ".png"}
+    if suffix and suffix not in allowed_suffixes:
+        return jsonify({
+            "error": "Unsupported image format",
+            "detail": "Allowed formats: .jpg, .jpeg, .png",
+        }), 400
+
+    try:
+        prediction = severity_model.predict_from_bytes(image_file.read())
+    except Exception as exc:
+        logger.exception("Severity prediction failed")
+        return jsonify({"error": f"Severity prediction failed: {exc}"}), 500
+
+    severity_level = str(prediction.get("severity_level", "Moderate"))
+    severity_score = _safe_float(prediction.get("severity_score"), 0.0)
+    confidence = _safe_float(prediction.get("confidence"), 0.0)
+
+    tracking_enabled = _parse_track_flag(
+        request.form.get("track") or request.args.get("track")
+    )
+    user_id = (
+        request.form.get("user_id") or request.args.get("user_id") or "anonymous"
+    ).strip() or "anonymous"
+
+    tracking = None
+    if tracking_enabled:
+        try:
+            _append_severity_visit(
+                user_id=user_id,
+                severity_level=severity_level,
+                severity_score=severity_score,
+                confidence=confidence,
+            )
+            tracking = _build_severity_tracking_summary(user_id)
+        except Exception as exc:
+            logger.exception("Severity tracking update failed")
+            tracking = {
+                "error": f"Failed to update tracking data: {exc}",
+                "files": {
+                    "visits_csv": str(SEVERITY_VISITS_CSV),
+                    "weeks_json": str(SEVERITY_WEEKS_JSON),
+                },
+            }
+
+    return jsonify({
+        # Primary output
+        "severity_level": severity_level,
+        "severity_score": round(severity_score, 2),
+
+        # Model diagnostics
+        "confidence": confidence,
+        "probabilities": prediction.get("probabilities", {}),
+        "score_based_level": prediction.get("score_based_level"),
+        "thresholds": prediction.get("thresholds", {}),
+        "feature_vector": prediction.get("feature_vector", {}),
+        "normalized_features": prediction.get("normalized_features", {}),
+        "preprocessing": prediction.get("preprocessing", {}),
+
+        # Compatibility aliases
+        "severity_class": severity_level,
+        "score": round(severity_score, 2),
+
+        # Optional progress tracking
+        "tracking_enabled": tracking_enabled,
+        "tracking": tracking,
+        "tracking_files": {
+            "visits_csv": str(SEVERITY_VISITS_CSV),
+            "weeks_json": str(SEVERITY_WEEKS_JSON),
+        },
+        "timestamp": datetime.datetime.now().isoformat(),
     })
 
 

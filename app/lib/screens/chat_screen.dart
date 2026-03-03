@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../utils/app_styles.dart';
 
-// ──────────────────────────────────────────────────────────────────────────────
+//
 // DATA MODELS
-// ──────────────────────────────────────────────────────────────────────────────
+//
 
 enum MessageSender { user, bot }
 
@@ -24,9 +24,9 @@ class ChatMessage {
   });
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
+//
 // SCREEN
-// ──────────────────────────────────────────────────────────────────────────────
+//
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -41,7 +41,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     ChatMessage(
       sender: MessageSender.bot,
       text:
-          'Hello! I\'m your AI Skin Care Assistant. 👋\n\n'
+          'Hello! I\'m your AI Skin Care Assistant.\n\n'
           'I can help identify skin conditions, suggest treatments, '
           'and answer your questions about skin health.\n\n'
           'How can I help you today?',
@@ -82,7 +82,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  // ── Scroll to bottom ───────────────────────────────────────────────────────
+  //
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -95,7 +95,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     });
   }
 
-  // ── Send message ───────────────────────────────────────────────────────────
+  //
   Future<void> _sendMessage({String? override}) async {
     final text = override ?? _controller.text.trim();
     if (text.isEmpty || _isTyping) return;
@@ -158,16 +158,16 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
+  //
   // BUILD
-  // ──────────────────────────────────────────────────────────────────────────
+  //
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
-      child: Container(
-        color: const Color(0xFFF0F4F8),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(gradient: AppGradients.page),
         child: Column(
           children: [
             _buildHeader(),
@@ -182,43 +182,30 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Header ─────────────────────────────────────────────────────────────────
+  //
   Widget _buildHeader() {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primary.withOpacity(0.75)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: AppGradients.hero,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.35),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: AppColors.primaryDark.withValues(alpha: 0.30),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 0, 16, 12),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
           child: Row(
             children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.arrow_back_ios_new,
-                  color: Colors.white,
-                  size: 20,
-                ),
-                onPressed: () => Navigator.maybePop(context),
-              ),
-              // Avatar
               Container(
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.18),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -249,17 +236,17 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                           decoration: BoxDecoration(
                             color: _isConnected
                                 ? const Color(0xFF4ADE80)
-                                : Colors.orange,
+                                : AppColors.warning,
                             shape: BoxShape.circle,
                           ),
                         ),
                         const SizedBox(width: 5),
                         Text(
                           _isConnected
-                              ? 'DistilBERT · ResNet-18 powered'
-                              : 'Reconnecting…',
+                              ? 'AI assistant online'
+                              : 'Reconnecting...',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.85),
+                            color: Colors.white.withValues(alpha: 0.85),
                             fontSize: 11,
                           ),
                         ),
@@ -268,7 +255,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   ],
                 ),
               ),
-              // Clear chat
               IconButton(
                 icon: const Icon(
                   Icons.refresh_rounded,
@@ -301,13 +287,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     });
   }
 
-  // ── Active diagnosis banner ────────────────────────────────────────────────
+  //
   Widget _buildDiagnosisBanner() {
-    const color = AppColors.primary;
+    const color = AppColors.primaryDark;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      color: color.withOpacity(0.1),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.24)),
+      ),
       child: Row(
         children: [
           const Icon(Icons.biotech_outlined, size: 16, color: color),
@@ -330,11 +321,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Message list ───────────────────────────────────────────────────────────
+  // Message list
   Widget _buildMessageList() {
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
       itemCount: _messages.length,
       itemBuilder: (_, i) => _buildMessageItem(_messages[i]),
     );
@@ -364,7 +355,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Typing indicator ───────────────────────────────────────────────────────
+  //
   Widget _buildTypingIndicator() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 0, 8),
@@ -374,7 +365,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -387,13 +378,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.white.withValues(alpha: 0.98),
               borderRadius: BorderRadius.circular(
                 20,
               ).copyWith(bottomLeft: Radius.zero),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
+                  color: Colors.black.withValues(alpha: 0.06),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -406,19 +397,28 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Offline banner ─────────────────────────────────────────────────────────
+  //
   Widget _buildOfflineBanner() {
     return Container(
-      color: Colors.orange.shade50,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.35)),
+      ),
       child: Row(
         children: [
-          const Icon(Icons.wifi_off_rounded, color: Colors.orange, size: 18),
+          const Icon(
+            Icons.wifi_off_rounded,
+            color: AppColors.warning,
+            size: 18,
+          ),
           const SizedBox(width: 8),
           const Expanded(
             child: Text(
-              'Connection issue — check that the backend server is running.',
-              style: TextStyle(color: Colors.orange, fontSize: 12),
+              'Connection issue. Check that the backend server is running.',
+              style: TextStyle(color: AppColors.warning, fontSize: 12),
             ),
           ),
         ],
@@ -426,15 +426,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Input bar ──────────────────────────────────────────────────────────────
+  // Input bar
   Widget _buildInputBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface.withValues(alpha: 0.98),
+        border: Border(
+          top: BorderSide(color: AppColors.border.withValues(alpha: 0.8)),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, -2),
           ),
@@ -449,12 +452,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               child: Container(
                 constraints: const BoxConstraints(maxHeight: 120),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F7FA),
+                  color: AppColors.backgroundAlt.withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
                     color: _focusNode.hasFocus
                         ? AppColors.primary
-                        : const Color(0xFFE5E7EB),
+                        : AppColors.border,
                     width: _focusNode.hasFocus ? 2 : 1,
                   ),
                 ),
@@ -468,13 +471,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   style: const TextStyle(
                     fontSize: 15,
                     height: 1.4,
-                    color: Color(0xFF1F2937),
+                    color: AppColors.textMain,
                   ),
                   decoration: InputDecoration(
                     hintText:
                         _followupPlaceholder ?? 'Type your symptoms here...',
                     hintStyle: const TextStyle(
-                      color: Color(0xFF9CA3AF),
+                      color: AppColors.textSecondary,
                       fontSize: 15,
                     ),
                     border: InputBorder.none,
@@ -503,9 +506,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
+//
 // SUB-WIDGETS
-// ──────────────────────────────────────────────────────────────────────────────
+//
 
 /// User message bubble (right-aligned, gradient).
 class _UserBubble extends StatelessWidget {
@@ -521,7 +524,7 @@ class _UserBubble extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+            colors: [AppColors.primaryDark, AppColors.primary],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -533,7 +536,7 @@ class _UserBubble extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
+              color: AppColors.primaryDark.withValues(alpha: 0.28),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
@@ -637,11 +640,11 @@ class _BotResponseCardState extends State<_BotResponseCard>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ── Main reply bubble ────────────────────────────────────
+                    //
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.surface.withValues(alpha: 0.96),
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(4),
                           topRight: Radius.circular(20),
@@ -650,7 +653,7 @@ class _BotResponseCardState extends State<_BotResponseCard>
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
+                            color: Colors.black.withValues(alpha: 0.06),
                             blurRadius: 10,
                             offset: const Offset(0, 3),
                           ),
@@ -659,13 +662,13 @@ class _BotResponseCardState extends State<_BotResponseCard>
                       child: _FormattedText(text: reply),
                     ),
 
-                    // ── Disease badge ────────────────────────────
+                    //
                     if (showDisease) ...[
                       const SizedBox(height: 10),
                       _DiseaseBadge(disease: disease),
                     ],
 
-                    // ── Treatments panel ─────────────────────────────────────
+                    //
                     if (treatments.isNotEmpty && showDisease) ...[
                       const SizedBox(height: 10),
                       _TreatmentsPanel(
@@ -677,19 +680,19 @@ class _BotResponseCardState extends State<_BotResponseCard>
                       ),
                     ],
 
-                    // ── Follow-up chips ──────────────────────────────────────
+                    //
                     if (followUps.isNotEmpty) ...[
                       const SizedBox(height: 10),
                       _FollowUpChips(
                         questions: followUps.cast<String>(),
                         label: needsMoreInfo
-                            ? '❓ Help me understand better:'
-                            : '💬 You might also ask:',
+                            ? 'Help me understand better:'
+                            : 'You might also ask:',
                         onTap: widget.onFollowupTap,
                       ),
                     ],
 
-                    // ── Timestamp ────────────────────────────────────────────
+                    //
                     Padding(
                       padding: const EdgeInsets.only(top: 6, left: 2),
                       child: Text(
@@ -725,21 +728,25 @@ class _ErrorBubble extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 14, right: 48),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.red.shade50,
+          color: AppColors.error.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.red.shade200),
+          border: Border.all(color: AppColors.error.withValues(alpha: 0.36)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.wifi_off_rounded, size: 16, color: Colors.red[600]),
+                const Icon(
+                  Icons.wifi_off_rounded,
+                  size: 16,
+                  color: AppColors.error,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Could not reach server',
                   style: TextStyle(
-                    color: Colors.red[700],
+                    color: AppColors.error.withValues(alpha: 0.9),
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
@@ -749,7 +756,7 @@ class _ErrorBubble extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               message.text,
-              style: TextStyle(color: Colors.red[600], fontSize: 12),
+              style: const TextStyle(color: AppColors.error, fontSize: 12),
             ),
             const SizedBox(height: 10),
             GestureDetector(
@@ -760,11 +767,11 @@ class _ErrorBubble extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.red,
+                  color: AppColors.error,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
-                  '⟳  Retry',
+                  'Retry',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -780,9 +787,9 @@ class _ErrorBubble extends StatelessWidget {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
+//
 // REUSABLE COMPONENTS
-// ──────────────────────────────────────────────────────────────────────────────
+//
 
 /// Renders plain text with simple **bold** support.
 class _FormattedText extends StatelessWidget {
@@ -819,17 +826,20 @@ class _DiseaseBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Simplified badge without confidence display
-    const color = AppColors.primary;
+    const color = AppColors.primaryDark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [color.withOpacity(0.12), color.withOpacity(0.04)],
+          colors: [
+            color.withValues(alpha: 0.12),
+            color.withValues(alpha: 0.04),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -994,7 +1004,7 @@ class _TreatmentsPanel extends StatelessWidget {
 }
 
 /// Follow-up suggestion chips.
-/// ✅ Correct behaviour: tapping sets input hint/placeholder — does NOT send.
+//
 class _FollowUpChips extends StatelessWidget {
   final List<String> questions;
   final String label;
@@ -1034,10 +1044,12 @@ class _FollowUpChips extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.4)),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.4),
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primary.withOpacity(0.08),
+                      color: AppColors.primary.withValues(alpha: 0.08),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -1096,7 +1108,7 @@ class _SendButton extends StatelessWidget {
           gradient: LinearGradient(
             colors: isDisabled
                 ? [const Color(0xFFE5E7EB), const Color(0xFFD1D5DB)]
-                : [AppColors.primary, const Color(0xFF8B5CF6)],
+                : [AppColors.primary, AppColors.primaryDark],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -1105,7 +1117,7 @@ class _SendButton extends StatelessWidget {
               ? []
               : [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.35),
+                    color: AppColors.primary.withValues(alpha: 0.35),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -1141,7 +1153,7 @@ class _DotsAnimation extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: animation,
-      builder: (_, __) => Row(
+      builder: (context, child) => Row(
         mainAxisSize: MainAxisSize.min,
         children: List.generate(3, (i) {
           // Stagger the dots
@@ -1151,7 +1163,7 @@ class _DotsAnimation extends StatelessWidget {
             width: 8,
             height: 8,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(stagger),
+              color: AppColors.primary.withValues(alpha: stagger),
               shape: BoxShape.circle,
             ),
           );

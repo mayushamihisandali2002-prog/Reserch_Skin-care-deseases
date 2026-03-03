@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-// We can use IconData if SVG assets aren't ready
+
 import '../utils/app_styles.dart';
-import 'dashboard_screen.dart';
-import 'analyze_screen.dart';
 import 'chat_screen.dart';
+import 'dashboard_screen.dart';
 import 'instruction_screen.dart';
+import 'severity_screen.dart';
+import 'skin_care_screen.dart';
 
 class HomeContainer extends StatefulWidget {
   const HomeContainer({super.key});
@@ -16,68 +17,57 @@ class HomeContainer extends StatefulWidget {
 class _HomeContainerState extends State<HomeContainer> {
   int _currentIndex = 0;
 
-  // Lazy-load screens to improve startup performance
-  Widget _getScreen(int index) {
-    switch (index) {
-      case 0:
-        return const DashboardScreen();
-      case 1:
-        return const AnalyzeScreen();
-      case 2:
-        return const ChatScreen();
-      default:
-        return const DashboardScreen();
-    }
-  }
-
-  void _onTabTapped(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
-  }
-
-  void _openScanner() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (context) => const InstructionScreen()));
-  }
+  final List<Widget> _screens = const [
+    DashboardScreen(),
+    InstructionScreen(),
+    SkinCareScreen(),
+    SeverityScreen(),
+    ChatScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true,
-      body: _getScreen(_currentIndex),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: _onTabTapped,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.analytics_outlined),
-            selectedIcon: Icon(Icons.analytics),
-            label: 'Analyze',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble),
-            label: 'Chat',
-          ),
-        ],
+      body: _screens[_currentIndex],
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: AppColors.border)),
+        ),
+        child: NavigationBar(
+          height: 72,
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (index) {
+            setState(() => _currentIndex = index);
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.dashboard_outlined),
+              selectedIcon: Icon(Icons.dashboard_rounded),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.camera_alt_outlined),
+              selectedIcon: Icon(Icons.camera_alt_rounded),
+              label: 'Diagnose',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.spa_outlined),
+              selectedIcon: Icon(Icons.spa_rounded),
+              label: 'Care',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.speed_outlined),
+              selectedIcon: Icon(Icons.speed_rounded),
+              label: 'Severity',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.chat_bubble_outline),
+              selectedIcon: Icon(Icons.chat_bubble),
+              label: 'Chat',
+            ),
+          ],
+        ),
       ),
-      // Only show "New Scan" button on Home and Analyze tabs, NOT on Chat tab
-      floatingActionButton: _currentIndex != 2
-          ? FloatingActionButton.extended(
-              onPressed: _openScanner,
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.camera_alt),
-              label: const Text('New Scan'),
-            )
-          : null,
     );
   }
 }

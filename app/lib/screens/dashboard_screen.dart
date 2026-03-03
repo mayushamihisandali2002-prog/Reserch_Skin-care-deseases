@@ -1,11 +1,14 @@
-import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'progress_screen.dart';
+import 'package:flutter/material.dart';
+
 import '../services/api_service.dart';
 import '../services/supabase_service.dart';
 import '../utils/app_styles.dart';
-import 'skin_care_screen.dart';
+import 'instruction_screen.dart';
 import 'login_screen.dart';
+import 'progress_screen.dart';
+import 'severity_screen.dart';
+import 'skin_care_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -26,474 +29,344 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadData() async {
-    final history = await ApiService.getHistory();
-    final stats = await ApiService.getStats();
-    if (mounted) {
+    setState(() => _isLoading = true);
+    try {
+      final history = await ApiService.getHistory();
+      final stats = await ApiService.getStats();
+      if (!mounted) return;
       setState(() {
         _history = history;
         _stats = stats;
-        _isLoading = false;
       });
-    }
-  }
-
-  String _getUserInitials() {
-    final user = SupabaseService.currentUser;
-    if (user == null) return '?';
-
-    final name = user.userMetadata?['full_name'] as String?;
-    if (name != null && name.isNotEmpty) {
-      final parts = name.split(' ');
-      if (parts.length >= 2) {
-        return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-      }
-      return name[0].toUpperCase();
-    }
-
-    final email = user.email ?? '';
-    return email.isNotEmpty ? email[0].toUpperCase() : '?';
-  }
-
-  String _getUserName() {
-    final user = SupabaseService.currentUser;
-    if (user == null) return 'User';
-    return user.userMetadata?['full_name'] as String? ?? 'User';
-  }
-
-  String _getUserEmail() {
-    return SupabaseService.currentUser?.email ?? '';
-  }
-
-  Future<void> _showLogoutConfirmation() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      await SupabaseService.signOut();
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-          (route) => false,
-        );
-      }
-    }
-  }
-
-  void _showProfileDialog() {
-    final user = SupabaseService.currentUser;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Profile'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 40,
-              backgroundColor: AppColors.primary.withOpacity(0.1),
-              child: Text(
-                _getUserInitials(),
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _getUserName(),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _getUserEmail(),
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 8),
-            if (user?.createdAt != null)
-              Text(
-                'Member since ${_formatDate(user!.createdAt)}',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-              ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatDate(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      return '${date.day}/${date.month}/${date.year}';
     } catch (_) {
-      return dateStr;
+      if (!mounted) return;
+      setState(() {
+        _history = [];
+        _stats = {};
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Skin Care Assistant', style: AppTextStyles.heading),
-        centerTitle: false,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: _loadData,
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
-          ),
-          PopupMenuButton<String>(
-            icon: CircleAvatar(
-              backgroundColor: AppColors.primary.withOpacity(0.1),
-              child: Text(
-                _getUserInitials(),
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
+  String _userName() {
+    final user = SupabaseService.currentUser;
+    final name = user?.userMetadata?['full_name'] as String?;
+    if (name != null && name.trim().isNotEmpty) {
+      return name.trim();
+    }
+    return 'User';
+  }
+
+  String _userEmail() => SupabaseService.currentUser?.email ?? '';
+
+  String _initials() {
+    final n = _userName();
+    if (n == 'User') {
+      final email = _userEmail();
+      return email.isEmpty ? 'U' : email[0].toUpperCase();
+    }
+
+    final parts = n.split(' ').where((e) => e.isNotEmpty).toList();
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return n[0].toUpperCase();
+  }
+
+  Future<void> _logout() async {
+    await SupabaseService.signOut();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+
+  Future<void> _showLogoutDialog() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
             ),
-            onSelected: (value) async {
-              if (value == 'logout') {
-                await _showLogoutConfirmation();
-              } else if (value == 'profile') {
-                _showProfileDialog();
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'profile',
-                child: Row(
-                  children: [
-                    const Icon(Icons.person_outline, size: 20),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _getUserName(),
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        Text(
-                          _getUserEmail(),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+    if (shouldLogout == true) {
+      await _logout();
+    }
+  }
+
+  int _historyCount() => _history.length;
+
+  double _latestScore() {
+    if (_history.isEmpty) return 0;
+    final item = _history.last;
+    final score = item is Map ? item['score'] : null;
+    if (score is num) return score.toDouble();
+    return 0;
+  }
+
+  Widget _metricTile(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: AppDecor.softCard(
+        color: Colors.white.withValues(alpha: 0.92),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: color),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTextStyles.caption),
+                Text(
+                  value,
+                  style: AppTextStyles.subHeading.copyWith(fontSize: 16),
                 ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout, size: 20, color: Colors.red),
-                    SizedBox(width: 12),
-                    Text('Logout', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+    );
+  }
+
+  Widget _quickAction({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: AppDecor.softCard(),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Overall Progress Card
-                  _buildProgressCard(),
-                  const SizedBox(height: 20),
-
-                  // Skin Care Assistant Card
-                  _buildSkinCareCard(context),
-                  const SizedBox(height: 30),
-
-                  // Skin Health Score Chart
-                  const Text(
-                    'Skin Health Score',
-                    style: AppTextStyles.subHeading,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildScoreChart(),
-                  const SizedBox(height: 30),
-
-                  // Symptom Distribution Chart
-                  const Text(
-                    'Symptom Distribution',
-                    style: AppTextStyles.subHeading,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildSymptomPieChart(),
-                  const SizedBox(height: 30),
-
-                  // Weekly Images Section
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Weekly Progress',
-                        style: AppTextStyles.subHeading,
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const ProgressScreen(),
-                            ),
-                          );
-                        },
-                        child: const Text('View All'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _buildWeeklyImages(),
+                  Text(title, style: AppTextStyles.bodyStrong),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: AppTextStyles.caption),
                 ],
               ),
             ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildProgressCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.secondary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'Overall Progress',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Healing Well',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.trending_up, color: Colors.white, size: 30),
-          ),
-        ],
-      ),
-    );
+  List<FlSpot> _scoreSpots() {
+    final spots = <FlSpot>[];
+    for (var i = 0; i < _history.length; i++) {
+      final row = _history[i];
+      if (row is! Map) continue;
+      final v = row['score'];
+      if (v is num) {
+        spots.add(FlSpot(i.toDouble(), v.toDouble()));
+      }
+    }
+    if (spots.isEmpty) {
+      spots.addAll(const [FlSpot(0, 20), FlSpot(1, 35), FlSpot(2, 55)]);
+    }
+    return spots;
   }
 
   Widget _buildScoreChart() {
+    final spots = _scoreSpots();
+    final maxX = spots.last.x;
     return Container(
-      height: 200,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+      height: 250,
+      padding: const EdgeInsets.fromLTRB(14, 18, 14, 10),
+      decoration: AppDecor.softCard(),
+      child: LineChart(
+        LineChartData(
+          minY: 0,
+          maxY: 100,
+          minX: 0,
+          maxX: maxX < 1 ? 1 : maxX,
+          lineTouchData: const LineTouchData(enabled: true),
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: 20,
+            getDrawingHorizontalLine: (value) =>
+                const FlLine(strokeWidth: 1, color: Color(0xFFE8EEF1)),
           ),
-        ],
-      ),
-      child: _history.isEmpty
-          ? const Center(child: Text("No data"))
-          : LineChart(
-              LineChartData(
-                gridData: FlGridData(show: false),
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        int index = value.toInt();
-                        if (index >= 0 &&
-                            index < _history.length &&
-                            index % 2 == 0) {
-                          return Text(
-                            _history[index]['week']!.replaceAll('Week ', 'W'),
-                            style: const TextStyle(fontSize: 10),
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      },
+          borderData: FlBorderData(show: false),
+          titlesData: FlTitlesData(
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            leftTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: true, reservedSize: 34),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) {
+                  final index = value.toInt();
+                  if (index < 0 || index >= _history.length) {
+                    return const SizedBox.shrink();
+                  }
+                  final row = _history[index];
+                  final label =
+                      (row is Map ? row['week'] : null)?.toString() ?? '';
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      label.replaceAll('Week ', 'W'),
+                      style: AppTextStyles.caption.copyWith(fontSize: 11),
                     ),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: _history.asMap().entries.map((e) {
-                      return FlSpot(
-                        e.key.toDouble(),
-                        (e.value['score'] ?? 0).toDouble(),
-                      );
-                    }).toList(),
-                    isCurved: true,
-                    color: AppColors.primary,
-                    barWidth: 3,
-                    dotData: FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: AppColors.primary.withOpacity(0.1),
-                    ),
-                  ),
-                ],
+                  );
+                },
               ),
             ),
+          ),
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              color: AppColors.primary,
+              barWidth: 3,
+              belowBarData: BarAreaData(
+                show: true,
+                color: AppColors.primary.withValues(alpha: 0.18),
+              ),
+              dotData: FlDotData(
+                show: true,
+                getDotPainter: (spot, percent, barData, index) {
+                  return FlDotCirclePainter(
+                    radius: 3.4,
+                    color: AppColors.primaryDark,
+                    strokeColor: Colors.white,
+                    strokeWidth: 1.4,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildSymptomPieChart() {
-    List<String> labels = List<String>.from(_stats['labels'] ?? []);
-    List<dynamic> values = _stats['values'] ?? [];
+  Widget _buildSymptomsChart() {
+    final labels = (_stats['labels'] as List?)?.map((e) => '$e').toList() ?? [];
+    final values =
+        (_stats['values'] as List?)
+            ?.map((e) => (e is num) ? e.toDouble() : 0.0)
+            .toList() ??
+        [];
 
-    if (labels.isEmpty) return const SizedBox();
+    final fallbackLabels = ['Redness', 'Itching', 'Dryness', 'Spots'];
+    final fallbackValues = [30.0, 25.0, 22.0, 23.0];
+
+    final displayLabels = labels.isEmpty ? fallbackLabels : labels;
+    final displayValues = values.isEmpty ? fallbackValues : values;
+    final total = displayValues.fold<double>(0, (sum, v) => sum + v).abs();
+
+    const sectionColors = [
+      Color(0xFF1F7A8C),
+      Color(0xFFF4A259),
+      Color(0xFF6EB5A9),
+      Color(0xFFD64550),
+      Color(0xFF7A93A0),
+    ];
 
     return Container(
-      height: 200,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
+      decoration: AppDecor.softCard(),
+      child: Column(
         children: [
-          Expanded(
+          SizedBox(
+            height: 170,
             child: PieChart(
               PieChartData(
-                sectionsSpace: 0,
-                centerSpaceRadius: 40,
-                sections: List.generate(labels.length, (i) {
-                  final isTouched = false;
-                  final fontSize = isTouched ? 25.0 : 16.0;
-                  final radius = isTouched ? 60.0 : 50.0;
-                  const shadows = [Shadow(color: Colors.black, blurRadius: 2)];
-
+                centerSpaceRadius: 42,
+                sectionsSpace: 2,
+                sections: List.generate(displayValues.length, (index) {
+                  final value = displayValues[index];
+                  final percent = total <= 0 ? 0.0 : (value / total) * 100;
                   return PieChartSectionData(
-                    color: [
-                      Colors.blue,
-                      Colors.red,
-                      Colors.orange,
-                      Colors.green,
-                    ][i % 4],
-                    value: (values[i] as num).toDouble(),
-                    title: '${values[i]}%',
-                    radius: radius,
-                    titleStyle: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                    value: value,
+                    title: '${percent.toStringAsFixed(0)}%',
+                    titleStyle: const TextStyle(
+                      fontSize: 11,
                       color: Colors.white,
+                      fontWeight: FontWeight.w700,
                     ),
+                    color: sectionColors[index % sectionColors.length],
+                    radius: 52,
                   );
                 }),
               ),
             ),
           ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: List.generate(labels.length, (i) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      color: [
-                        Colors.blue,
-                        Colors.red,
-                        Colors.orange,
-                        Colors.green,
-                      ][i % 4],
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: List.generate(displayLabels.length, (index) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: sectionColors[index % sectionColors.length],
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(width: 8),
-                    Text(labels[i], style: const TextStyle(fontSize: 12)),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(displayLabels[index], style: AppTextStyles.caption),
+                ],
               );
             }),
           ),
@@ -502,147 +375,256 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildWeeklyImages() {
+  Widget _buildRecentHistory() {
     if (_history.isEmpty) {
-      return const Center(
-        child: Text("No history found.", style: AppTextStyles.body),
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: AppDecor.softCard(),
+        child: Text(
+          'No check-ins yet. Start with your first scan.',
+          style: AppTextStyles.body,
+        ),
       );
     }
 
-    return SizedBox(
-      height: 180,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _history.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 16),
-        itemBuilder: (context, index) {
-          final item = _history[index];
-          return Container(
-            width: 140,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+    final items = _history.reversed.take(3).toList();
+    return Column(
+      children: items.map((item) {
+        if (item is! Map) return const SizedBox.shrink();
+        final week = (item['week'] ?? 'Week').toString();
+        final status = (item['status'] ?? 'Unknown').toString();
+        final score = item['score'];
+        final scoreText = score is num ? '${score.toStringAsFixed(0)}%' : '-';
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: AppDecor.softCard(color: const Color(0xFFFAFCFD)),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        topRight: Radius.circular(16),
-                      ),
-                    ),
-                    child: const Icon(Icons.image, color: Colors.grey),
-                  ),
+                child: const Icon(Icons.event_note, color: AppColors.primary),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(week, style: AppTextStyles.bodyStrong),
+                    Text(status, style: AppTextStyles.caption),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item['week'] ?? 'Week ${index + 1}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            item['status'] ?? '',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.success,
-                            ),
-                          ),
-                          if (item['score'] != null)
-                            Text(
-                              '${item['score']}%',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+              ),
+              Text(scoreText, style: AppTextStyles.bodyStrong),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
-  Widget _buildSkinCareCard(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (context) => const SkinCareScreen()));
-      },
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.green.withOpacity(0.2),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
-          border: Border.all(color: Colors.green.withOpacity(0.3)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Skin Care Assistant',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Dashboard'),
+        actions: [
+          IconButton(
+            onPressed: _loadData,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+          ),
+          PopupMenuButton<String>(
+            icon: CircleAvatar(
+              backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+              child: Text(
+                _initials(),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primaryDark,
                 ),
-                SizedBox(height: 8),
-                Text(
-                  'Get Personalized Advice',
-                  style: TextStyle(color: Colors.black87, fontSize: 14),
-                ),
-              ],
-            ),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.face_retouching_natural,
-                color: Colors.green,
-                size: 30,
               ),
             ),
-          ],
-        ),
+            onSelected: (value) async {
+              if (value == 'logout') {
+                await _showLogoutDialog();
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                enabled: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_userName(), style: AppTextStyles.bodyStrong),
+                    Text(_userEmail(), style: AppTextStyles.caption),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, color: AppColors.error, size: 18),
+                    SizedBox(width: 8),
+                    Text('Logout'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Container(
+        decoration: const BoxDecoration(gradient: AppGradients.page),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _loadData,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        gradient: AppGradients.hero,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Welcome, ${_userName().split(' ').first}',
+                            style: AppTextStyles.heading.copyWith(
+                              color: Colors.white,
+                              fontSize: 24,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Track your skin journey, run AI analysis, and keep your care plan consistent.',
+                            style: AppTextStyles.body.copyWith(
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _metricTile(
+                                  'Check-ins',
+                                  '${_historyCount()}',
+                                  Icons.insights_outlined,
+                                  AppColors.secondary,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _metricTile(
+                                  'Latest Score',
+                                  '${_latestScore().toStringAsFixed(0)}%',
+                                  Icons.monitor_heart_outlined,
+                                  AppColors.accent,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Quick Actions',
+                      style: AppTextStyles.subHeading,
+                    ),
+                    const SizedBox(height: 10),
+                    _quickAction(
+                      title: 'Disease Diagnosis',
+                      subtitle: 'Image + symptoms + voice note workflow.',
+                      icon: Icons.camera_alt_outlined,
+                      color: AppColors.primary,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const InstructionScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    _quickAction(
+                      title: 'Skin Care Assistant',
+                      subtitle: 'Skin type + personalized routine guidance.',
+                      icon: Icons.spa_outlined,
+                      color: AppColors.accent,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const SkinCareScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    _quickAction(
+                      title: 'Face Severity Analysis',
+                      subtitle: 'Mild/Moderate/Severe with score and tracking.',
+                      icon: Icons.speed_outlined,
+                      color: AppColors.warning,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const SeverityScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    _quickAction(
+                      title: 'Progress History',
+                      subtitle: 'Open weekly logs and healing insights.',
+                      icon: Icons.timeline_outlined,
+                      color: AppColors.success,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ProgressScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 22),
+                    const Text(
+                      'Skin Health Trend',
+                      style: AppTextStyles.subHeading,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildScoreChart(),
+                    const SizedBox(height: 22),
+                    const Text(
+                      'Symptom Distribution',
+                      style: AppTextStyles.subHeading,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildSymptomsChart(),
+                    const SizedBox(height: 22),
+                    const Text(
+                      'Recent Check-ins',
+                      style: AppTextStyles.subHeading,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildRecentHistory(),
+                  ],
+                ),
+              ),
       ),
     );
   }

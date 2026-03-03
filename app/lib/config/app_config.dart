@@ -31,23 +31,23 @@ class AppConfig {
 
     // Development URLs based on platform
     if (kIsWeb) {
-      return 'http://127.0.0.1:5000';
+      return 'http://127.0.0.1:5001';
     }
 
     if (!kIsWeb && Platform.isAndroid) {
       // Use PC's LAN IP address for Android device connection
       // Make sure your PC and phone are on the same WiFi network
       // Update this IP to match your PC's IP (run `ipconfig` on Windows)
-      return 'http://10.185.72.24:5000';
+      return 'http://10.185.72.24:5001';
     }
 
     if (!kIsWeb && Platform.isIOS) {
       // For physical iOS device, use the PC's LAN IP address
-      return 'http://172.28.2.98:5000';
+      return 'http://172.28.2.98:5001';
     }
 
     // Windows, macOS, Linux desktop
-    return 'http://127.0.0.1:5000';
+    return 'http://127.0.0.1:5001';
   }
 
   /// API endpoints
