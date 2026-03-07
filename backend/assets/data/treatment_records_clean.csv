@@ -9999,3 +9999,203 @@ case_id,patient_id,primary_disease,disease_category,severity,recommended_medicin
 9998,9949,Warts (Verruca vulgaris),viral,moderate,salicylic acid preparation,yes,no,improved
 9999,3929,Tinea cruris (Jock itch),fungal,mild,drying powders,yes,yes,worsened
 10000,3527,Perioral dermatitis,inflammatory,moderate,stop topical steroids,yes,no,worsened
+10001,5405,Solar Lentigines (Sunspots),pigmentary,mild,Azelaic Acid 10%,yes,no,improved
+10002,2151,Solar Lentigines (Sunspots),pigmentary,moderate,Kojic Acid Cream,yes,no,improved
+10003,6319,Melasma,pigmentary,severe,Azelaic Acid 10%,yes,yes,improved
+10004,5338,Post-inflammatory hyperpigmentation,pigmentary,moderate,Sunscreen SPF 50+,yes,yes,improved
+10005,9787,Solar Lentigines (Sunspots),pigmentary,mild,Sunscreen SPF 50+,yes,yes,no_change
+10006,7851,Post-inflammatory hyperpigmentation,pigmentary,mild,Vitamin C Serum,yes,yes,improved
+10007,3733,Solar Lentigines (Sunspots),pigmentary,severe,Sunscreen SPF 50+,yes,yes,improved
+10008,6075,Solar Lentigines (Sunspots),pigmentary,severe,Glycolic Acid Peel,no,no,improved
+10009,1404,Freckles (Ephelides),pigmentary,mild,Glycolic Acid Peel,no,no,improved
+10010,6317,Post-inflammatory hyperpigmentation,pigmentary,severe,Glycolic Acid Peel,no,yes,no_change
+10011,5067,Melasma,pigmentary,moderate,Sunscreen SPF 50+,yes,no,no_change
+10012,5398,Freckles (Ephelides),pigmentary,mild,Vitamin C Serum,yes,yes,improved
+10013,5155,Melasma,pigmentary,mild,Kojic Acid Cream,yes,no,improved
+10014,2850,Solar Lentigines (Sunspots),pigmentary,severe,Hydroquinone 2%,no,yes,improved
+10015,5388,Freckles (Ephelides),pigmentary,severe,Hydroquinone 2%,no,yes,no_change
+10016,2991,Melasma,pigmentary,moderate,Hydroquinone 2%,no,no,improved
+10017,7074,Solar Lentigines (Sunspots),pigmentary,severe,Niacinamide 10%,yes,yes,improved
+10018,1232,Freckles (Ephelides),pigmentary,mild,Glycolic Acid Peel,no,yes,improved
+10019,9375,Solar Lentigines (Sunspots),pigmentary,mild,Niacinamide 10%,yes,yes,improved
+10020,5687,Post-inflammatory hyperpigmentation,pigmentary,severe,Glycolic Acid Peel,no,no,improved
+10021,2369,Melasma,pigmentary,moderate,Hydroquinone 2%,no,yes,no_change
+10022,1054,Freckles (Ephelides),pigmentary,moderate,Niacinamide 10%,yes,yes,no_change
+10023,1495,Melasma,pigmentary,moderate,Retinol 0.5%,no,no,no_change
+10024,4075,Freckles (Ephelides),pigmentary,moderate,Hydroquinone 2%,no,yes,improved
+10025,8472,Melasma,pigmentary,severe,Kojic Acid Cream,yes,no,improved
+10026,7118,Post-inflammatory hyperpigmentation,pigmentary,severe,Kojic Acid Cream,yes,yes,improved
+10027,2752,Freckles (Ephelides),pigmentary,mild,Niacinamide 10%,yes,no,improved
+10028,3285,Post-inflammatory hyperpigmentation,pigmentary,moderate,Glycolic Acid Peel,no,no,no_change
+10029,9256,Melasma,pigmentary,severe,Retinol 0.5%,no,yes,improved
+10030,2695,Solar Lentigines (Sunspots),pigmentary,severe,Niacinamide 10%,yes,no,no_change
+10031,8987,Freckles (Ephelides),pigmentary,mild,Retinol 0.5%,no,no,improved
+10032,9244,Solar Lentigines (Sunspots),pigmentary,severe,Glycolic Acid Peel,no,no,improved
+10033,5460,Solar Lentigines (Sunspots),pigmentary,severe,Hydroquinone 2%,no,no,improved
+10034,9322,Solar Lentigines (Sunspots),pigmentary,moderate,Kojic Acid Cream,yes,no,improved
+10035,7209,Post-inflammatory hyperpigmentation,pigmentary,severe,Glycolic Acid Peel,no,no,improved
+10036,6918,Post-inflammatory hyperpigmentation,pigmentary,severe,Sunscreen SPF 50+,yes,no,no_change
+10037,6286,Solar Lentigines (Sunspots),pigmentary,mild,Niacinamide 10%,yes,no,improved
+10038,2730,Post-inflammatory hyperpigmentation,pigmentary,mild,Retinol 0.5%,no,yes,improved
+10039,5091,Melasma,pigmentary,severe,Glycolic Acid Peel,no,yes,improved
+10040,4815,Melasma,pigmentary,severe,Glycolic Acid Peel,no,no,improved
+10041,8093,Solar Lentigines (Sunspots),pigmentary,mild,Hydroquinone 2%,no,no,improved
+10042,8353,Melasma,pigmentary,mild,Niacinamide 10%,yes,yes,improved
+10043,7959,Freckles (Ephelides),pigmentary,mild,Retinol 0.5%,no,yes,improved
+10044,2683,Melasma,pigmentary,moderate,Sunscreen SPF 50+,yes,yes,improved
+10045,9928,Post-inflammatory hyperpigmentation,pigmentary,moderate,Niacinamide 10%,yes,yes,no_change
+10046,4408,Post-inflammatory hyperpigmentation,pigmentary,moderate,Sunscreen SPF 50+,yes,yes,improved
+10047,7324,Post-inflammatory hyperpigmentation,pigmentary,moderate,Niacinamide 10%,yes,yes,improved
+10048,7501,Melasma,pigmentary,moderate,Glycolic Acid Peel,no,no,improved
+10049,1231,Post-inflammatory hyperpigmentation,pigmentary,moderate,Retinol 0.5%,no,no,improved
+10050,1006,Solar Lentigines (Sunspots),pigmentary,mild,Hydroquinone 2%,no,yes,improved
+10051,3010,Post-inflammatory hyperpigmentation,pigmentary,severe,Vitamin C Serum,yes,no,improved
+10052,2695,Solar Lentigines (Sunspots),pigmentary,severe,Retinol 0.5%,no,yes,improved
+10053,6332,Solar Lentigines (Sunspots),pigmentary,mild,Azelaic Acid 10%,yes,yes,improved
+10054,7073,Melasma,pigmentary,severe,Vitamin C Serum,yes,yes,improved
+10055,6588,Post-inflammatory hyperpigmentation,pigmentary,severe,Retinol 0.5%,no,yes,improved
+10056,5754,Post-inflammatory hyperpigmentation,pigmentary,mild,Glycolic Acid Peel,no,no,improved
+10057,4039,Solar Lentigines (Sunspots),pigmentary,severe,Retinol 0.5%,no,yes,improved
+10058,1562,Freckles (Ephelides),pigmentary,moderate,Sunscreen SPF 50+,yes,no,improved
+10059,7656,Melasma,pigmentary,severe,Niacinamide 10%,yes,no,no_change
+10060,5031,Solar Lentigines (Sunspots),pigmentary,severe,Sunscreen SPF 50+,yes,no,improved
+10061,2124,Freckles (Ephelides),pigmentary,severe,Niacinamide 10%,yes,yes,no_change
+10062,2707,Solar Lentigines (Sunspots),pigmentary,mild,Kojic Acid Cream,yes,no,improved
+10063,9776,Solar Lentigines (Sunspots),pigmentary,moderate,Retinol 0.5%,no,no,improved
+10064,7347,Post-inflammatory hyperpigmentation,pigmentary,severe,Retinol 0.5%,no,no,improved
+10065,4492,Solar Lentigines (Sunspots),pigmentary,mild,Retinol 0.5%,no,yes,no_change
+10066,5419,Post-inflammatory hyperpigmentation,pigmentary,mild,Kojic Acid Cream,yes,yes,no_change
+10067,9979,Melasma,pigmentary,mild,Azelaic Acid 10%,yes,yes,no_change
+10068,9307,Solar Lentigines (Sunspots),pigmentary,severe,Hydroquinone 2%,no,no,improved
+10069,7338,Post-inflammatory hyperpigmentation,pigmentary,severe,Kojic Acid Cream,yes,no,improved
+10070,5925,Solar Lentigines (Sunspots),pigmentary,moderate,Retinol 0.5%,no,no,improved
+10071,1450,Solar Lentigines (Sunspots),pigmentary,moderate,Glycolic Acid Peel,no,no,improved
+10072,3820,Post-inflammatory hyperpigmentation,pigmentary,severe,Vitamin C Serum,yes,no,improved
+10073,1620,Solar Lentigines (Sunspots),pigmentary,moderate,Niacinamide 10%,yes,no,improved
+10074,5688,Post-inflammatory hyperpigmentation,pigmentary,moderate,Vitamin C Serum,yes,no,no_change
+10075,2200,Freckles (Ephelides),pigmentary,moderate,Kojic Acid Cream,yes,yes,improved
+10076,1948,Post-inflammatory hyperpigmentation,pigmentary,moderate,Glycolic Acid Peel,no,no,improved
+10077,6761,Melasma,pigmentary,mild,Azelaic Acid 10%,yes,yes,improved
+10078,5614,Freckles (Ephelides),pigmentary,severe,Niacinamide 10%,yes,yes,improved
+10079,6389,Post-inflammatory hyperpigmentation,pigmentary,moderate,Retinol 0.5%,no,yes,improved
+10080,9111,Freckles (Ephelides),pigmentary,moderate,Niacinamide 10%,yes,yes,improved
+10081,9498,Freckles (Ephelides),pigmentary,moderate,Azelaic Acid 10%,yes,no,improved
+10082,4305,Freckles (Ephelides),pigmentary,mild,Kojic Acid Cream,yes,no,improved
+10083,2522,Freckles (Ephelides),pigmentary,mild,Sunscreen SPF 50+,yes,no,improved
+10084,3318,Melasma,pigmentary,severe,Kojic Acid Cream,yes,no,improved
+10085,1329,Melasma,pigmentary,severe,Azelaic Acid 10%,yes,no,improved
+10086,6439,Solar Lentigines (Sunspots),pigmentary,severe,Kojic Acid Cream,yes,yes,improved
+10087,6116,Solar Lentigines (Sunspots),pigmentary,mild,Glycolic Acid Peel,no,yes,improved
+10088,6070,Post-inflammatory hyperpigmentation,pigmentary,severe,Niacinamide 10%,yes,no,no_change
+10089,8501,Solar Lentigines (Sunspots),pigmentary,severe,Retinol 0.5%,no,no,no_change
+10090,9894,Solar Lentigines (Sunspots),pigmentary,mild,Retinol 0.5%,no,no,improved
+10091,6150,Post-inflammatory hyperpigmentation,pigmentary,moderate,Sunscreen SPF 50+,yes,yes,improved
+10092,8209,Solar Lentigines (Sunspots),pigmentary,mild,Kojic Acid Cream,yes,yes,no_change
+10093,2091,Melasma,pigmentary,mild,Sunscreen SPF 50+,yes,no,improved
+10094,9048,Freckles (Ephelides),pigmentary,severe,Kojic Acid Cream,yes,no,no_change
+10095,9258,Solar Lentigines (Sunspots),pigmentary,mild,Glycolic Acid Peel,no,yes,improved
+10096,4781,Solar Lentigines (Sunspots),pigmentary,severe,Sunscreen SPF 50+,yes,yes,improved
+10097,1757,Melasma,pigmentary,moderate,Vitamin C Serum,yes,no,improved
+10098,5526,Solar Lentigines (Sunspots),pigmentary,moderate,Retinol 0.5%,no,no,improved
+10099,5048,Solar Lentigines (Sunspots),pigmentary,severe,Sunscreen SPF 50+,yes,no,no_change
+10100,9260,Post-inflammatory hyperpigmentation,pigmentary,severe,Vitamin C Serum,yes,no,improved
+10101,4952,Solar Lentigines (Sunspots),pigmentary,mild,Vitamin C Serum,yes,yes,improved
+10102,3631,Freckles (Ephelides),pigmentary,mild,Retinol 0.5%,no,no,improved
+10103,4512,Freckles (Ephelides),pigmentary,severe,Hydroquinone 2%,no,no,improved
+10104,2240,Post-inflammatory hyperpigmentation,pigmentary,severe,Azelaic Acid 10%,yes,yes,improved
+10105,1523,Post-inflammatory hyperpigmentation,pigmentary,mild,Hydroquinone 2%,no,no,improved
+10106,2609,Freckles (Ephelides),pigmentary,mild,Kojic Acid Cream,yes,no,improved
+10107,4492,Melasma,pigmentary,moderate,Hydroquinone 2%,no,no,improved
+10108,3174,Freckles (Ephelides),pigmentary,moderate,Kojic Acid Cream,yes,no,no_change
+10109,7199,Post-inflammatory hyperpigmentation,pigmentary,severe,Hydroquinone 2%,no,no,improved
+10110,4449,Melasma,pigmentary,moderate,Glycolic Acid Peel,no,no,improved
+10111,2532,Melasma,pigmentary,mild,Sunscreen SPF 50+,yes,yes,improved
+10112,8153,Melasma,pigmentary,moderate,Azelaic Acid 10%,yes,yes,improved
+10113,7912,Melasma,pigmentary,severe,Vitamin C Serum,yes,yes,improved
+10114,1344,Solar Lentigines (Sunspots),pigmentary,severe,Hydroquinone 2%,no,no,improved
+10115,1650,Freckles (Ephelides),pigmentary,severe,Azelaic Acid 10%,yes,yes,improved
+10116,6306,Solar Lentigines (Sunspots),pigmentary,mild,Azelaic Acid 10%,yes,yes,improved
+10117,3164,Freckles (Ephelides),pigmentary,moderate,Hydroquinone 2%,no,no,improved
+10118,7612,Solar Lentigines (Sunspots),pigmentary,mild,Hydroquinone 2%,no,no,improved
+10119,9630,Post-inflammatory hyperpigmentation,pigmentary,moderate,Niacinamide 10%,yes,no,improved
+10120,7273,Melasma,pigmentary,moderate,Niacinamide 10%,yes,no,improved
+10121,9426,Solar Lentigines (Sunspots),pigmentary,severe,Hydroquinone 2%,no,yes,no_change
+10122,1538,Freckles (Ephelides),pigmentary,severe,Vitamin C Serum,yes,no,improved
+10123,5777,Freckles (Ephelides),pigmentary,mild,Sunscreen SPF 50+,yes,yes,no_change
+10124,3122,Post-inflammatory hyperpigmentation,pigmentary,mild,Azelaic Acid 10%,yes,no,improved
+10125,1226,Solar Lentigines (Sunspots),pigmentary,severe,Retinol 0.5%,no,yes,improved
+10126,7432,Freckles (Ephelides),pigmentary,moderate,Sunscreen SPF 50+,yes,yes,improved
+10127,2620,Post-inflammatory hyperpigmentation,pigmentary,moderate,Azelaic Acid 10%,yes,yes,improved
+10128,3998,Freckles (Ephelides),pigmentary,severe,Hydroquinone 2%,no,yes,improved
+10129,2829,Solar Lentigines (Sunspots),pigmentary,severe,Glycolic Acid Peel,no,yes,improved
+10130,9125,Solar Lentigines (Sunspots),pigmentary,moderate,Vitamin C Serum,yes,yes,improved
+10131,3367,Melasma,pigmentary,severe,Vitamin C Serum,yes,yes,no_change
+10132,9024,Melasma,pigmentary,mild,Retinol 0.5%,no,no,no_change
+10133,6037,Freckles (Ephelides),pigmentary,mild,Glycolic Acid Peel,no,no,improved
+10134,4586,Freckles (Ephelides),pigmentary,mild,Kojic Acid Cream,yes,no,improved
+10135,2459,Freckles (Ephelides),pigmentary,moderate,Azelaic Acid 10%,yes,yes,improved
+10136,6393,Post-inflammatory hyperpigmentation,pigmentary,severe,Azelaic Acid 10%,yes,no,improved
+10137,3324,Melasma,pigmentary,severe,Niacinamide 10%,yes,no,no_change
+10138,4052,Solar Lentigines (Sunspots),pigmentary,severe,Glycolic Acid Peel,no,yes,no_change
+10139,9933,Post-inflammatory hyperpigmentation,pigmentary,mild,Azelaic Acid 10%,yes,yes,improved
+10140,6039,Post-inflammatory hyperpigmentation,pigmentary,moderate,Azelaic Acid 10%,yes,no,no_change
+10141,6317,Post-inflammatory hyperpigmentation,pigmentary,mild,Retinol 0.5%,no,no,no_change
+10142,7035,Post-inflammatory hyperpigmentation,pigmentary,moderate,Azelaic Acid 10%,yes,no,improved
+10143,7676,Melasma,pigmentary,severe,Kojic Acid Cream,yes,no,improved
+10144,6652,Freckles (Ephelides),pigmentary,mild,Sunscreen SPF 50+,yes,no,improved
+10145,8462,Melasma,pigmentary,severe,Hydroquinone 2%,no,yes,no_change
+10146,2799,Solar Lentigines (Sunspots),pigmentary,mild,Hydroquinone 2%,no,yes,no_change
+10147,2715,Post-inflammatory hyperpigmentation,pigmentary,mild,Sunscreen SPF 50+,yes,yes,improved
+10148,7211,Post-inflammatory hyperpigmentation,pigmentary,moderate,Vitamin C Serum,yes,no,no_change
+10149,1665,Melasma,pigmentary,moderate,Azelaic Acid 10%,yes,no,improved
+10150,6114,Freckles (Ephelides),pigmentary,severe,Kojic Acid Cream,yes,no,improved
+10151,1466,Post-inflammatory hyperpigmentation,pigmentary,moderate,Kojic Acid Cream,yes,no,no_change
+10152,4863,Post-inflammatory hyperpigmentation,pigmentary,moderate,Glycolic Acid Peel,no,no,improved
+10153,3939,Freckles (Ephelides),pigmentary,moderate,Sunscreen SPF 50+,yes,yes,improved
+10154,5738,Freckles (Ephelides),pigmentary,severe,Retinol 0.5%,no,yes,improved
+10155,2645,Freckles (Ephelides),pigmentary,mild,Glycolic Acid Peel,no,no,improved
+10156,3331,Melasma,pigmentary,mild,Glycolic Acid Peel,no,no,improved
+10157,8315,Post-inflammatory hyperpigmentation,pigmentary,severe,Azelaic Acid 10%,yes,no,improved
+10158,8442,Freckles (Ephelides),pigmentary,moderate,Vitamin C Serum,yes,no,improved
+10159,6795,Freckles (Ephelides),pigmentary,severe,Hydroquinone 2%,no,yes,improved
+10160,5259,Post-inflammatory hyperpigmentation,pigmentary,severe,Retinol 0.5%,no,yes,no_change
+10161,7100,Freckles (Ephelides),pigmentary,mild,Glycolic Acid Peel,no,yes,improved
+10162,6575,Post-inflammatory hyperpigmentation,pigmentary,mild,Sunscreen SPF 50+,yes,yes,improved
+10163,8705,Post-inflammatory hyperpigmentation,pigmentary,moderate,Sunscreen SPF 50+,yes,no,improved
+10164,2982,Freckles (Ephelides),pigmentary,moderate,Hydroquinone 2%,no,yes,no_change
+10165,1976,Post-inflammatory hyperpigmentation,pigmentary,severe,Sunscreen SPF 50+,yes,yes,improved
+10166,6295,Melasma,pigmentary,moderate,Azelaic Acid 10%,yes,no,no_change
+10167,9784,Solar Lentigines (Sunspots),pigmentary,moderate,Sunscreen SPF 50+,yes,no,improved
+10168,6980,Solar Lentigines (Sunspots),pigmentary,severe,Vitamin C Serum,yes,no,improved
+10169,9197,Post-inflammatory hyperpigmentation,pigmentary,severe,Sunscreen SPF 50+,yes,yes,improved
+10170,7897,Solar Lentigines (Sunspots),pigmentary,moderate,Vitamin C Serum,yes,no,improved
+10171,6031,Freckles (Ephelides),pigmentary,moderate,Hydroquinone 2%,no,yes,improved
+10172,6580,Post-inflammatory hyperpigmentation,pigmentary,moderate,Vitamin C Serum,yes,no,improved
+10173,8756,Freckles (Ephelides),pigmentary,moderate,Vitamin C Serum,yes,no,improved
+10174,9209,Solar Lentigines (Sunspots),pigmentary,mild,Hydroquinone 2%,no,yes,improved
+10175,4496,Solar Lentigines (Sunspots),pigmentary,severe,Glycolic Acid Peel,no,no,improved
+10176,7668,Solar Lentigines (Sunspots),pigmentary,severe,Retinol 0.5%,no,yes,improved
+10177,7596,Freckles (Ephelides),pigmentary,severe,Glycolic Acid Peel,no,no,improved
+10178,4947,Solar Lentigines (Sunspots),pigmentary,moderate,Sunscreen SPF 50+,yes,yes,improved
+10179,9719,Melasma,pigmentary,moderate,Kojic Acid Cream,yes,yes,improved
+10180,3423,Melasma,pigmentary,moderate,Glycolic Acid Peel,no,no,improved
+10181,1296,Freckles (Ephelides),pigmentary,moderate,Kojic Acid Cream,yes,yes,improved
+10182,1142,Solar Lentigines (Sunspots),pigmentary,moderate,Retinol 0.5%,no,no,improved
+10183,8846,Post-inflammatory hyperpigmentation,pigmentary,moderate,Niacinamide 10%,yes,no,improved
+10184,1601,Solar Lentigines (Sunspots),pigmentary,severe,Vitamin C Serum,yes,yes,no_change
+10185,7913,Freckles (Ephelides),pigmentary,moderate,Azelaic Acid 10%,yes,yes,improved
+10186,6515,Solar Lentigines (Sunspots),pigmentary,severe,Kojic Acid Cream,yes,no,improved
+10187,9806,Melasma,pigmentary,mild,Azelaic Acid 10%,yes,no,improved
+10188,5305,Post-inflammatory hyperpigmentation,pigmentary,mild,Glycolic Acid Peel,no,no,improved
+10189,6501,Post-inflammatory hyperpigmentation,pigmentary,severe,Azelaic Acid 10%,yes,no,improved
+10190,7681,Melasma,pigmentary,severe,Retinol 0.5%,no,yes,no_change
+10191,4190,Freckles (Ephelides),pigmentary,moderate,Kojic Acid Cream,yes,yes,improved
+10192,4763,Solar Lentigines (Sunspots),pigmentary,moderate,Azelaic Acid 10%,yes,yes,improved
+10193,1660,Solar Lentigines (Sunspots),pigmentary,moderate,Azelaic Acid 10%,yes,no,improved
+10194,3745,Post-inflammatory hyperpigmentation,pigmentary,mild,Vitamin C Serum,yes,no,improved
+10195,1793,Post-inflammatory hyperpigmentation,pigmentary,moderate,Azelaic Acid 10%,yes,no,improved
+10196,9499,Post-inflammatory hyperpigmentation,pigmentary,moderate,Sunscreen SPF 50+,yes,no,no_change
+10197,7750,Melasma,pigmentary,severe,Kojic Acid Cream,yes,no,improved
+10198,4316,Melasma,pigmentary,mild,Hydroquinone 2%,no,yes,improved
+10199,9416,Freckles (Ephelides),pigmentary,mild,Glycolic Acid Peel,no,yes,improved
+10200,9100,Melasma,pigmentary,mild,Retinol 0.5%,no,no,improved

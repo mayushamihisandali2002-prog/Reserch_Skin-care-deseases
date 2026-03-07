@@ -27,6 +27,44 @@
     "spotness": 0.2,
     "saturation_mean": 0.1
   },
+  "disease_weights": {
+    "Acne": {
+      "spotness": 0.6,
+      "redness_index": 0.15,
+      "edge_density": 0.15,
+      "texture_entropy": 0.05,
+      "saturation_mean": 0.05
+    },
+    "Eczema": {
+      "redness_index": 0.5,
+      "texture_entropy": 0.3,
+      "edge_density": 0.1,
+      "spotness": 0.05,
+      "saturation_mean": 0.05
+    },
+    "Psoriasis": {
+      "texture_entropy": 0.5,
+      "edge_density": 0.4,
+      "redness_index": 0.05,
+      "spotness": 0.05
+    },
+    "Pigmentation / Dark Spots": {
+      "spotness": 0.8,
+      "texture_entropy": 0.1,
+      "saturation_mean": 0.1
+    },
+    "Rosacea": {
+      "redness_index": 0.7,
+      "saturation_mean": 0.2,
+      "edge_density": 0.1
+    },
+    "Dermatitis": {
+      "redness_index": 0.4,
+      "saturation_mean": 0.3,
+      "edge_density": 0.2,
+      "texture_entropy": 0.1
+    }
+  },
   "severity_thresholds": {
     "q1": 39.87109916687012,
     "q2": 47.332201461791996
