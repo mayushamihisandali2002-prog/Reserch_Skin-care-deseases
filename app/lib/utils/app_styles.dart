@@ -1,55 +1,76 @@
 import 'package:flutter/material.dart';
 
+extension ThemeExtension on BuildContext {
+  ThemeData get theme => Theme.of(this);
+  bool get isDarkMode => theme.brightness == Brightness.dark;
+  ColorScheme get colorScheme => theme.colorScheme;
+
+  Color get clrSurfaceGlass => isDarkMode ? const Color(0x99161B22) : const Color(0x99FFFFFF).withValues(alpha: 0.9);
+  Color get clrSurface => colorScheme.surface;
+  Color get clrBackgroundAlt => isDarkMode ? const Color(0xFF0D1117) : const Color(0xFFF1F5F7);
+  Color get clrBackground => colorScheme.surfaceContainerHighest.withValues(alpha: 0.1); 
+  // Using a more dynamic background
+  Color get clrBackgroundReal => theme.scaffoldBackgroundColor;
+  Color get clrTextMain => colorScheme.onSurface;
+  Color get clrTextSec => colorScheme.onSurfaceVariant;
+  Color get clrBorder => colorScheme.outline;
+}
+
 class AppColors {
-  static const Color primary = Color(0xFF1F7A8C);
-  static const Color primaryDark = Color(0xFF145563);
-  static const Color secondary = Color(0xFFF4A259);
-  static const Color accent = Color(0xFF6EB5A9);
+  // Primary: Sophisticated deep teal/emerald
+  static const Color primary = Color(0xFF0F4C5C);
+  static const Color primaryLight = Color(0xFF236B7D);
+  static const Color primaryDark = Color(0xFF082D36);
 
-  static const Color background = Color(0xFFF3F6F8);
-  static const Color backgroundAlt = Color(0xFFEAF0F3);
+  // Accents: Vibrant but balanced
+  static const Color secondary = Color(0xFFE36414); // Vibrant sunset orange
+  static const Color accent = Color(0xFF5F0F40); // Deep wine
+  static const Color highlight = Color(0xFF9B2226); // Rich red
+
+  // Fixed colors for legacy support during refactor
   static const Color surface = Color(0xFFFFFFFF);
+  static const Color background = Color(0xFFF8FBFC);
+  static const Color textMain = Color(0xFF10252D);
+  static const Color textSecondary = Color(0xFF5E737C);
+  static const Color border = Color(0xFFE1E8EB);
 
-  static const Color textMain = Color(0xFF132A36);
-  static const Color textSecondary = Color(0xFF5B6E78);
-  static const Color border = Color(0xFFD9E3E8);
-
-  static const Color success = Color(0xFF2E9B67);
-  static const Color warning = Color(0xFFC27B2A);
-  static const Color error = Color(0xFFD64550);
+  // Status
+  static const Color success = Color(0xFF1B998B);
+  static const Color warning = Color(0xFFFB8500);
+  static const Color error = Color(0xFFD62828);
 }
 
 class AppTextStyles {
-  static const TextStyle heading = TextStyle(
+  static TextStyle heading(BuildContext context) => TextStyle(
     fontSize: 26,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.3,
-    color: AppColors.textMain,
+    color: context.clrTextMain,
   );
 
-  static const TextStyle subHeading = TextStyle(
+  static TextStyle subHeading(BuildContext context) => TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.1,
-    color: AppColors.textMain,
+    color: context.clrTextMain,
   );
 
-  static const TextStyle body = TextStyle(
+  static TextStyle body(BuildContext context) => TextStyle(
     fontSize: 14,
     height: 1.5,
-    color: AppColors.textSecondary,
+    color: context.clrTextSec,
   );
 
-  static const TextStyle bodyStrong = TextStyle(
+  static TextStyle bodyStrong(BuildContext context) => TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w600,
-    color: AppColors.textMain,
+    color: context.clrTextMain,
   );
 
-  static const TextStyle caption = TextStyle(
+  static TextStyle caption(BuildContext context) => TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w500,
-    color: AppColors.textSecondary,
+    color: context.clrTextSec,
   );
 }
 
@@ -57,30 +78,72 @@ class AppGradients {
   static const LinearGradient hero = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF246A77), Color(0xFF1E4D57)],
+    colors: [Color(0xFF0F4C5C), Color(0xFF236B7D)],
   );
 
-  static const LinearGradient page = LinearGradient(
+  static const LinearGradient premium = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF0F4C5C), Color(0xFF5F0F40)],
+  );
+
+  static LinearGradient page(BuildContext context) => LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFFF6FAFC), Color(0xFFEFF4F7)],
+    colors: [
+      context.theme.scaffoldBackgroundColor,
+      context.clrBackgroundAlt,
+    ],
+  );
+
+  static LinearGradient glass(BuildContext context) => LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      context.clrSurfaceGlass.withValues(alpha: 0.8),
+      context.clrSurfaceGlass.withValues(alpha: 0.4),
+    ],
   );
 }
 
 class AppDecor {
-  static BoxDecoration softCard({
-    Color color = AppColors.surface,
-    Color borderColor = AppColors.border,
+  static BoxDecoration softCard(
+    BuildContext context, {
+    Color? color,
+    Color? borderColor,
+    double radius = 24.0,
+    bool showBorder = true,
   }) {
     return BoxDecoration(
-      color: color,
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: borderColor),
-      boxShadow: const [
+      color: color ?? context.clrSurface,
+      borderRadius: BorderRadius.circular(radius),
+      border: showBorder
+          ? Border.all(
+              color: borderColor ?? context.clrBorder.withValues(alpha: 0.6),
+            )
+          : null,
+      boxShadow: [
         BoxShadow(
-          color: Color(0x140C1B22),
-          blurRadius: 16,
-          offset: Offset(0, 8),
+          color: context.isDarkMode 
+              ? Colors.black.withValues(alpha: 0.3) 
+              : const Color(0xFF10252D).withValues(alpha: 0.06),
+          blurRadius: 24,
+          offset: const Offset(0, 12),
+        ),
+      ],
+    );
+  }
+
+  static BoxDecoration glassCard(BuildContext context, {double radius = 24.0}) {
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(radius),
+      gradient: AppGradients.glass(context),
+      border: Border.all(color: context.clrBorder.withValues(alpha: 0.2)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.05),
+          blurRadius: 15,
+          spreadRadius: 2,
         ),
       ],
     );

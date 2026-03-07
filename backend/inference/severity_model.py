@@ -90,6 +90,7 @@ class SeverityModel:
             self.threshold_q2 = float(thresholds.get("q2", self.threshold_q2))
             levels = meta.get("severity_levels", []) or self.severity_levels
             self.severity_levels = [str(level).strip().lower() for level in levels]
+            self.disease_weights = meta.get("disease_weights", {})
 
             if not self.feature_cols:
                 raise ValueError("feature_cols is missing or empty in metadata.json")
@@ -248,14 +249,21 @@ class SeverityModel:
                 normalized[col] = _clamp01((value - min_val) / denom)
         return normalized
 
-    def _compute_weighted_score(self, normalized_features: dict[str, float]) -> tuple[float, str]:
+    def _compute_weighted_score(self, normalized_features: dict[str, float], disease_name: Optional[str] = None) -> tuple[float, str]:
         weight_sum = 0.0
         weighted_value = 0.0
 
+        # Use disease-specific weights if available
+        current_weights = self.weights
+        if disease_name and disease_name in self.disease_weights:
+            current_weights = self.disease_weights[disease_name]
+            # print(f"[Severity] Using specialized weights for {disease_name}")
+
         for col in self.feature_cols:
-            w = float(self.weights.get(col, 0.0))
+            w = float(current_weights.get(col, 0.0))
             v = float(normalized_features.get(col, 0.0))
             weighted_value += w * v
+            # If disease weights are relative (don't sum to 1), weight_sum handles it
             weight_sum += abs(w)
 
         if weight_sum <= 1e-12:
@@ -299,7 +307,7 @@ class SeverityModel:
     def _display_level(level: str) -> str:
         return str(level).strip().replace("_", " ").title()
 
-    def predict_from_pil(self, image: Image.Image) -> dict[str, Any]:
+    def predict_from_pil(self, image: Image.Image, use_tta: bool = True, disease_name: Optional[str] = None) -> dict[str, Any]:
         if not self.loaded or self.model is None:
             raise RuntimeError(self.load_error or "Severity model not loaded")
 
@@ -307,18 +315,46 @@ class SeverityModel:
             image = image.convert("RGB")
 
         original_w, original_h = image.size
-        resized = self._resize_keep_aspect(image, RESIZE_SHORT_SIDE)
-        cropped = self._center_crop(resized, TARGET_SIZE)
+        
+        # Prepare views for TTA (4 views: Original, H-Flip, V-Flip, HV-Flip)
+        views = [image]
+        if use_tta:
+            views.append(image.transpose(Image.FLIP_LEFT_RIGHT))
+            views.append(image.transpose(Image.FLIP_TOP_BOTTOM))
+            views.append(image.transpose(Image.FLIP_LEFT_RIGHT).transpose(Image.FLIP_TOP_BOTTOM))
 
-        image_rgb = np.array(cropped, dtype=np.uint8)
-        image_rgb, normalization_method = self._apply_clahe_or_fallback(image_rgb)
+        all_raw_features = []
+        all_normalized_features = []
+        
+        # Meta for last view (just for reporting)
+        normalization_method = "unknown"
+        face_count = None
 
-        face_count = self._detect_face_count(image_rgb)
-        raw_features = self._extract_features(image_rgb)
-        normalized_features = self._normalize_features(raw_features)
+        for view in views:
+            resized = self._resize_keep_aspect(view, RESIZE_SHORT_SIDE)
+            cropped = self._center_crop(resized, TARGET_SIZE)
+            view_rgb = np.array(cropped, dtype=np.uint8)
+            view_rgb, normalization_method = self._apply_clahe_or_fallback(view_rgb)
+            
+            # Extract features for this view
+            view_face_count = self._detect_face_count(view_rgb)
+            if face_count is None: face_count = view_face_count # Capture first view's face count
+            
+            view_raw = self._extract_features(view_rgb)
+            view_norm = self._normalize_features(view_raw)
+            
+            all_raw_features.append(view_raw)
+            all_normalized_features.append(view_norm)
+
+        # Average features across views
+        avg_raw = {}
+        avg_norm = {}
+        for col in self.feature_cols:
+            avg_raw[col] = float(np.mean([f.get(col, 0.0) for f in all_raw_features]))
+            avg_norm[col] = float(np.mean([f.get(col, 0.0) for f in all_normalized_features]))
 
         vector = np.array(
-            [[float(normalized_features.get(col, 0.0)) for col in self.feature_cols]],
+            [[avg_norm[col] for col in self.feature_cols]],
             dtype=np.float32,
         )
 
@@ -335,7 +371,7 @@ class SeverityModel:
                 probabilities[self._display_level(cls_level)] = float(probs[idx])
             confidence = float(np.max(probs))
 
-        score, score_level = self._compute_weighted_score(normalized_features)
+        score, score_level = self._compute_weighted_score(avg_norm, disease_name=disease_name)
 
         return {
             "severity_level": self._display_level(model_level),
@@ -344,12 +380,8 @@ class SeverityModel:
             "probabilities": probabilities,
             "model_prediction": self._display_level(model_level),
             "score_based_level": self._display_level(score_level),
-            "feature_vector": {
-                col: float(raw_features.get(col, 0.0)) for col in self.feature_cols
-            },
-            "normalized_features": {
-                col: float(normalized_features.get(col, 0.0)) for col in self.feature_cols
-            },
+            "feature_vector": avg_raw,
+            "normalized_features": avg_norm,
             "thresholds": {
                 "q1": float(self.threshold_q1),
                 "q2": float(self.threshold_q2),
@@ -360,12 +392,13 @@ class SeverityModel:
                 "normalization": normalization_method,
                 "face_count": face_count,
                 "face_visible": None if face_count is None else (face_count > 0),
+                "tta_views": len(views)
             },
         }
 
-    def predict_from_bytes(self, image_bytes: bytes) -> dict[str, Any]:
+    def predict_from_bytes(self, image_bytes: bytes, disease_name: Optional[str] = None) -> dict[str, Any]:
         with Image.open(BytesIO(image_bytes)) as image:
-            return self.predict_from_pil(image)
+            return self.predict_from_pil(image, disease_name=disease_name)
 
 
 _instance: Optional[SeverityModel] = None

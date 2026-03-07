@@ -43,25 +43,33 @@ class HealingAnalysisScreen extends StatelessWidget {
             const SizedBox(height: 30),
 
             // Radar Chart Section
-            const Text('Symptom Breakdown', style: AppTextStyles.subHeading),
+            Text('Symptom Breakdown', style: AppTextStyles.subHeading(context)),
             const SizedBox(height: 20),
-            _buildRadarChart(metrics),
+            _buildRadarChart(context, metrics),
             const SizedBox(height: 30),
 
             // Detailed Metrics Grid
-            const Text('Detailed Metrics', style: AppTextStyles.subHeading),
+            Text('Detailed Metrics', style: AppTextStyles.subHeading(context)),
             const SizedBox(height: 16),
-            _buildMetricsGrid(metrics),
+            _buildMetricsGrid(context, metrics),
             
             const SizedBox(height: 30),
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(16)),
+              decoration: BoxDecoration(
+                color: context.isDarkMode ? Colors.blue.withValues(alpha: 0.1) : Colors.blue[50], 
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Row(
                 children: [
-                   const Icon(Icons.info, color: Colors.blue),
+                   Icon(Icons.info, color: context.isDarkMode ? Colors.blueAccent : Colors.blue),
                    const SizedBox(width: 12),
-                   const Expanded(child: Text('Lower values are better for Redness, Inflammation, and Scaling. Higher is better for Texture/Healing.')),
+                   Expanded(
+                     child: Text(
+                       'Lower values are better for Redness, Inflammation, and Scaling. Higher is better for Texture/Healing.',
+                       style: TextStyle(color: context.clrTextMain),
+                     ),
+                   ),
                 ],
               ),
             )
@@ -71,7 +79,7 @@ class HealingAnalysisScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRadarChart(Map<String, dynamic> metrics) {
+  Widget _buildRadarChart(BuildContext context, Map<String, dynamic> metrics) {
     final values = [
       (metrics['redness'] ?? 0).toDouble(),
       (metrics['inflammation'] ?? 0).toDouble(),
@@ -86,7 +94,7 @@ class HealingAnalysisScreen extends StatelessWidget {
       child: RadarChart(
         RadarChartData(
           ticksTextStyle: const TextStyle(color: Colors.transparent),
-          gridBorderData: BorderSide(color: Colors.grey[300]!),
+          gridBorderData: BorderSide(color: context.clrBorder.withValues(alpha: 0.3)),
           titlePositionPercentageOffset: 0.2,
           getTitle: (index, angle) {
             const titles = ['Redness', 'Inflammation', 'Scaling', 'Texture'];
@@ -111,7 +119,7 @@ class HealingAnalysisScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMetricsGrid(Map<String, dynamic> metrics) {
+  Widget _buildMetricsGrid(BuildContext context, Map<String, dynamic> metrics) {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -127,16 +135,21 @@ class HealingAnalysisScreen extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.clrSurface,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 4)],
+            boxShadow: [
+              BoxShadow(
+                color: context.isDarkMode ? Colors.black26 : Colors.grey.withOpacity(0.1), 
+                blurRadius: 4,
+              ),
+            ],
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 e.key.toUpperCase(), 
-                style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)
+                style: TextStyle(color: context.clrTextSec, fontSize: 12, fontWeight: FontWeight.bold)
               ),
               const SizedBox(height: 8),
               Text(

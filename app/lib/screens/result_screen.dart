@@ -1,29 +1,45 @@
 import 'package:flutter/material.dart';
 import '../utils/app_styles.dart';
 
-class ResultScreen extends StatelessWidget {
+class ResultScreen extends StatefulWidget {
   final Map<String, dynamic> data;
 
   const ResultScreen({super.key, required this.data});
 
   @override
+  State<ResultScreen> createState() => _ResultScreenState();
+}
+
+class _ResultScreenState extends State<ResultScreen> {
+  @override
   Widget build(BuildContext context) {
-    final String prediction =
-        (data['prediction'] ?? data['final_diagnosis'] ?? 'Unknown').toString();
-    final double confidence = _toDouble(data['confidence']);
+    final Map<String, dynamic> data = widget.data;
+    // Handle nested Master Report or flat response
+    final Map<String, dynamic> diag = data.containsKey('diagnosis')
+        ? Map<String, dynamic>.from(data['diagnosis'])
+        : data;
+
+    final String prediction = (diag['prediction'] ??
+            diag['final_diagnosis'] ??
+            diag['disease'] ??
+            'Unknown')
+        .toString();
+    final double confidence = _toDouble(diag['confidence']);
     final String confidencePercent =
-        (data['confidence_percent']?.toString() ??
+        (diag['confidence_percent']?.toString() ??
         '${(confidence * 100).toStringAsFixed(1)}%');
     final String confidenceLevel = _normalizeConfidenceLevel(
-      data['confidence_level']?.toString(),
+      diag['confidence_level']?.toString(),
       confidence,
     );
     final Color confidenceColor = _confidenceColor(confidenceLevel);
 
-    final String? transcript = data['transcript']?.toString();
-    final String? transcriptionStatus = data['transcription_status']
+    final String? consistencyWarning = data['consistency_warning']?.toString();
+
+    final String? transcript = diag['transcript']?.toString();
+    final String? transcriptionStatus = diag['transcription_status']
         ?.toString();
-    final String? transcriptionError = data['transcription_error']?.toString();
+    final String? transcriptionError = diag['transcription_error']?.toString();
 
     final String normalizedTranscript = (transcript ?? '').trim();
     final bool isPlaceholderTranscript =
@@ -37,49 +53,57 @@ class ResultScreen extends StatelessWidget {
                 transcriptionStatus != 'not_requested' &&
                 transcriptionStatus != 'frontend_text'));
 
-    final String? diseaseExplanation = data['disease_explanation']?.toString();
-    final String decisionMode = (data['decision_mode']?.toString() ?? 'UNKNOWN')
-        .toUpperCase();
-    final String modelUsed = (data['model_used']?.toString() ?? 'unknown')
-        .toUpperCase();
+    final String? diseaseExplanation = diag['disease_explanation']?.toString();
 
-    final double symptomMatchScore = _toDouble(data['symptom_match_score']);
+    final double symptomMatchScore = _toDouble(diag['symptom_match_score']);
     final String symptomMatchPercent =
-        data['symptom_match_percent']?.toString() ??
+        diag['symptom_match_percent']?.toString() ??
         '${(symptomMatchScore * 100).toStringAsFixed(0)}%';
 
     final List<String> expectedSymptoms = _normalizeStringList(
-      data['expected_symptoms'] ?? data['symptoms'],
+      diag['expected_symptoms'] ?? diag['symptoms'],
     );
     final List<String> extractedSymptoms = _normalizeStringList(
-      data['extracted_symptoms'],
+      diag['extracted_symptoms'],
     );
     final List<String> matchedSymptoms = _normalizeStringList(
-      data['matched_symptoms'],
+      diag['matched_symptoms'],
     );
-    final List<String> warnings = _normalizeStringList(data['warnings']);
-    final List<String> nextSteps = _normalizeStringList(data['next_steps']);
+    final List<String> warnings = _normalizeStringList(diag['warnings']);
+    final List<String> nextSteps = _normalizeStringList(
+      diag['next_steps'] ?? diag['recommendations'],
+    );
 
-    final List<Map<String, dynamic>> top3 = _normalizePredictionList(
-      data['top3_predictions'],
-    );
     final List<Map<String, dynamic>> treatments = _normalizeMapList(
-      data['treatments'],
+      diag['treatments'] ?? diag['recommended_treatments'],
     );
-    final Map<String, dynamic> routine = _normalizeMap(data['routine']);
+    final Map<String, dynamic> routine = _normalizeMap(
+      data['skin_profile'] ?? diag['routine'],
+    );
+    final Map<String, dynamic> severity = _normalizeMap(data['severity']);
 
-    final String? imageDisease = _nullableString(data['image_disease']);
-    final String? textDisease = _nullableString(data['text_disease']);
-    final double imageConfidence = _toDouble(data['image_confidence']);
-    final double textConfidence = _toDouble(data['text_confidence']);
-    final double imageWeight = _toDouble(data['image_weight']);
-    final double textWeight = _toDouble(data['text_weight']);
-    final double agreementScore = _toDouble(data['agreement_score']);
+    // Model diagnostics variables
+    final String decisionMode =
+        (diag['decision_mode'] ?? diag['mode'] ?? 'unknown').toString();
+    final String modelUsed = (diag['model_used'] ?? diag['model'] ?? 'fused')
+        .toString();
+    final List<Map<String, dynamic>> top3 = _normalizePredictionList(
+      diag['top_3'] ?? diag['top3'] ?? diag['predictions'],
+    );
+
+    // Individual model outputs for diagnostics
+    final String? imageDisease = diag['image_disease']?.toString();
+    final double imageConfidence = _toDouble(diag['image_confidence']);
+    final String? textDisease = diag['text_disease']?.toString();
+    final double textConfidence = _toDouble(diag['text_confidence']);
+    final double imageWeight = _toDouble(diag['image_weight']);
+    final double textWeight = _toDouble(diag['text_weight']);
+    final double agreementScore = _toDouble(diag['agreement_score']);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Analysis Result')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppGradients.page),
+        decoration: BoxDecoration(gradient: AppGradients.page(context)),
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 22),
           child: Column(
@@ -91,54 +115,22 @@ class ResultScreen extends StatelessWidget {
                 confidenceLevel: confidenceLevel,
                 confidenceColor: confidenceColor,
               ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _buildMetricChip(
-                    label: 'Confidence',
-                    value: confidencePercent,
-                    color: confidenceColor,
-                    icon: Icons.analytics_outlined,
-                  ),
-                  _buildMetricChip(
-                    label: 'Symptom Match',
-                    value: symptomMatchPercent,
-                    color: AppColors.accent,
-                    icon: Icons.fact_check_outlined,
-                  ),
-                  _buildMetricChip(
-                    label: 'Decision',
-                    value: _friendlyDecisionMode(decisionMode),
-                    color: AppColors.secondary,
-                    icon: Icons.account_tree_outlined,
-                  ),
-                  _buildMetricChip(
-                    label: 'Model',
-                    value: modelUsed,
-                    color: AppColors.primaryDark,
-                    icon: Icons.memory_outlined,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              if (top3.isNotEmpty) ...[
-                _buildPredictionSection(top3),
+              const SizedBox(height: 20),
+              if (data['summary'] != null) ...[
+                _buildSummarySection(data['summary']!),
                 const SizedBox(height: 14),
               ],
-              if (imageDisease != null || textDisease != null) ...[
-                _buildModelDiagnostics(
-                  imageDisease: imageDisease,
-                  imageConfidence: imageConfidence,
-                  textDisease: textDisease,
-                  textConfidence: textConfidence,
-                  imageWeight: imageWeight,
-                  textWeight: textWeight,
-                  agreementScore: agreementScore,
-                ),
+
+              const SizedBox(height: 14),
+              if (consistencyWarning != null) ...[
+                _buildConsistencyAlert(consistencyWarning),
                 const SizedBox(height: 14),
               ],
+              if (severity.isNotEmpty && severity['face_detected'] == true) ...[
+                _buildSeverityCard(severity),
+                const SizedBox(height: 14),
+              ],
+
               if (hasTranscript) ...[
                 _buildSectionCard(
                   title: 'Voice Transcript',
@@ -146,9 +138,9 @@ class ResultScreen extends StatelessWidget {
                   iconColor: AppColors.primary,
                   child: Text(
                     normalizedTranscript,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
-                      color: AppColors.textMain,
+                      color: context.clrTextMain,
                     ),
                   ),
                 ),
@@ -164,9 +156,9 @@ class ResultScreen extends StatelessWidget {
                         (isPlaceholderTranscript
                             ? 'Voice note was not transcribed by the server. Try uploading a WAV file or check ffmpeg setup.'
                             : 'Voice note could not be transcribed. Try a clearer recording or upload a WAV file.'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
-                      color: AppColors.textMain,
+                      color: context.clrTextMain,
                     ),
                   ),
                 ),
@@ -193,6 +185,17 @@ class ResultScreen extends StatelessWidget {
                 const SizedBox(height: 14),
               ],
               if (warnings.isNotEmpty) _buildWarningSection(warnings),
+              _buildPredictionSection(top3),
+              const SizedBox(height: 14),
+              _buildModelDiagnostics(
+                imageDisease: imageDisease,
+                imageConfidence: imageConfidence,
+                textDisease: textDisease,
+                textConfidence: textConfidence,
+                imageWeight: imageWeight,
+                textWeight: textWeight,
+                agreementScore: agreementScore,
+              ),
             ],
           ),
         ),
@@ -208,54 +211,72 @@ class ResultScreen extends StatelessWidget {
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        gradient: AppGradients.hero,
-        borderRadius: BorderRadius.circular(20),
+        gradient: AppGradients.premium,
+        borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryDark.withValues(alpha: 0.24),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            color: AppColors.primaryDark.withValues(alpha: 0.3),
+            blurRadius: 25,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Final Diagnosis',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            prediction,
-            style: AppTextStyles.heading.copyWith(
-              color: Colors.white,
-              fontSize: 30,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildPill(
-                label: 'Confidence $confidencePercent',
-                textColor: Colors.white,
-                backgroundColor: Colors.white.withValues(alpha: 0.2),
+              Text(
+                'AI ANALYSIS REPORT',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.6),
+                  fontSize: 12,
+                  letterSpacing: 2.0,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-              _buildPill(
-                label: confidenceLevel.toUpperCase(),
-                textColor: confidenceColor,
-                backgroundColor: Colors.white,
+              const Icon(
+                Icons.verified_user_rounded,
+                color: Colors.white,
+                size: 20,
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            prediction,
+            style: AppTextStyles.heading(context).copyWith(
+              color: Colors.white,
+              fontSize: 34,
+              height: 1.1,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.auto_graph_rounded, color: confidenceColor, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  '$confidencePercent Confidence',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -263,6 +284,7 @@ class ResultScreen extends StatelessWidget {
   }
 
   Widget _buildPredictionSection(List<Map<String, dynamic>> top3) {
+    if (top3.isEmpty) return const SizedBox.shrink();
     return _buildSectionCard(
       title: 'Top Predictions',
       icon: Icons.insights_outlined,
@@ -301,7 +323,7 @@ class ResultScreen extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: probability.clamp(0.0, 1.0),
                     minHeight: 9,
-                    backgroundColor: AppColors.border.withValues(alpha: 0.7),
+                    backgroundColor: context.clrBorder.withValues(alpha: 0.7),
                     valueColor: const AlwaysStoppedAnimation<Color>(
                       AppColors.primaryDark,
                     ),
@@ -311,6 +333,106 @@ class ResultScreen extends StatelessWidget {
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildConsistencyAlert(String warning) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              warning,
+              style: TextStyle(
+                fontSize: 14,
+                color: context.clrTextMain,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSeverityCard(Map<String, dynamic> severity) {
+    final String level =
+        (severity['severity_label'] ?? severity['level'] ?? 'Unknown')
+            .toString();
+    final double score = _toDouble(
+      severity['severity_score'] ?? severity['score'],
+    );
+
+    Color severityColor;
+    switch (level.toLowerCase()) {
+      case 'severe':
+        severityColor = AppColors.error;
+        break;
+      case 'moderate':
+        severityColor = AppColors.warning;
+        break;
+      default:
+        severityColor = AppColors.success;
+    }
+
+    return _buildSectionCard(
+      title: 'Severity Assessment',
+      icon: Icons.assessment_outlined,
+      iconColor: severityColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: severityColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  level.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: severityColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Score: ${(score * 100).toStringAsFixed(1)}%',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: context.clrTextSec,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: score.clamp(0.0, 1.0),
+              minHeight: 10,
+              backgroundColor: context.clrBorder,
+              valueColor: AlwaysStoppedAnimation<Color>(severityColor),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -336,10 +458,14 @@ class ResultScreen extends StatelessWidget {
       );
     }
     if (textDisease != null && textDisease.isNotEmpty) {
+      final String safeTextValue =
+          (textDisease == 'Unknown' && textConfidence <= 0.0)
+              ? 'Not provided'
+              : '$textDisease (${(textConfidence * 100).toStringAsFixed(1)}%)';
       rows.add(
         _buildKeyValueRow(
           label: 'Text Branch',
-          value: '$textDisease (${(textConfidence * 100).toStringAsFixed(1)}%)',
+          value: safeTextValue,
         ),
       );
     }
@@ -404,7 +530,7 @@ class ResultScreen extends StatelessWidget {
             child: LinearProgressIndicator(
               value: symptomMatchScore.clamp(0.0, 1.0),
               minHeight: 8,
-              backgroundColor: AppColors.border.withValues(alpha: 0.6),
+              backgroundColor: context.clrBorder.withValues(alpha: 0.6),
               valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
             ),
           ),
@@ -559,6 +685,52 @@ class ResultScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildSummarySection(String summary) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.auto_awesome,
+                color: AppColors.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'AI SUMMARY',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                  letterSpacing: 1.2,
+                  color: AppColors.primary.withValues(alpha: 0.8),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            summary,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: context.clrTextMain,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildWarningSection(List<String> warnings) {
     return Container(
       width: double.infinity,
@@ -600,34 +772,32 @@ class ResultScreen extends StatelessWidget {
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: AppDecor.softCard(),
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: AppDecor.softCard(context, radius: 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  color: iconColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(icon, color: iconColor, size: 20),
+                child: Icon(icon, color: iconColor, size: 22),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTextStyles.subHeading(context).copyWith(fontSize: 18),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 20),
           child,
         ],
       ),
@@ -644,7 +814,7 @@ class ResultScreen extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 120),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.92),
+        color: context.clrSurface.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
@@ -658,9 +828,9 @@ class ResultScreen extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
-                  color: AppColors.textSecondary,
+                  color: context.clrTextSec,
                 ),
               ),
               Text(
@@ -678,68 +848,28 @@ class ResultScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPill({
-    required String label,
-    required Color textColor,
-    required Color backgroundColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: textColor,
-          fontWeight: FontWeight.w700,
-          fontSize: 11.5,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSymptomChip(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
   Widget _buildKeyValueRow({required String label, required String value}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 118,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
+          Text(
+            '$label: ',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              color: context.clrTextSec,
             ),
           ),
-          const SizedBox(width: 8),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(color: AppColors.textMain, height: 1.35),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: context.clrTextMain,
+              ),
             ),
           ),
         ],
@@ -750,86 +880,114 @@ class ResultScreen extends StatelessWidget {
   Widget _buildLabel(String text) {
     return Text(
       text,
-      style: const TextStyle(
-        fontWeight: FontWeight.w700,
-        color: AppColors.textMain,
+      style: TextStyle(
+        fontWeight: FontWeight.w800,
+        fontSize: 13,
+        color: context.clrTextSec,
+        letterSpacing: 0.5,
       ),
     );
   }
 
   Widget _buildMutedText(String text) {
-    return Text(text, style: const TextStyle(color: AppColors.textSecondary));
+    return Text(
+      text,
+      style: TextStyle(
+        color: context.clrTextSec.withValues(alpha: 0.7),
+        fontSize: 14,
+        fontStyle: FontStyle.italic,
+      ),
+    );
   }
 
-  static double _toDouble(dynamic value) {
-    if (value == null) return 0.0;
+  Widget _buildSymptomChip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  double _toDouble(dynamic value) {
     if (value is num) return value.toDouble();
-    return double.tryParse(value.toString()) ?? 0.0;
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
   }
 
-  static String? _nullableString(dynamic value) {
-    if (value == null) return null;
-    final parsed = value.toString().trim();
-    return parsed.isEmpty || parsed.toLowerCase() == 'none' ? null : parsed;
+  String _normalizeConfidenceLevel(String? level, double confidence) {
+    if (level != null && level.isNotEmpty) return level;
+    if (confidence >= 0.8) return 'High';
+    if (confidence >= 0.5) return 'Moderate';
+    return 'Low';
   }
 
-  static Map<String, dynamic> _normalizeMap(dynamic value) {
-    if (value is Map<String, dynamic>) {
-      return value;
-    }
-    if (value is Map) {
-      return value.map((k, v) => MapEntry(k.toString(), v));
-    }
-    return {};
-  }
-
-  static List<Map<String, dynamic>> _normalizeMapList(dynamic value) {
-    if (value is! List) return [];
-    return value
-        .whereType<Map>()
-        .map((e) => e.map((k, v) => MapEntry(k.toString(), v)))
-        .toList();
-  }
-
-  static List<Map<String, dynamic>> _normalizePredictionList(dynamic value) {
-    return _normalizeMapList(value);
-  }
-
-  static List<String> _normalizeStringList(dynamic value) {
-    if (value is! List) return [];
-    return value
-        .where((item) => item != null)
-        .map((item) => item.toString().trim())
-        .where((item) => item.isNotEmpty)
-        .toList();
-  }
-
-  static String _normalizeConfidenceLevel(String? provided, double confidence) {
-    final raw = provided?.trim().toLowerCase();
-    if (raw == 'high' || raw == 'moderate' || raw == 'medium' || raw == 'low') {
-      return raw == 'medium' ? 'moderate' : raw!;
-    }
-    if (confidence >= 0.75) return 'high';
-    if (confidence >= 0.50) return 'moderate';
-    return 'low';
-  }
-
-  static Color _confidenceColor(String level) {
+  Color _confidenceColor(String level) {
     switch (level.toLowerCase()) {
       case 'high':
         return AppColors.success;
       case 'moderate':
-        return Colors.orange;
-      default:
+        return AppColors.warning;
+      case 'low':
         return AppColors.error;
+      default:
+        return AppColors.primary;
     }
   }
 
-  static String _friendlyDecisionMode(String mode) {
-    return mode
-        .split('_')
-        .where((p) => p.isNotEmpty)
-        .map((p) => p[0] + p.substring(1).toLowerCase())
-        .join(' ');
+  List<String> _normalizeStringList(dynamic value) {
+    if (value is List) return value.map((e) => e.toString()).toList();
+    if (value is String) {
+      if (value.startsWith('[') && value.endsWith(']')) {
+        // Simple cleanup for stringified lists if any
+        return value
+            .substring(1, value.length - 1)
+            .split(',')
+            .map((e) => e.trim().replaceAll("'", "").replaceAll("\"", ""))
+            .toList();
+      }
+      return [value];
+    }
+    return [];
+  }
+
+  List<Map<String, dynamic>> _normalizeMapList(dynamic value) {
+    if (value is List) {
+      return value
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return [];
+  }
+
+  List<Map<String, dynamic>> _normalizePredictionList(dynamic value) {
+    if (value is List) {
+      return value
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    if (value is Map) {
+      return value.entries
+          .map((e) => {'disease': e.key, 'probability': _toDouble(e.value)})
+          .toList();
+    }
+    return [];
+  }
+
+  Map<String, dynamic> _normalizeMap(dynamic value) {
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return {};
   }
 }

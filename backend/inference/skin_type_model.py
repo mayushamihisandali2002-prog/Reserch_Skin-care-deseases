@@ -208,19 +208,35 @@ class SkinTypeModel:
             state_dict = {k.replace("module.", "", 1): v for k, v in state_dict.items()}
         return state_dict
 
-    def _predict_proba(self, pil_image) -> np.ndarray:
+    def _predict_proba(self, pil_image, use_tta: bool = True) -> np.ndarray:
         if not self.loaded or self.model is None or self.transform is None:
             raise RuntimeError(self.load_error or "Skin-type model not loaded")
 
         import torch
+        from PIL import Image
 
         if pil_image.mode != "RGB":
             pil_image = pil_image.convert("RGB")
 
-        tensor = self.transform(pil_image).unsqueeze(0)
-        with torch.no_grad():
-            logits = self.model(tensor)
-            probs = torch.softmax(logits, dim=-1)[0].cpu().numpy()
+        # Prepare images for TTA (6 views)
+        images = [pil_image]
+        if use_tta:
+            images.append(pil_image.transpose(Image.FLIP_LEFT_RIGHT))
+            images.append(pil_image.transpose(Image.FLIP_TOP_BOTTOM))
+            images.append(pil_image.transpose(Image.FLIP_LEFT_RIGHT).transpose(Image.FLIP_TOP_BOTTOM))
+            images.append(pil_image.transpose(Image.ROTATE_90))
+            images.append(pil_image.transpose(Image.ROTATE_270))
+
+        all_logits = []
+        for img in images:
+            tensor = self.transform(img).unsqueeze(0)
+            with torch.no_grad():
+                logits = self.model(tensor)
+                all_logits.append(logits)
+
+        # Average logits across augmentations (TTA)
+        avg_logits = torch.mean(torch.stack(all_logits), dim=0)
+        probs = torch.softmax(avg_logits, dim=-1)[0].cpu().numpy()
         return probs
 
     def predict_from_pil(self, pil_image) -> dict[str, Any]:

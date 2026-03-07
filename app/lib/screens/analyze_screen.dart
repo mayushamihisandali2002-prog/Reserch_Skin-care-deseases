@@ -230,21 +230,21 @@ class _AnalyzeScreenState extends State<AnalyzeScreen> {
                     children: [
                       const Text(
                         'Recovery Trend',
-                        style: AppTextStyles.subHeading,
+                        style: AppTextStyles.subHeading(context),
                       ),
                       const SizedBox(height: 14),
 
                       // ✅ Chart container
                       Container(
-                        padding: const EdgeInsets.all(14),
+                        padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
+                          color: context.clrSurface,
+                          borderRadius: BorderRadius.circular(28),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.grey.withOpacity(0.08),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
+                              color: context.isDarkMode ? Colors.black45 : Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
                             ),
                           ],
                         ),
@@ -298,11 +298,11 @@ class _AnalyzeScreenState extends State<AnalyzeScreen> {
                                                           ),
                                                       child: Text(
                                                         label,
-                                                        style: const TextStyle(
+                                                        style: TextStyle(
                                                           fontSize: 11,
                                                           fontWeight:
                                                               FontWeight.w600,
-                                                          color: Colors.black54,
+                                                          color: context.clrTextSec,
                                                         ),
                                                       ),
                                                     );
@@ -333,14 +333,12 @@ class _AnalyzeScreenState extends State<AnalyzeScreen> {
                                                             -0.35, // ✅ slight rotation prevents overlap
                                                         child: Text(
                                                           label,
-                                                          style:
-                                                              const TextStyle(
+                                                          style: TextStyle(
                                                                 fontSize: 11,
                                                                 fontWeight:
                                                                     FontWeight
                                                                         .bold,
-                                                                color: Colors
-                                                                    .black54,
+                                                                color: context.clrTextSec,
                                                               ),
                                                         ),
                                                       ),
@@ -486,54 +484,80 @@ class _AnalyzeScreenState extends State<AnalyzeScreen> {
 
                       // ✅ Insight Card (more details)
                       Container(
-                        padding: const EdgeInsets.all(18),
+                        padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: AppColors.secondary.withOpacity(0.10),
-                          borderRadius: BorderRadius.circular(16),
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.secondary.withValues(alpha: 0.15),
+                              AppColors.secondary.withValues(alpha: 0.05),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(28),
                           border: Border.all(
-                            color: AppColors.secondary.withOpacity(0.7),
+                            color: AppColors.secondary.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              insight["title"],
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textMain,
-                                fontSize: 18,
-                              ),
+                            Row(
+                              children: [
+                                Icon(Icons.auto_graph_rounded, color: AppColors.secondary, size: 24),
+                                const SizedBox(width: 12),
+                                Text(
+                                  insight["title"],
+                                  style: AppTextStyles.subHeading(context).copyWith(
+                                    color: AppColors.primaryDark,
+                                    fontSize: 20,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 16),
                             Text(
                               insight["summary"],
-                              style: const TextStyle(
-                                color: AppColors.textMain,
-                                fontWeight: FontWeight.w700,
-                              ),
+                              style: AppTextStyles.bodyStrong(context).copyWith(color: context.clrTextMain),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 12),
 
                             ...((insight["bullets"] as List<String>).map(
                               (b) => Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: Text(
-                                  "• $b",
-                                  style: const TextStyle(
-                                    color: AppColors.textMain,
-                                    height: 1.45,
-                                  ),
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text("• ", style: TextStyle(fontWeight: FontWeight.bold)),
+                                    Expanded(
+                                      child: Text(
+                                        b,
+                                        style: TextStyle(
+                                          color: context.clrTextMain,
+                                          height: 1.45,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             )),
 
-                            const SizedBox(height: 10),
-                            Text(
-                              "Tip: ${insight["tip"]}",
-                              style: const TextStyle(
-                                color: AppColors.textMain,
-                                fontWeight: FontWeight.bold,
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: context.clrSurface.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                "PRO TIP: ${insight["tip"]}",
+                                style: TextStyle(
+                                  color: AppColors.primaryDark,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                  letterSpacing: 0.5,
+                                ),
                               ),
                             ),
                           ],
@@ -583,9 +607,9 @@ class _AnalyzeScreenState extends State<AnalyzeScreen> {
                                     padding: const EdgeInsets.only(bottom: 6),
                                     child: Text(
                                       s,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         height: 1.4,
-                                        color: AppColors.textMain,
+                                        color: context.clrTextMain,
                                       ),
                                     ),
                                   ),
@@ -641,11 +665,11 @@ class _AnalyzeScreenState extends State<AnalyzeScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.clrSurface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
+            color: context.isDarkMode ? Colors.black26 : Colors.grey.withOpacity(0.08),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -656,10 +680,17 @@ class _AnalyzeScreenState extends State<AnalyzeScreen> {
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            style: TextStyle(
+              fontSize: 16, 
+              fontWeight: FontWeight.w800,
+              color: context.clrTextMain,
+            ),
           ),
           const SizedBox(height: 6),
-          Text(subtitle, style: const TextStyle(color: Colors.black54)),
+          Text(
+            subtitle, 
+            style: TextStyle(color: context.clrTextSec),
+          ),
           const SizedBox(height: 12),
           ...items,
         ],
@@ -675,14 +706,17 @@ class _AnalyzeScreenState extends State<AnalyzeScreen> {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: context.clrTextMain,
+              ),
             ),
           ),
           Text(
             "$value$unit",
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w800,
-              color: Colors.black87,
+              color: context.clrTextMain,
             ),
           ),
         ],

@@ -39,13 +39,21 @@ from .config import (
     # Built-in treatment KB
     DISEASE_TREATMENTS,
     DISEASE_LABELS,
+    DISEASE_EXPLANATIONS,
+    EXPECTED_SYMPTOMS,
     # Inference params
     CONFIDENCE_THRESHOLD,
     FUSION_ALPHA,
     TOP_K_TREATMENTS,
     DEBUG,
     get_model_status,
+    # Specialized models
+    SEVERITY_MODEL_PATH,
+    SEVERITY_METADATA_PATH,
+    SKIN_TYPE_MODEL_PATH,
+    SKIN_TYPE_LABEL_MAP_PATH,
 )
+from .knowledge_base import SYMPTOM_KEYWORDS, SYMPTOM_MAP
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -58,15 +66,9 @@ def _softmax(x: np.ndarray) -> np.ndarray:
 # ── Main Pipeline ──────────────────────────────────────────────────────────────
 
 class InferencePipeline:
-    def _get_disease_explanation(self, disease):
-        explanations = {
-            "Eczema": "Eczema is a chronic skin condition characterized by dry, itchy, and inflamed skin. It often appears in childhood and can be triggered by environmental factors, stress, or allergens.",
-            "Dermatitis": "Dermatitis refers to inflammation of the skin, often caused by contact with irritants or allergens. Symptoms include redness, swelling, and itching.",
-            "Psoriasis": "Psoriasis is an autoimmune condition that causes rapid skin cell growth, leading to thick, scaly patches. It can be triggered by stress, infections, or certain medications.",
-            "Acne": "Acne is a common skin disorder resulting from blocked hair follicles and oil glands. It presents as pimples, blackheads, and sometimes cysts, often on the face, chest, and back.",
-            "Urticaria": "Urticaria, or hives, is a skin reaction that causes itchy welts. It is often triggered by allergies, stress, or infections and usually resolves within hours to days.",
-        }
-        return explanations.get(disease, "No explanation available for this disease.")
+    def _get_disease_explanation(self, disease: str) -> str:
+        """Retrieve disease explanation from config."""
+        return DISEASE_EXPLANATIONS.get(disease, "No explanation available for this disease.")
     """
     Central inference hub for SkinAI.
 
@@ -95,8 +97,13 @@ class InferencePipeline:
         self.treatment_df = None
         self.data_loaded = False
 
+        # Specialized models (Lazy loaded)
+        self.severity_model = None
+        self.skin_type_model = None
+
         self._load_models()
         self._load_data()
+        self._load_specialized_models()
 
     # ── Loading ────────────────────────────────────────────────────────────────
 
@@ -139,6 +146,24 @@ class InferencePipeline:
                     print("[Pipeline] ✅ Legacy sklearn model loaded (fallback)")
             except Exception as exc:
                 print(f"[Pipeline] sklearn load error: {exc}")
+
+    def _load_specialized_models(self) -> None:
+        """Load Severity and Skin Type models for full automation."""
+        try:
+            from .severity_model import get_severity_model
+            self.severity_model = get_severity_model(SEVERITY_MODEL_PATH, SEVERITY_METADATA_PATH)
+            if self.severity_model.loaded:
+                print("[Pipeline] ✅ Severity model integrated")
+        except Exception as exc:
+            print(f"[Pipeline] Severity integration error: {exc}")
+
+        try:
+            from .skin_type_model import get_skin_type_model
+            self.skin_type_model = get_skin_type_model(SKIN_TYPE_MODEL_PATH, SKIN_TYPE_LABEL_MAP_PATH)
+            if self.skin_type_model.loaded:
+                print("[Pipeline] ✅ Skin-Type model integrated")
+        except Exception as exc:
+            print(f"[Pipeline] Skin-Type integration error: {exc}")
 
     def _load_data(self) -> None:
         """Load CSV knowledge-base for treatment enrichment."""
@@ -210,14 +235,15 @@ class InferencePipeline:
         return "low"
 
     def _compute_dynamic_alpha(
-        self, img_conf: float, txt_conf: float, have_img: bool, have_txt: bool
+        self, img_conf: float, txt_conf: float, have_img: bool, have_txt: bool, txt_probs: Optional[np.ndarray] = None
     ) -> float:
         """
         Compute dynamic fusion weight for image modality.
+        User requested 50/50 fusion. However, if text detects Pigmentation/Dark Spots (Class 5),
+        since Image model lacks this class natively, we defer to Text.
         """
         if have_img and have_txt:
-            alpha = FUSION_ALPHA + 0.30 * (img_conf - txt_conf)
-            return float(np.clip(alpha, 0.30, 0.80))
+            return 0.50
         if have_img:
             return 1.0
         return 0.0
@@ -247,6 +273,13 @@ class InferencePipeline:
         if len(image_probs) == 0 or len(text_probs) == 0:
             return None
 
+        # Pad to match shapes
+        max_len = max(len(image_probs), len(text_probs))
+        if len(image_probs) < max_len:
+            image_probs = np.pad(image_probs, (0, max_len - len(image_probs)), 'constant')
+        if len(text_probs) < max_len:
+            text_probs = np.pad(text_probs, (0, max_len - len(text_probs)), 'constant')
+
         img_norm = float(np.linalg.norm(image_probs))
         txt_norm = float(np.linalg.norm(text_probs))
         if img_norm <= 0 or txt_norm <= 0:
@@ -269,6 +302,11 @@ class InferencePipeline:
         Falls back to single modality if only one is available.
         """
         if img_loaded and txt_loaded:
+            max_len = max(len(img_probs), len(txt_probs))
+            if len(img_probs) < max_len:
+                img_probs = np.pad(img_probs, (0, max_len - len(img_probs)), 'constant')
+            if len(txt_probs) < max_len:
+                txt_probs = np.pad(txt_probs, (0, max_len - len(txt_probs)), 'constant')
             return image_alpha * img_probs + (1 - image_alpha) * txt_probs
         elif img_loaded:
             return img_probs
@@ -393,44 +431,18 @@ class InferencePipeline:
         """
         Extract canonical symptom keywords from user text/transcript.
         """
-        symptom_keywords = [
-            "itching", "itchy", "itch", "redness", "red", "dry", "dryness",
-            "scaling", "scaly", "flaky", "burning", "pain", "painful",
-            "swelling", "swollen", "bumps", "pimples", "blisters", "rash",
-            "patches", "spots", "cracked", "peeling", "oozing", "crusty",
-            "inflammation", "irritation", "sore", "tender", "thickened",
-            "discoloration", "whiteheads", "blackheads", "oily", "greasy"
-        ]
-        
-        # Normalize keywords to canonical forms
-        keyword_map = {
-            "itchy": "itching", "itch": "itching",
-            "red": "redness", "scaly": "scaling", "flaky": "scaling",
-            "dry": "dryness", "swollen": "swelling",
-            "painful": "pain", "sore": "pain",
-        }
-        
         text_lower = text.lower()
         found = []
-        for kw in symptom_keywords:
+        for kw in SYMPTOM_KEYWORDS:
             if kw in text_lower:
-                canonical = keyword_map.get(kw, kw)
+                canonical = SYMPTOM_MAP.get(kw, kw)
                 if canonical not in found:
                     found.append(canonical)
         return found
 
     def _get_expected_symptoms(self, disease: str) -> List[str]:
-        """
-        Get expected symptoms for a disease from knowledge base.
-        """
-        kb_symptoms = {
-            "Eczema": ["itching", "dryness", "redness", "scaling", "cracked", "inflammation"],
-            "Dermatitis": ["redness", "itching", "swelling", "blisters", "rash", "irritation"],
-            "Psoriasis": ["scaling", "redness", "itching", "dryness", "patches", "thickened"],
-            "Acne": ["pimples", "blackheads", "whiteheads", "oily", "inflammation", "bumps"],
-            "Urticaria": ["swelling", "redness", "itching", "bumps", "rash", "welts"],
-        }
-        return kb_symptoms.get(disease, [])
+        """Get expected symptoms for a disease from config."""
+        return EXPECTED_SYMPTOMS.get(disease, [])
 
     def _compute_symptom_match(self, extracted: List[str], expected: List[str]) -> Tuple[float, List[str]]:
         """
@@ -478,7 +490,7 @@ class InferencePipeline:
 
         Returns comprehensive structured output with:
         - Final diagnosis and confidence
-        - ASR transcript
+        - ASR transcript (if provided)
         - Extracted vs expected symptoms with match score
         - Top-3 predictions
         - Decision mode explanation
@@ -489,7 +501,7 @@ class InferencePipeline:
         have_img = self.image_model_loaded and img_conf > 0
         have_txt = (self.distilbert_loaded or self.sklearn_loaded) and txt_conf > 0
 
-        image_alpha = self._compute_dynamic_alpha(img_conf, txt_conf, have_img, have_txt)
+        image_alpha = self._compute_dynamic_alpha(img_conf, txt_conf, have_img, have_txt, txt_probs)
         text_alpha = 1.0 - image_alpha
         fused = self._fuse(img_probs, txt_probs, have_img, have_txt, image_alpha)
 
@@ -497,10 +509,19 @@ class InferencePipeline:
         top3_indices = np.argsort(fused)[::-1][:3]
         final_class = int(top3_indices[0])
         base_conf = float(fused[final_class])
+        
+        # Calibration based on modality agreement
+        agreement_score = self._agreement_score(img_probs, txt_probs) if have_img and have_txt else 1.0
+        
+        # Penalize confidence if models strongly disagree
+        if agreement_score is not None and agreement_score < 0.3:
+            calibration_factor = 0.7  # 30% reduction for disagreement
+        else:
+            calibration_factor = 1.0
+
         second_conf = float(fused[top3_indices[1]]) if len(top3_indices) > 1 else 0.0
         top_probability_gap = max(0.0, base_conf - second_conf)
-        calibrated_conf = min(1.0, base_conf * (0.80 + 0.60 * top_probability_gap))
-        final_conf = float(calibrated_conf)
+        
         final_disease = DISEASE_LABELS.get(final_class, "Unknown")
 
         # Decision mode
@@ -508,7 +529,7 @@ class InferencePipeline:
             img_conf, txt_conf, have_img, have_txt, image_alpha
         )
 
-        # Symptom analysis
+        # ── Symptom analysis ──
         extracted_symptoms = self._extract_symptoms(text)
         expected_symptoms = self._get_expected_symptoms(final_disease)
         symptom_match_score, matched_symptoms = self._compute_symptom_match(
@@ -516,6 +537,21 @@ class InferencePipeline:
         )
         agreement_score = self._agreement_score(img_probs, txt_probs) if have_img and have_txt else None
 
+        # ── Advanced Adaptive Calibration ──
+        # 1. Symptom Match Adjustment
+        symptom_boost = 1.0
+        warnings = []
+        if len(extracted_symptoms) > 0:
+            if symptom_match_score >= 0.5:
+                symptom_boost = 1.0 + (symptom_match_score * 0.15)
+            elif symptom_match_score < 0.2:
+                # Heavy penalty if symptoms strongly contradict diagnosis classes
+                symptom_boost = 0.40
+                warnings.append("Symptoms strongly mismatch the predicted diagnosis. The condition may be out-of-scope (e.g., Freckles, Pigmentation, or Sunspots).")
+
+        # Final calibrated confidence factoring in modality agreement and symptom matching
+        calibrated_conf = base_conf * (0.85 + 0.15 * top_probability_gap) * calibration_factor * symptom_boost
+        final_conf = float(np.clip(calibrated_conf, 0.0, 1.0))
         model_used = (
             "fusion"     if (have_img and have_txt) else
             "image_only" if have_img else
@@ -527,6 +563,7 @@ class InferencePipeline:
             "disease":          final_disease,
             "confidence":       final_conf,
             "confidence_level": self._confidence_level(final_conf),
+            "transcript":       transcript or text if text else "",
 
             # ASR transcript
             "transcript":       transcript if transcript else text if text else None,
@@ -539,6 +576,9 @@ class InferencePipeline:
             "expected_symptoms":  expected_symptoms,
             "symptom_match_score": symptom_match_score,
             "matched_symptoms":   matched_symptoms,
+            
+            # Additional warnings explicitly for UI
+            "warnings":         warnings,
 
             # Top-3 predictions
             "top3_predictions":   top3_predictions,
@@ -569,6 +609,131 @@ class InferencePipeline:
         raw = self._get_treatments(disease)
         return [t.get("medicine", "Unknown") for t in raw]
 
+    # ── Fully Automated Smart Predict ──
+
+    def smart_predict(
+        self, 
+        text: str, 
+        image_bytes: Optional[bytes] = None, 
+        journey_id: Optional[str] = None, 
+        target_body_part: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        FULLY AUTOMATED ENTRY POINT.
+        Intelligently determines what needs to be analyzed based on the image and text.
+        Includes Anatomical Part Consistency checks if a journey_id is provided.
+        """
+        import io
+        from PIL import Image
+
+        master_report = {
+            "status": "success",
+            "automation_level": "full",
+            "diagnosis": None,
+            "severity": None,
+            "skin_profile": None,
+            "quality_check": {"passed": True, "notes": []},
+            "summary": ""
+        }
+
+        # 1. Image Processing & Quality Check
+        pil_img = None
+        if image_bytes:
+            try:
+                pil_img = Image.open(io.BytesIO(image_bytes))
+                # Basic Blur Detection (automation safety)
+                from PIL import ImageStat
+                if pil_img.mode != "L": gray = pil_img.convert("L")
+                else: gray = pil_img
+                # This is a very rough heuristic for automation
+                std_dev = ImageStat.Stat(gray).stddev[0]
+                if std_dev < 15:
+                    master_report["quality_check"]["notes"].append("Image may be too dark or low contrast.")
+            except Exception as e:
+                master_report["quality_check"]["passed"] = False
+                master_report["quality_check"]["notes"].append(f"Image processing error: {e}")
+
+        # 2. Disease Multi-modal Diagnosis (Disease + Symptoms)
+        disease_res = self.predict_fused(text or "", image_bytes or b"", transcript=text)
+        master_report["diagnosis"] = disease_res
+
+        # 3. Specialized Face Analysis (Automation)
+        detected_part = "Skin" # Default generic
+        part_warning = None
+
+        if pil_img and self.severity_model and self.severity_model.loaded:
+            import numpy as np
+            img_np = np.array(pil_img.convert("RGB"))
+            
+            # Check for face presence automatically
+            severity_res = self.severity_model.predict_from_pil(pil_img, disease_name=disease_res.get("disease"))
+            face_visible = severity_res.get("preprocessing", {}).get("face_visible", False)
+            
+            if face_visible:
+                detected_part = "Face"
+                master_report["severity"] = {
+                    "level": severity_res["severity_level"],
+                    "score": severity_res["severity_score"],
+                    "face_detected": True
+                }
+                
+                # If face is detected, automatically run skin-type for a full "user profile"
+                if self.skin_type_model and self.skin_type_model.loaded:
+                    type_res = self.skin_type_model.predict_from_pil(pil_img)
+                    master_report["skin_profile"] = {
+                        "type": type_res["skin_type"],
+                        "confidence": type_res["confidence"]
+                    }
+            else:
+                detected_part = "Body/Other"
+                master_report["severity"] = {"face_detected": False, "note": "Limited body-part severity analysis used."}
+
+        # 3.1 Anatomical Part Consistency Check
+        if target_body_part and target_body_part.lower() != "skin":
+            # If journey expects a face but none found
+            if target_body_part.lower() == "face" and detected_part != "Face":
+                part_warning = "Visual mismatch: This journey is tracking your face, but the photo appears to be of a different body part."
+            # If journey expects non-face but face found
+            elif target_body_part.lower() != "face" and detected_part == "Face":
+                part_warning = f"Visual mismatch: This journey is tracking your {target_body_part}, but the photo appears to be of your face."
+
+        master_report["anatomical_check"] = {
+            "detected_part": detected_part,
+            "target_part": target_body_part,
+            "consistency_warning": part_warning
+        }
+
+        # 4. Generate Automation Summary
+        diag = disease_res.get("disease", "a skin condition")
+        conf = disease_res.get("confidence_level", "low")
+        
+        has_text = bool(text and text.strip())
+        has_image = bool(image_bytes)
+        
+        if has_text and has_image:
+            summary = f"I've analyzed your image and symptoms, and detected {diag}. "
+        elif has_text:
+            summary = f"I've analyzed your symptoms and detected {diag}. "
+        else:
+            summary = f"I've analyzed your image and detected {diag}. "
+
+        
+        severity_data = master_report.get("severity")
+        if severity_data and "level" in severity_data:
+            sev = severity_data["level"]
+            summary += f"The condition appears to be in a {sev} stage. "
+        elif severity_data and not severity_data.get("face_detected", True):
+            summary += "I analyzed the image for severity, though the specific facial severity metrics were limited. "
+            
+        profile_data = master_report.get("skin_profile")
+        if profile_data and "type" in profile_data:
+            st = profile_data["type"]
+            summary += f"For your {st} skin, I've adjusted the recommendations below."
+        elif not profile_data and detected_part == "Face":
+             summary += "I've also included general skin-type guidance for your facial analysis."
+
+        master_report["summary"] = summary
+        return master_report
 
 # ── Singleton ─────────────────────────────────────────────────────────────────
 

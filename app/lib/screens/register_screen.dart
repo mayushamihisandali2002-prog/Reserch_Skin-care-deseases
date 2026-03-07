@@ -35,7 +35,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _navigateToHome() {
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const HomeContainer()),
+      MaterialPageRoute(builder: (context) => HomeContainer()),
       (route) => false,
     );
   }
@@ -130,22 +130,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'We\'ve sent a verification link to:',
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(color: context.clrTextSec),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       _emailController.text.trim(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textMain,
+                        color: context.clrTextMain,
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'Please check your inbox and click the link to verify your account.',
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(color: context.clrTextSec),
                     ),
                   ],
                 ),
@@ -224,20 +224,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: IconThemeData(color: context.clrTextMain),
       ),
-      extendBodyBehindAppBar: true,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.background, Colors.white],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: AppGradients.page(context)),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -249,20 +243,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Title
-                    const Text(
+                    Text(
                       'Create Account',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textMain,
+                        color: context.clrTextMain,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Join us to track and improve your skin health',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                      style: TextStyle(color: context.clrTextSec, fontSize: 14),
                     ),
                     const SizedBox(height: 32),
 
@@ -271,9 +265,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.shade200),
+                          color: context.isDarkMode ? Colors.red.withValues(alpha: 0.1) : Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
@@ -298,15 +292,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const SizedBox(height: 16),
                     ],
 
-                    // Google Sign In Button (at top for quick signup)
+                    // Google Sign In Button
                     OutlinedButton(
                       onPressed: _isGoogleLoading ? null : _signInWithGoogle,
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        side: BorderSide(color: Colors.grey.shade300),
+                        side: BorderSide(color: context.clrBorder.withValues(alpha: 0.3)),
+                        backgroundColor: context.clrSurface,
                       ),
                       child: _isGoogleLoading
                           ? const SizedBox(
@@ -319,23 +314,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               children: [
                                 Image.network(
                                   'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
-                                  height: 20,
-                                  width: 20,
-                                  errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.g_mobiledata,
-                                    size: 24,
-                                    color: Colors.red,
-                                  ),
+                                  height: 22,
+                                  width: 22,
+                                  errorBuilder: (_, _, _) => const Icon(Icons.g_mobiledata, size: 24, color: Colors.blue),
                                 ),
-                                const SizedBox(width: 12),
-                                const Text(
-                                  'Sign up with Google',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.black87,
+                                const SizedBox(width: 14),
+                                  Text(
+                                    'Sign up with Google',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: context.clrTextMain,
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                     ),
@@ -344,15 +335,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     // Divider
                     Row(
                       children: [
-                        Expanded(child: Divider(color: Colors.grey.shade300)),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
+                        Expanded(child: Divider(color: context.clrBorder.withValues(alpha: 0.5))),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Text(
                             'OR',
-                            style: TextStyle(color: Colors.grey, fontSize: 12),
+                            style: TextStyle(color: context.clrTextSec, fontSize: 12),
                           ),
                         ),
-                        Expanded(child: Divider(color: Colors.grey.shade300)),
+                        Expanded(child: Divider(color: context.clrBorder.withValues(alpha: 0.5))),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -398,16 +389,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         decoration: InputDecoration(
                           hintText: 'Password',
                           border: InputBorder.none,
-                          prefixIcon: const Icon(
+                          prefixIcon: Icon(
                             Icons.lock_outline,
-                            color: Colors.grey,
+                            color: context.clrTextSec,
                           ),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility_off
                                   : Icons.visibility,
-                              color: Colors.grey,
+                              color: context.clrTextSec,
                             ),
                             onPressed: () {
                               setState(
@@ -443,16 +434,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         decoration: InputDecoration(
                           hintText: 'Confirm Password',
                           border: InputBorder.none,
-                          prefixIcon: const Icon(
+                          prefixIcon: Icon(
                             Icons.lock_outline,
-                            color: Colors.grey,
+                            color: context.clrTextSec,
                           ),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscureConfirmPassword
                                   ? Icons.visibility_off
                                   : Icons.visibility,
-                              color: Colors.grey,
+                              color: context.clrTextSec,
                             ),
                             onPressed: () {
                               setState(
@@ -481,6 +472,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               setState(() => _agreedToTerms = value ?? false);
                             },
                             activeColor: AppColors.primary,
+                            checkColor: Colors.white,
+                            side: BorderSide(color: context.clrTextSec),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(4),
                             ),
@@ -492,27 +485,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             onTap: () {
                               setState(() => _agreedToTerms = !_agreedToTerms);
                             },
-                            child: const Text.rich(
+                            child: Text.rich(
                               TextSpan(
                                 text: 'I agree to the ',
                                 style: TextStyle(
-                                  color: Colors.grey,
+                                  color: context.clrTextSec,
                                   fontSize: 13,
                                 ),
                                 children: [
                                   TextSpan(
                                     text: 'Terms of Service',
                                     style: TextStyle(
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.w500,
+                                      color: context.isDarkMode ? Colors.white : AppColors.primary,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                   TextSpan(text: ' and '),
                                   TextSpan(
                                     text: 'Privacy Policy',
                                     style: TextStyle(
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.w500,
+                                      color: context.isDarkMode ? Colors.white : AppColors.primary,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
@@ -528,15 +521,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ElevatedButton(
                       onPressed: _isLoading ? null : _register,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
+                        backgroundColor: context.isDarkMode ? Colors.white12 : AppColors.primary,
+                        foregroundColor: context.isDarkMode ? Colors.white : Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        elevation: 2,
-                        disabledBackgroundColor: AppColors.primary.withOpacity(
-                          0.6,
+                        elevation: 0,
+                        disabledBackgroundColor: AppColors.primary.withValues(
+                          alpha: 0.3,
                         ),
                       ),
                       child: _isLoading
@@ -562,16 +555,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
-                          "Already have an account? ",
-                          style: TextStyle(color: Colors.grey),
+                        Text(
+                          'Already have an account? ',
+                          style: TextStyle(color: context.clrTextSec),
                         ),
                         GestureDetector(
                           onTap: () => Navigator.of(context).pop(),
-                          child: const Text(
+                          child: Text(
                             'Login',
                             style: TextStyle(
-                              color: AppColors.primary,
+                              color: context.isDarkMode ? Colors.white : AppColors.primary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -597,13 +590,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     TextInputAction textInputAction = TextInputAction.next,
   }) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10),
-        ],
-      ),
+      decoration: AppDecor.softCard(context, radius: 16),
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
@@ -612,7 +599,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         decoration: InputDecoration(
           hintText: hintText,
           border: InputBorder.none,
-          prefixIcon: Icon(prefixIcon, color: Colors.grey),
+          prefixIcon: Icon(prefixIcon, color: context.clrTextSec),
           contentPadding: const EdgeInsets.all(16),
           errorStyle: const TextStyle(height: 0.8),
         ),

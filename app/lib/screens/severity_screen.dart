@@ -16,15 +16,16 @@ class SeverityScreen extends StatefulWidget {
 }
 
 class _SeverityScreenState extends State<SeverityScreen> {
-  static const Color _teal = Color(0xFF1F7A8C);
-  static const Color _tealDark = Color(0xFF145563);
-  static const Color _gold = Color(0xFFC27B2A);
-  static const Color _red = Color(0xFFD64550);
+  Color get _brand => AppColors.primary;
+  Color get _warning => AppColors.warning;
+  Color get _error => AppColors.error;
 
   XFile? _selectedImage;
   bool _isLoading = false;
   bool _trackProgress = true;
   Map<String, dynamic>? _result;
+
+  // ... (rest of the state logic)
 
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
@@ -109,9 +110,9 @@ class _SeverityScreenState extends State<SeverityScreen> {
   Color _levelColor(String level) {
     final normalized = level.trim().toLowerCase();
     if (normalized == 'mild') return AppColors.success;
-    if (normalized == 'moderate') return _gold;
-    if (normalized == 'severe') return _red;
-    return _teal;
+    if (normalized == 'moderate') return AppColors.warning;
+    if (normalized == 'severe') return AppColors.error;
+    return _brand;
   }
 
   Widget _sectionCard({
@@ -119,11 +120,12 @@ class _SeverityScreenState extends State<SeverityScreen> {
     required Widget child,
     String? subtitle,
     IconData icon = Icons.analytics_outlined,
-    Color accent = _teal,
+    Color? accent,
   }) {
+    final effectiveAccent = accent ?? _brand;
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: AppDecor.softCard(),
+      decoration: AppDecor.softCard(context, ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -133,23 +135,23 @@ class _SeverityScreenState extends State<SeverityScreen> {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.14),
+                  color: effectiveAccent.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, size: 18, color: accent),
+                child: Icon(icon, size: 18, color: effectiveAccent),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   title,
-                  style: AppTextStyles.subHeading.copyWith(fontSize: 17),
+                  style: AppTextStyles.subHeading(context).copyWith(fontSize: 17),
                 ),
               ),
             ],
           ),
           if (subtitle != null) ...[
             const SizedBox(height: 6),
-            Text(subtitle, style: AppTextStyles.body),
+            Text(subtitle, style: AppTextStyles.body(context)),
           ],
           const SizedBox(height: 12),
           child,
@@ -167,11 +169,11 @@ class _SeverityScreenState extends State<SeverityScreen> {
           decoration: BoxDecoration(
             gradient: AppGradients.hero,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: Color(0x1F145563),
+                color: context.isDarkMode ? Colors.black45 : const Color(0x1F145563),
                 blurRadius: 14,
-                offset: Offset(0, 8),
+                offset: const Offset(0, 8),
               ),
             ],
           ),
@@ -180,7 +182,7 @@ class _SeverityScreenState extends State<SeverityScreen> {
             children: [
               Text(
                 'Face Skin Severity',
-                style: AppTextStyles.heading.copyWith(
+                style: AppTextStyles.heading(context).copyWith(
                   color: Colors.white,
                   fontSize: 24,
                 ),
@@ -188,7 +190,7 @@ class _SeverityScreenState extends State<SeverityScreen> {
               const SizedBox(height: 8),
               Text(
                 'Upload one clear face image. The system extracts engineered skin features and predicts Mild, Moderate, or Severe.',
-                style: AppTextStyles.body.copyWith(
+                style: AppTextStyles.body(context).copyWith(
                   color: Colors.white.withValues(alpha: 0.9),
                 ),
               ),
@@ -210,9 +212,9 @@ class _SeverityScreenState extends State<SeverityScreen> {
                   width: double.infinity,
                   height: 260,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FCFD),
+                    color: context.clrBackground,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: context.clrBorder),
                   ),
                   child: _selectedImage == null
                       ? Column(
@@ -221,7 +223,7 @@ class _SeverityScreenState extends State<SeverityScreen> {
                             Icon(
                               Icons.face_retouching_natural_outlined,
                               size: 54,
-                              color: _teal.withValues(alpha: 0.9),
+                              color: _brand.withValues(alpha: 0.9),
                             ),
                             const SizedBox(height: 10),
                             const Text(
@@ -231,7 +233,7 @@ class _SeverityScreenState extends State<SeverityScreen> {
                             const SizedBox(height: 4),
                             Text(
                               'Supported: JPG, JPEG, PNG',
-                              style: AppTextStyles.body,
+                              style: AppTextStyles.body(context),
                             ),
                           ],
                         )
@@ -258,7 +260,7 @@ class _SeverityScreenState extends State<SeverityScreen> {
                     onPressed: () => _pickImage(ImageSource.camera),
                     icon: const Icon(Icons.camera_alt),
                     label: const Text('Camera'),
-                    style: FilledButton.styleFrom(backgroundColor: _tealDark),
+                    style: FilledButton.styleFrom(backgroundColor: _brand),
                   ),
                   OutlinedButton.icon(
                     onPressed: () => _pickImage(ImageSource.gallery),
@@ -281,13 +283,13 @@ class _SeverityScreenState extends State<SeverityScreen> {
             contentPadding: EdgeInsets.zero,
             title: Text(
               _trackProgress ? 'Tracking enabled' : 'Tracking disabled',
-              style: AppTextStyles.bodyStrong,
+              style: AppTextStyles.bodyStrong(context),
             ),
             subtitle: Text(
               _trackProgress
                   ? 'New entries will be saved in visits history.'
                   : 'Only one-time analysis output will be returned.',
-              style: AppTextStyles.caption,
+              style: AppTextStyles.caption(context),
             ),
             onChanged: (value) {
               setState(() => _trackProgress = value);
@@ -353,12 +355,12 @@ class _SeverityScreenState extends State<SeverityScreen> {
             children: [
               Text(
                 'Severity Level',
-                style: AppTextStyles.caption.copyWith(color: Colors.white70),
+                style: AppTextStyles.caption(context).copyWith(color: Colors.white70),
               ),
               const SizedBox(height: 4),
               Text(
                 level,
-                style: AppTextStyles.heading.copyWith(
+                style: AppTextStyles.heading(context).copyWith(
                   color: Colors.white,
                   fontSize: 34,
                 ),
@@ -366,7 +368,7 @@ class _SeverityScreenState extends State<SeverityScreen> {
               const SizedBox(height: 10),
               Text(
                 'Severity Score: ${score.toStringAsFixed(1)} / 100',
-                style: AppTextStyles.bodyStrong.copyWith(color: Colors.white),
+                style: AppTextStyles.bodyStrong(context).copyWith(color: Colors.white),
               ),
               const SizedBox(height: 8),
               ClipRRect(
@@ -391,7 +393,7 @@ class _SeverityScreenState extends State<SeverityScreen> {
             children: [
               Text(
                 'Top confidence: ${(confidence * 100).toStringAsFixed(1)}%',
-                style: AppTextStyles.bodyStrong,
+                style: AppTextStyles.bodyStrong(context),
               ),
               const SizedBox(height: 10),
               ...probabilities.entries.map((entry) {
@@ -403,7 +405,7 @@ class _SeverityScreenState extends State<SeverityScreen> {
                     children: [
                       Text(
                         '${entry.key}: ${(p * 100).toStringAsFixed(1)}%',
-                        style: AppTextStyles.bodyStrong,
+                        style: AppTextStyles.bodyStrong(context),
                       ),
                       const SizedBox(height: 6),
                       ClipRRect(
@@ -411,8 +413,8 @@ class _SeverityScreenState extends State<SeverityScreen> {
                         child: LinearProgressIndicator(
                           minHeight: 7,
                           value: p.clamp(0.0, 1.0),
-                          color: _teal,
-                          backgroundColor: AppColors.backgroundAlt,
+                          color: AppColors.primary,
+                          backgroundColor: context.clrBackgroundAlt,
                         ),
                       ),
                     ],
@@ -486,13 +488,13 @@ class _SeverityScreenState extends State<SeverityScreen> {
                 if (tracking['visits_count'] != null)
                   Text(
                     'Visits: ${tracking['visits_count']} | Improvement: ${tracking['improvement_percent'] ?? 0}%',
-                    style: AppTextStyles.bodyStrong,
+                    style: AppTextStyles.bodyStrong(context),
                   ),
                 const SizedBox(height: 8),
                 if (weeklyTrend.isEmpty)
                   Text(
                     'No weekly trend available yet.',
-                    style: AppTextStyles.body,
+                    style: AppTextStyles.body(context),
                   )
                 else
                   ...weeklyTrend.map(
@@ -503,14 +505,14 @@ class _SeverityScreenState extends State<SeverityScreen> {
                           Expanded(
                             child: Text(
                               row['week']?.toString() ?? '-',
-                              style: AppTextStyles.bodyStrong,
+                              style: AppTextStyles.bodyStrong(context),
                             ),
                           ),
                           Text(
                             _toDouble(
                               row['avg_severity_score'],
                             ).toStringAsFixed(1),
-                            style: AppTextStyles.body,
+                            style: AppTextStyles.body(context),
                           ),
                         ],
                       ),
@@ -537,17 +539,23 @@ class _SeverityScreenState extends State<SeverityScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.backgroundAlt,
+        color: context.clrBackgroundAlt,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.clrBorder),
       ),
-      child: Text(text, style: AppTextStyles.caption.copyWith(fontSize: 13)),
+      child: Text(
+        text, 
+        style: AppTextStyles.caption(context).copyWith(
+          fontSize: 13,
+          color: context.clrTextMain,
+        ),
+      ),
     );
   }
 
   Widget _buildFeatureTable(Map<String, dynamic> values) {
     if (values.isEmpty) {
-      return Text('No data available.', style: AppTextStyles.body);
+      return Text('No data available.', style: AppTextStyles.body(context));
     }
     final entries = values.entries.toList();
     entries.sort((a, b) => a.key.compareTo(b.key));
@@ -559,20 +567,26 @@ class _SeverityScreenState extends State<SeverityScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
-                color: const Color(0xFFF8FBFC),
-                border: Border.all(color: AppColors.border),
+                color: context.clrSurface,
+                border: Border.all(color: context.clrBorder),
               ),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       entry.key,
-                      style: AppTextStyles.bodyStrong.copyWith(fontSize: 13.5),
+                      style: AppTextStyles.bodyStrong(context).copyWith(
+                        fontSize: 13.5,
+                        color: context.clrTextMain,
+                      ),
                     ),
                   ),
                   Text(
                     _toDouble(entry.value).toStringAsFixed(4),
-                    style: AppTextStyles.body.copyWith(fontSize: 13.5),
+                    style: AppTextStyles.body(context).copyWith(
+                      fontSize: 13.5,
+                      color: context.clrTextSec,
+                    ),
                   ),
                 ],
               ),
@@ -587,7 +601,7 @@ class _SeverityScreenState extends State<SeverityScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Severity Analysis')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppGradients.page),
+        decoration: BoxDecoration(gradient: AppGradients.page(context)),
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),

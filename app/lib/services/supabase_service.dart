@@ -123,6 +123,9 @@ class SupabaseService {
     String? skinType,
     String? gender,
     DateTime? dateOfBirth,
+    List<String>? allergies,
+    String? medicalHistory,
+    String? trackingPreference,
   }) async {
     if (userId == null) return;
 
@@ -130,8 +133,14 @@ class SupabaseService {
     if (fullName != null) updates['full_name'] = fullName;
     if (skinType != null) updates['skin_type'] = skinType;
     if (gender != null) updates['gender'] = gender;
-    if (dateOfBirth != null)
+    if (allergies != null) updates['allergies'] = allergies;
+    if (medicalHistory != null) updates['medical_history'] = medicalHistory;
+    if (trackingPreference != null) {
+      updates['tracking_preference'] = trackingPreference;
+    }
+    if (dateOfBirth != null) {
       updates['date_of_birth'] = dateOfBirth.toIso8601String();
+    }
 
     if (updates.isNotEmpty) {
       await client
@@ -217,6 +226,48 @@ class SupabaseService {
   }
 
   // ============================================================================
+  // TRACKING JOURNEY OPERATIONS
+  // ============================================================================
+
+  /// Start a new tracking journey
+  static Future<Map<String, dynamic>> startJourney({
+    required String title,
+    required String bodyPart,
+    String? frequency,
+    String? initialDiagnosis,
+  }) async {
+    final response = await client.from('tracking_journeys').insert({
+      'user_id': userId,
+      'title': title,
+      'body_part': bodyPart,
+      'frequency': frequency ?? 'weekly',
+      'initial_diagnosis': initialDiagnosis,
+    }).select().single();
+    return response;
+  }
+
+  /// Get all tracking journeys for current user
+  static Future<List<Map<String, dynamic>>> getJourneys() async {
+    if (userId == null) return [];
+    final response = await client
+        .from('tracking_journeys')
+        .select()
+        .eq('user_id', userId!)
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  /// Get analysis progress for a specific journey
+  static Future<List<Map<String, dynamic>>> getJourneyProgress(String journeyId) async {
+    final response = await client
+        .from(SupabaseConfig.skinAnalysesTable)
+        .select()
+        .eq('journey_id', journeyId)
+        .order('created_at', ascending: true);
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  // ============================================================================
   // SKIN ANALYSIS OPERATIONS
   // ============================================================================
 
@@ -231,9 +282,11 @@ class SupabaseService {
     String? bodyLocation,
     String? symptomsDescription,
     String? duration,
+    String? journeyId,
+    String? bodyPartDetected,
   }) async {
     // Upload image to storage
-    final fileName = '${userId}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final fileName = '$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
     final storagePath = await client.storage
         .from(SupabaseConfig.skinImagesBucket)
         .upload(fileName, imageFile);
@@ -258,6 +311,8 @@ class SupabaseService {
           'body_location': bodyLocation,
           'symptoms_description': symptomsDescription,
           'duration': duration,
+          'journey_id': journeyId,
+          'body_part_detected': bodyPartDetected,
         })
         .select()
         .single();
@@ -370,8 +425,9 @@ class SupabaseService {
   }) async {
     final updates = <String, dynamic>{};
     if (status != null) updates['status'] = status;
-    if (effectivenessRating != null)
+    if (effectivenessRating != null) {
       updates['effectiveness_rating'] = effectivenessRating;
+    }
     if (sideEffects != null) updates['side_effects'] = sideEffects;
     if (notes != null) updates['notes'] = notes;
     if (endDate != null) updates['end_date'] = endDate.toIso8601String();

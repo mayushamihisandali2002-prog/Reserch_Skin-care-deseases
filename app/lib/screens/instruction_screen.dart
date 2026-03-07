@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import '../services/api_service.dart';
+import '../services/supabase_service.dart';
 import '../utils/app_styles.dart';
 import 'result_screen.dart';
 
@@ -31,11 +32,27 @@ class _InstructionScreenState extends State<InstructionScreen> {
   Uint8List? _uploadedAudioBytes;
   String? _uploadedAudioName;
   bool _hasUploadedAudio = false;
+  bool _isAnalyzing = false;
+  List<Map<String, dynamic>> _journeys = [];
+  String? _selectedJourneyId;
 
   @override
   void initState() {
     super.initState();
+    _loadJourneys();
     _initSpeech();
+  }
+
+  Future<void> _loadJourneys() async {
+    try {
+      final journeys = await SupabaseService.getJourneys();
+      setState(() {
+        _journeys = journeys;
+        if (_journeys.isNotEmpty) {
+          // No auto-selection by default to keep it optional
+        }
+      });
+    } catch (_) {}
   }
 
   Future<void> _initSpeech() async {
@@ -274,6 +291,7 @@ class _InstructionScreenState extends State<InstructionScreen> {
           imageFileName,
           _uploadedAudioBytes!,
           _uploadedAudioName ?? 'audio.wav',
+          journeyId: _selectedJourneyId,
         );
       } else if (_hasTranscription && _transcribedText.isNotEmpty) {
         // Multimodal fusion: Image + Text (transcribed speech)
@@ -281,10 +299,15 @@ class _InstructionScreenState extends State<InstructionScreen> {
           imageBytes,
           imageFileName,
           _transcribedText, // Send transcribed text directly
+          journeyId: _selectedJourneyId,
         );
       } else {
         // Image-only analysis
-        result = await ApiService.analyzeSkin(imageBytes, imageFileName);
+        result = await ApiService.analyzeSkin(
+          imageBytes,
+          imageFileName,
+          journeyId: _selectedJourneyId,
+        );
       }
 
       if (!mounted) return;
@@ -318,37 +341,71 @@ class _InstructionScreenState extends State<InstructionScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('New Skin Scan')),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppGradients.page),
+        decoration: BoxDecoration(gradient: AppGradients.page(context)),
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  gradient: AppGradients.hero,
-                  borderRadius: BorderRadius.circular(20),
+                  gradient: AppGradients.premium,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-                child: const Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Capture A Clear Skin Photo',
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.auto_fix_high_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'AI SCAN PREPARATION',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Capture High-Quality Input',
                       style: TextStyle(
-                        fontSize: 21,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
                         color: Colors.white,
+                        height: 1.1,
                       ),
                     ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Use natural light and keep the affected area centered. '
-                      'You can optionally add voice symptoms for better analysis.',
+                    const SizedBox(height: 10),
+                    const Text(
+                      'For the most accurate diagnosis, ensure focus and natural lighting.',
                       style: TextStyle(
-                        fontSize: 13,
-                        height: 1.45,
+                        fontSize: 14,
                         color: Colors.white70,
+                        height: 1.4,
                       ),
                     ),
                   ],
@@ -358,8 +415,9 @@ class _InstructionScreenState extends State<InstructionScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: AppDecor.softCard(
-                  color: Colors.white.withValues(alpha: 0.88),
-                  borderColor: AppColors.border.withValues(alpha: 0.9),
+                  context,
+                  color: context.clrSurface.withValues(alpha: 0.88),
+                  borderColor: context.clrBorder.withValues(alpha: 0.9),
                 ),
                 child: Row(
                   children: [
@@ -377,64 +435,121 @@ class _InstructionScreenState extends State<InstructionScreen> {
                   ],
                 ),
               ),
+              if (_journeys.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _buildJourneySelector(),
+              ],
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: AppDecor.softCard(),
+                decoration: AppDecor.softCard(context),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Face Image', style: AppTextStyles.subHeading),
-                    const SizedBox(height: 4),
                     const Text(
+                      'Face Image',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
                       'Upload one clear selfie or skin-area photo.',
-                      style: AppTextStyles.body,
+                      style: AppTextStyles.body(context),
                     ),
                     const SizedBox(height: 14),
                     GestureDetector(
                       onTap: () => _pickImage(ImageSource.gallery),
                       child: Container(
-                        height: 250,
+                        height: 280,
                         width: double.infinity,
                         decoration: BoxDecoration(
-                          color: AppColors.backgroundAlt,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.border),
+                          color: context.clrSurface,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: context.clrBorder.withValues(alpha: 0.5),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
                         ),
                         child: _selectedImage == null
                             ? Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(
-                                    Icons.add_photo_alternate_outlined,
-                                    size: 44,
-                                    color: AppColors.primaryDark.withValues(
-                                      alpha: 0.85,
+                                  Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.05,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.add_a_photo_rounded,
+                                      size: 32,
+                                      color: AppColors.primary,
                                     ),
                                   ),
-                                  const SizedBox(height: 10),
-                                  const Text(
-                                    'Tap to select image',
-                                    style: AppTextStyles.bodyStrong,
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Select Diagnostic Image',
+                                    style: AppTextStyles.bodyStrong(context),
                                   ),
                                   const SizedBox(height: 4),
-                                  const Text(
-                                    'JPG / PNG recommended',
-                                    style: AppTextStyles.caption,
+                                  Text(
+                                    'Tap to browse gallery',
+                                    style: AppTextStyles.caption(context),
                                   ),
                                 ],
                               )
                             : ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: kIsWeb
-                                    ? Image.network(
-                                        _selectedImage!.path,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Image.file(
-                                        File(_selectedImage!.path),
-                                        fit: BoxFit.cover,
+                                borderRadius: BorderRadius.circular(23),
+                                child: Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      child: kIsWeb
+                                          ? Image.network(
+                                              _selectedImage!.path,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : Image.file(
+                                              File(_selectedImage!.path),
+                                              fit: BoxFit.cover,
+                                            ),
+                                    ),
+                                    Positioned(
+                                      right: 12,
+                                      top: 12,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black45,
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'SELECTED',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
                                       ),
+                                    ),
+                                  ],
+                                ),
                               ),
                       ),
                     ),
@@ -464,7 +579,7 @@ class _InstructionScreenState extends State<InstructionScreen> {
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: AppDecor.softCard(),
+                decoration: AppDecor.softCard(context),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -487,10 +602,10 @@ class _InstructionScreenState extends State<InstructionScreen> {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             'Voice Symptoms (Optional)',
-                            style: AppTextStyles.subHeading,
+                            style: AppTextStyles.subHeading(context),
                           ),
                         ),
                       ],
@@ -509,9 +624,9 @@ class _InstructionScreenState extends State<InstructionScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
+                        color: context.clrSurface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: context.clrBorder.withValues(alpha: 0.5)),
                       ),
                       child: Text(
                         _voiceDetailText(),
@@ -519,8 +634,8 @@ class _InstructionScreenState extends State<InstructionScreen> {
                           fontSize: 13,
                           color:
                               _hasUploadedAudio || _transcribedText.isNotEmpty
-                              ? AppColors.textMain
-                              : AppColors.textSecondary,
+                              ? context.clrTextMain
+                              : context.clrTextSec,
                           fontStyle:
                               _hasUploadedAudio || _transcribedText.isNotEmpty
                               ? FontStyle.normal
@@ -614,8 +729,8 @@ class _InstructionScreenState extends State<InstructionScreen> {
                     gradient: _isLoading
                         ? LinearGradient(
                             colors: [
-                              AppColors.textSecondary.withValues(alpha: 0.6),
-                              AppColors.textSecondary.withValues(alpha: 0.5),
+                              context.clrTextSec.withValues(alpha: 0.6),
+                              context.clrTextSec.withValues(alpha: 0.5),
                             ],
                           )
                         : const LinearGradient(
@@ -656,7 +771,7 @@ class _InstructionScreenState extends State<InstructionScreen> {
                           ),
                     label: Text(
                       _isLoading ? 'Analyzing...' : 'Analyze Skin Condition',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
@@ -672,6 +787,42 @@ class _InstructionScreenState extends State<InstructionScreen> {
     );
   }
 
+  Widget _buildJourneySelector() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: AppDecor.softCard(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Tracking Journey (Optional)',
+            style: AppTextStyles.bodyStrong(context),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: _selectedJourneyId,
+            hint: const Text('Continue a tracking journey...'),
+            isExpanded: true,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              prefixIcon: Icon(
+                Icons.track_changes_rounded,
+                color: AppColors.primary,
+              ),
+            ),
+            items: _journeys.map((j) {
+              return DropdownMenuItem(
+                value: j['id'].toString(),
+                child: Text(j['title'] ?? 'Untitled Journey'),
+              );
+            }).toList(),
+            onChanged: (val) => setState(() => _selectedJourneyId = val),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _tip({required IconData icon, required String label}) {
     return Expanded(
       child: Container(
@@ -679,7 +830,7 @@ class _InstructionScreenState extends State<InstructionScreen> {
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.75),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+          border: Border.all(color: context.clrBorder.withValues(alpha: 0.8)),
         ),
         child: Row(
           children: [
@@ -688,10 +839,10 @@ class _InstructionScreenState extends State<InstructionScreen> {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textMain,
+                  color: context.clrTextMain,
                 ),
               ),
             ),

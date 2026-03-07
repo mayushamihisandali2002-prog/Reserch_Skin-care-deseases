@@ -104,8 +104,11 @@ class SupabaseService:
         symptoms_description: str = None,
         duration: str = None,
         model_used: str = 'resnet18',
+        journey_id: str = None,
+        body_part_detected: str = None,
+        image_metadata: Dict = None,
     ) -> Dict[str, Any]:
-        """Save a skin analysis result."""
+        """Save a skin analysis result with journey tracking support."""
         client = cls.get_client()
         
         data = {
@@ -120,6 +123,9 @@ class SupabaseService:
             'symptoms_description': symptoms_description,
             'duration': duration,
             'model_used': model_used,
+            'journey_id': journey_id,
+            'body_part_detected': body_part_detected,
+            'image_metadata': image_metadata,
         }
         
         result = client.table('skin_analyses').insert(data).execute()
@@ -200,16 +206,70 @@ class SupabaseService:
         return result.data
     
     @classmethod
-    def update_user_profile(cls, user_id: str, **kwargs) -> Dict[str, Any]:
-        """Update a user's profile."""
+    def update_user_profile(cls, user_id: str, profile_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update a user's profile with personalization fields."""
         client = cls.get_client()
         
+        # Filter allowed fields
+        allowed_fields = [
+            'full_name', 'skin_type', 'gender', 'date_of_birth', 
+            'allergies', 'medical_history', 'current_medications', 
+            'tracking_preference'
+        ]
+        updates = {k: v for k, v in profile_data.items() if k in allowed_fields}
+        
         result = client.table('profiles') \
-            .update(kwargs) \
+            .update(updates) \
             .eq('id', user_id) \
             .execute()
         
         return result.data[0] if result.data else None
+
+    # =========================================================================
+    # TRACKING JOURNEY OPERATIONS
+    # =========================================================================
+
+    @classmethod
+    def create_journey(cls, user_id: str, title: str, body_part: str, frequency: str = 'weekly') -> Dict[str, Any]:
+        """Create a new tracking journey for a user."""
+        client = cls.get_client()
+        
+        data = {
+            'user_id': user_id,
+            'title': title,
+            'body_part': body_part,
+            'frequency': frequency,
+            'status': 'active'
+        }
+        
+        result = client.table('tracking_journeys').insert(data).execute()
+        return result.data[0] if result.data else None
+
+    @classmethod
+    def get_user_journeys(cls, user_id: str) -> List[Dict]:
+        """List all tracking journeys for a user."""
+        client = cls.get_client()
+        
+        result = client.table('tracking_journeys') \
+            .select('*') \
+            .eq('user_id', user_id) \
+            .order('created_at', desc=True) \
+            .execute()
+        
+        return result.data or []
+
+    @classmethod
+    def get_journey_part(cls, journey_id: str) -> Optional[str]:
+        """Retrieve the target body part for a journey."""
+        client = cls.get_client()
+        
+        result = client.table('tracking_journeys') \
+            .select('body_part') \
+            .eq('id', journey_id) \
+            .single() \
+            .execute()
+        
+        return result.data['body_part'] if result.data else None
     
     # =========================================================================
     # TREATMENT TRACKING OPERATIONS

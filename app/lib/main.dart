@@ -3,11 +3,15 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
 import 'utils/app_styles.dart';
+import 'utils/app_theme.dart';
 import 'services/supabase_service.dart';
 
 import 'screens/login_screen.dart';
 import 'screens/home_container.dart';
+import 'screens/onboarding_screen.dart';
+import 'screens/journey_setup_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +25,12 @@ void main() async {
   GoogleFonts.config.allowRuntimeFetching = true;
 
   // Run app immediately with splash, initialize in background
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -29,131 +38,20 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-      primary: AppColors.primary,
-      secondary: AppColors.secondary,
-      surface: AppColors.surface,
-      error: AppColors.error,
-      brightness: Brightness.light,
-    );
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
       title: 'Skin Care Assistant',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: colorScheme,
-        useMaterial3: true,
-        // Use system fonts as fallback to avoid network font loading issues
-        textTheme: kIsWeb
-            ? Typography.material2021().black.apply(
-                fontFamily: 'Segoe UI, Roboto, sans-serif',
-              )
-            : GoogleFonts.outfitTextTheme(),
-        scaffoldBackgroundColor: AppColors.background,
-        appBarTheme: AppBarTheme(
-          centerTitle: false,
-          elevation: 0,
-          surfaceTintColor: Colors.transparent,
-          backgroundColor: AppColors.surface.withValues(alpha: 0.95),
-          foregroundColor: AppColors.textMain,
-          titleTextStyle:
-              (kIsWeb
-                      ? Typography.material2021().black
-                      : GoogleFonts.outfitTextTheme())
-                  .titleLarge
-                  ?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textMain,
-                  ),
-        ),
-        cardTheme: CardThemeData(
-          color: AppColors.surface,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: AppColors.border),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: AppColors.surface,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 12,
-          ),
-          labelStyle: const TextStyle(color: AppColors.textSecondary),
-          hintStyle: const TextStyle(color: AppColors.textSecondary),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            elevation: 0,
-            foregroundColor: Colors.white,
-            backgroundColor: AppColors.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            foregroundColor: Colors.white,
-            backgroundColor: AppColors.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.primaryDark,
-            side: const BorderSide(color: AppColors.border),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        snackBarTheme: const SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.textMain,
-          contentTextStyle: TextStyle(color: Colors.white),
-        ),
-        navigationBarTheme: NavigationBarThemeData(
-          backgroundColor: AppColors.surface,
-          indicatorColor: AppColors.primary.withValues(alpha: 0.15),
-          labelTextStyle: WidgetStateProperty.resolveWith((states) {
-            return TextStyle(
-              fontWeight: states.contains(WidgetState.selected)
-                  ? FontWeight.w700
-                  : FontWeight.w500,
-              color: states.contains(WidgetState.selected)
-                  ? AppColors.primaryDark
-                  : AppColors.textSecondary,
-            );
-          }),
-          iconTheme: WidgetStateProperty.resolveWith((states) {
-            return IconThemeData(
-              color: states.contains(WidgetState.selected)
-                  ? AppColors.primaryDark
-                  : AppColors.textSecondary,
-            );
-          }),
-        ),
-      ),
+      themeMode: themeProvider.themeMode,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       home: const AuthWrapper(),
+      routes: {
+        '/onboarding': (context) => const OnboardingScreen(),
+        '/journey-setup': (context) => const JourneySetupScreen(),
+        '/home': (context) => const HomeContainer(),
+      },
     );
   }
 }
@@ -169,6 +67,7 @@ class AuthWrapper extends StatefulWidget {
 class _AuthWrapperState extends State<AuthWrapper> {
   bool _isInitializing = true;
   bool _isLoggedIn = false;
+  bool _needsOnboarding = false;
 
   @override
   void initState() {
@@ -186,11 +85,23 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
   }
 
-  void _checkAuthState() {
-    setState(() {
-      _isLoggedIn = SupabaseService.isLoggedIn;
-      _isInitializing = false;
-    });
+  Future<void> _checkAuthState() async {
+    final isLoggedIn = SupabaseService.isLoggedIn;
+    bool needsOnboarding = false;
+
+    if (isLoggedIn) {
+      final profile = await SupabaseService.getProfile();
+      // If skin_type is not set, we assume they need onboarding
+      needsOnboarding = profile == null || profile['skin_type'] == null;
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoggedIn = isLoggedIn;
+        _needsOnboarding = needsOnboarding;
+        _isInitializing = false;
+      });
+    }
   }
 
   void _listenToAuthChanges() {
@@ -211,7 +122,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     if (_isInitializing) {
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: context.clrBackground,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -223,7 +134,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textMain,
+                  color: context.clrTextMain,
                 ),
               ),
               const SizedBox(height: 16),
@@ -234,6 +145,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
       );
     }
 
-    return _isLoggedIn ? const HomeContainer() : const LoginScreen();
+    if (_isLoggedIn) {
+      return _needsOnboarding
+          ? const OnboardingScreen()
+          : const HomeContainer();
+    }
+    return const LoginScreen();
   }
 }

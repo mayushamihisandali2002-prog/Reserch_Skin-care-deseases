@@ -18,13 +18,40 @@ from typing import Optional, Tuple
 import numpy as np
 
 # ── Disease label mapping ─────────────────────────────────────────────────────
-# Must match the class ordering the model was trained on.
+# The image model is trained on 30 classes
+TRAINED_CLASSES = 30
+
 DISEASE_LABELS: dict[int, str] = {
     0: "Eczema",
     1: "Dermatitis",
     2: "Psoriasis",
     3: "Acne",
     4: "Urticaria",
+    5: "Pigmentation / Dark Spots",
+    6: "Ringworm",
+    7: "Rosacea",
+    8: "Shingles",
+    9: "Vitiligo",
+    10: "Impetigo",
+    11: "Molluscum Contagiosum",
+    12: "Folliculitis",
+    13: "Scabies",
+    14: "Warts",
+    15: "Seborrheic Dermatitis",
+    16: "Lichen Planus",
+    17: "Cellulitis",
+    18: "Herpes Simplex",
+    19: "Pityriasis Versicolor",
+    20: "Melanoma",
+    21: "Basal Cell Carcinoma",
+    22: "Actinic Keratosis",
+    23: "Seborrheic Keratosis",
+    24: "Dermatofibroma",
+    25: "Cherry Angioma",
+    26: "Melanocytic Nevi",
+    27: "Hidradenitis Suppurativa",
+    28: "Alopecia Areata",
+    29: "Melasma",
 }
 NUM_CLASSES = len(DISEASE_LABELS)
 
@@ -79,8 +106,8 @@ class ResNetImageModel:
                 # It's a state_dict — create ResNet-18 architecture and load weights
                 print("[ResNet] Detected state_dict format — building ResNet-18 architecture")
                 self.model = models.resnet18(weights=None)
-                # Modify final layer for 5 classes (skin diseases)
-                self.model.fc = torch.nn.Linear(self.model.fc.in_features, NUM_CLASSES)
+                # Modify final layer for 30 classes (skin diseases) which it was trained on
+                self.model.fc = torch.nn.Linear(self.model.fc.in_features, TRAINED_CLASSES)
                 
                 # Handle potential key prefix issues (e.g., 'module.' from DataParallel)
                 state_dict = checkpoint
@@ -115,13 +142,12 @@ class ResNetImageModel:
 
     # ── Inference ──────────────────────────────────────────────────────────────
 
-    def predict_from_pil(self, pil_image) -> Tuple[str, float, np.ndarray]:
+    def predict_from_pil(
+        self, pil_image, use_tta: bool = True
+    ) -> Tuple[str, float, np.ndarray]:
         """
         Predict skin disease from a PIL Image.
-
-        Returns
-        -------
-        (disease_name, confidence_0_to_1, probabilities_array[NUM_CLASSES])
+        Includes Test-Time Augmentation (TTA) for increased robustness.
         """
         fallback = ("Unknown", 0.0, np.zeros(NUM_CLASSES))
         if not self.loaded:
@@ -130,29 +156,50 @@ class ResNetImageModel:
         try:
             import torch
             import torch.nn.functional as F
+            from PIL import Image
 
             # Ensure RGB
             if pil_image.mode != "RGB":
                 pil_image = pil_image.convert("RGB")
 
-            # Preprocess to tensor + add batch dimension
-            tensor = self.transform(pil_image).unsqueeze(0)
+            # Prepare images for TTA (6 views: Original, H-Flip, V-Flip, HV-Flip, Rot90, Rot270)
+            images = [pil_image]
+            if use_tta:
+                images.append(pil_image.transpose(Image.FLIP_LEFT_RIGHT))
+                images.append(pil_image.transpose(Image.FLIP_TOP_BOTTOM))
+                images.append(pil_image.transpose(Image.FLIP_LEFT_RIGHT).transpose(Image.FLIP_TOP_BOTTOM))
+                images.append(pil_image.transpose(Image.ROTATE_90))
+                images.append(pil_image.transpose(Image.ROTATE_270))
 
-            with torch.no_grad():
-                raw_output = self.model(tensor)
+            all_logits = []
+            for img in images:
+                # Preprocess to tensor + add batch dimension
+                tensor = self.transform(img).unsqueeze(0)
+                with torch.no_grad():
+                    raw_output = self.model(tensor)
+                
+                # Handle different output formats (some models return objects, some tensors)
+                if hasattr(raw_output, "logits"):
+                    logits = raw_output.logits
+                elif isinstance(raw_output, torch.Tensor):
+                    logits = raw_output
+                else:
+                    try:
+                        logits = raw_output[0] if hasattr(raw_output, "__getitem__") else raw_output
+                    except:
+                        logits = raw_output
+                
+                all_logits.append(logits)
 
-            # Handle models that return a named tuple (e.g. InceptionOutputs)
-            # But NOT regular tensors (which also have __iter__)
-            if hasattr(raw_output, "logits"):
-                logits = raw_output.logits
-            elif isinstance(raw_output, torch.Tensor):
-                logits = raw_output
-            elif hasattr(raw_output, "__iter__"):
-                logits = list(raw_output)[0]
-            else:
-                logits = raw_output
-
-            probs: np.ndarray = F.softmax(logits, dim=-1)[0].numpy()
+            # Average logits across augmentations (TTA)
+            avg_logits = torch.mean(torch.stack(all_logits), dim=0)
+            probs: np.ndarray = F.softmax(avg_logits, dim=-1)[0].cpu().numpy()
+            
+            # Pad the probabilities array so it has NUM_CLASSES elements (i.e., add 0 for Pigmentation)
+            if len(probs) == TRAINED_CLASSES and NUM_CLASSES > TRAINED_CLASSES:
+                padded_probs = np.zeros(NUM_CLASSES)
+                padded_probs[:TRAINED_CLASSES] = probs
+                probs = padded_probs
 
             predicted_class = int(np.argmax(probs))
             confidence = float(probs[predicted_class])
