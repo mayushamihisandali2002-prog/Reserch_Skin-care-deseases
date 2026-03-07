@@ -17,10 +17,12 @@ class SessionState:
     pending_followup: bool = False
     followup_answers: Dict[str, str] = field(default_factory=dict)
     conversation_history: List[Dict] = field(default_factory=list)
+    last_accessed_at: str = field(default_factory=lambda: datetime.now().isoformat())
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
     
     def add_message(self, role: str, content: str, metadata: Dict = None):
-        """Add message to history"""
+        """Add message to history and update activity"""
+        self.update_activity()
         self.conversation_history.append({
             "role": role,
             "content": content,
@@ -28,11 +30,15 @@ class SessionState:
             "metadata": metadata or {}
         })
     
+    def update_activity(self):
+        """Update last accessed timestamp"""
+        self.last_accessed_at = datetime.now().isoformat()
+    
     def is_active(self) -> bool:
-        """Check if session is still active (within 30 min)"""
-        created = datetime.fromisoformat(self.created_at)
-        elapsed = (datetime.now() - created).total_seconds()
-        return elapsed < 1800  # 30 minutes
+        """Check if session is still active (within 30 min of last activity)"""
+        last_acc = datetime.fromisoformat(self.last_accessed_at)
+        elapsed = (datetime.now() - last_acc).total_seconds()
+        return elapsed < 3600  # Extended to 60 minutes of inactivity
 
 
 class SessionManager:

@@ -164,19 +164,35 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: DecoratedBox(
-        decoration: const BoxDecoration(gradient: AppGradients.page),
-        child: Column(
-          children: [
-            _buildHeader(),
-            if (_lastDisease != null) _buildDiagnosisBanner(),
-            Expanded(child: _buildMessageList()),
-            if (_isTyping) _buildTypingIndicator(),
-            if (!_isConnected) _buildOfflineBanner(),
-            _buildInputBar(),
-          ],
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Container(
+          decoration: BoxDecoration(gradient: AppGradients.page(context)),
+          child: Column(
+            children: [
+              _buildHeader(),
+              Expanded(
+                child: Stack(
+                  children: [
+                    _buildMessageList(),
+                    if (_lastDisease != null) 
+                      Positioned(
+                        top: 10,
+                        left: 16,
+                        right: 16,
+                        child: _buildDiagnosisBanner(),
+                      ),
+                  ],
+                ),
+              ),
+              if (_isTyping) _buildTypingIndicator(),
+              if (!_isConnected) _buildOfflineBanner(),
+              _buildInputBar(),
+            ],
+          ),
         ),
       ),
     );
@@ -184,70 +200,67 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   //
   Widget _buildHeader() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: AppGradients.hero,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryDark.withValues(alpha: 0.30),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        bottom: false,
+    return ClipRRect(
+      child: Container(
+        padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.85),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+          padding: const EdgeInsets.fromLTRB(20, 10, 10, 16),
           child: Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
-                  Icons.medical_services_outlined,
+                  Icons.auto_awesome_rounded,
                   color: Colors.white,
-                  size: 22,
+                  size: 24,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'AI Skin Care Assistant',
+                      'Skin Health AI',
                       style: TextStyle(
                         color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                        letterSpacing: 0.2,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                        letterSpacing: -0.5,
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Row(
                       children: [
                         Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: _isConnected
-                                ? const Color(0xFF4ADE80)
-                                : AppColors.warning,
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF4ADE80),
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 5),
+                        const SizedBox(width: 6),
                         Text(
-                          _isConnected
-                              ? 'AI assistant online'
-                              : 'Reconnecting...',
+                          'Online & Learning',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.85),
-                            fontSize: 11,
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
@@ -256,12 +269,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 ),
               ),
               IconButton(
-                icon: const Icon(
-                  Icons.refresh_rounded,
-                  color: Colors.white,
-                  size: 22,
-                ),
-                tooltip: 'Clear chat',
+                icon: const Icon(Icons.delete_sweep_rounded, color: Colors.white70),
                 onPressed: _clearChat,
               ),
             ],
@@ -378,7 +386,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.98),
+              color: context.clrSurface.withValues(alpha: 0.98),
               borderRadius: BorderRadius.circular(
                 20,
               ).copyWith(bottomLeft: Radius.zero),
@@ -428,79 +436,70 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   // Input bar
   Widget _buildInputBar() {
+    bool hasContent = _controller.text.trim().isNotEmpty;
+    
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.98),
-        border: Border(
-          top: BorderSide(color: AppColors.border.withValues(alpha: 0.8)),
-        ),
+        color: context.clrSurface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, -2),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
           ),
         ],
       ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: Container(
-                constraints: const BoxConstraints(maxHeight: 120),
-                decoration: BoxDecoration(
-                  color: AppColors.backgroundAlt.withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: _focusNode.hasFocus
-                        ? AppColors.primary
-                        : AppColors.border,
-                    width: _focusNode.hasFocus ? 2 : 1,
-                  ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: context.clrBackground,
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                maxLines: 4,
+                minLines: 1,
+                decoration: InputDecoration(
+                  hintText: _followupPlaceholder ?? 'Describe symptoms...',
+                  border: InputBorder.none,
+                  hintStyle: AppTextStyles.caption(context).copyWith(fontSize: 15),
                 ),
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  maxLines: 5,
-                  minLines: 1,
-                  textCapitalization: TextCapitalization.sentences,
-                  textInputAction: TextInputAction.send,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    height: 1.4,
-                    color: AppColors.textMain,
-                  ),
-                  decoration: InputDecoration(
-                    hintText:
-                        _followupPlaceholder ?? 'Type your symptoms here...',
-                    hintStyle: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 15,
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
-                    ),
-                  ),
-                  onSubmitted: (_) => _sendMessage(),
-                  onChanged: (_) => setState(() {}),
-                ),
+                onChanged: (_) => setState(() {}),
               ),
             ),
-            const SizedBox(width: 12),
-            _SendButton(
-              onTap: _isTyping || _controller.text.trim().isEmpty
-                  ? null
-                  : () => _sendMessage(),
-              isTyping: _isTyping,
-              hasText: _controller.text.trim().isNotEmpty,
+          ),
+          const SizedBox(width: 12),
+          GestureDetector(
+            onTap: _isTyping || !hasContent ? null : () => _sendMessage(),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                gradient: hasContent ? AppGradients.premium : null,
+                color: hasContent ? null : (context.isDarkMode ? Colors.grey[800] : Colors.grey[200]),
+                shape: BoxShape.circle,
+                boxShadow: hasContent ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ] : null,
+              ),
+              child: Icon(
+                _isTyping ? Icons.hourglass_empty_rounded : Icons.send_rounded,
+                color: hasContent ? Colors.white : Colors.grey[400],
+                size: 22,
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -520,25 +519,21 @@ class _UserBubble extends StatelessWidget {
     return Align(
       alignment: Alignment.centerRight,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 14, left: 64),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: const EdgeInsets.only(bottom: 16, left: 64),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.primaryDark, AppColors.primary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: AppGradients.premium,
           borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-            bottomLeft: Radius.circular(20),
-            bottomRight: Radius.circular(4),
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+            bottomLeft: Radius.circular(24),
+            bottomRight: Radius.circular(8),
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primaryDark.withValues(alpha: 0.28),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+              color: AppColors.primary.withValues(alpha: 0.2),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -546,8 +541,9 @@ class _UserBubble extends StatelessWidget {
           message.text,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 14,
+            fontSize: 16,
             height: 1.4,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ),
@@ -644,7 +640,7 @@ class _BotResponseCardState extends State<_BotResponseCard>
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppColors.surface.withValues(alpha: 0.96),
+                        color: context.clrSurface.withValues(alpha: 0.96),
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(4),
                           topRight: Radius.circular(20),
@@ -806,7 +802,7 @@ class _FormattedText extends StatelessWidget {
           text: parts[i],
           style: TextStyle(
             fontWeight: i.isOdd ? FontWeight.w700 : FontWeight.normal,
-            color: Colors.black87,
+            color: context.clrTextMain,
             fontSize: 13.5,
             height: 1.55,
           ),
@@ -893,9 +889,9 @@ class _TreatmentsPanel extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
+        color: context.isDarkMode ? const Color(0xFF064E3B) : const Color(0xFFF0FDF4),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF86EFAC)),
+        border: Border.all(color: context.isDarkMode ? const Color(0xFF047857) : const Color(0xFF86EFAC)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -911,13 +907,13 @@ class _TreatmentsPanel extends StatelessWidget {
                   color: Color(0xFF16A34A),
                 ),
                 const SizedBox(width: 6),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Treatment Options',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
-                      color: Color(0xFF15803D),
+                      color: context.isDarkMode ? const Color(0xFF6EE7B7) : const Color(0xFF15803D),
                     ),
                   ),
                 ),
@@ -927,9 +923,9 @@ class _TreatmentsPanel extends StatelessWidget {
                     children: [
                       Text(
                         expanded ? 'Less' : 'All ${treatments.length}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: Color(0xFF16A34A),
+                          color: context.isDarkMode ? const Color(0xFF34D399) : const Color(0xFF16A34A),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -973,10 +969,10 @@ class _TreatmentsPanel extends StatelessWidget {
                       children: [
                         Text(
                           medicine,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF166534),
+                            color: context.isDarkMode ? const Color(0xFFA7F3D0) : const Color(0xFF166534),
                           ),
                         ),
                         if (advice.isNotEmpty)
@@ -984,10 +980,10 @@ class _TreatmentsPanel extends StatelessWidget {
                             padding: const EdgeInsets.only(top: 2),
                             child: Text(
                               advice,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey[600],
-                              ),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: context.isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                ),
                             ),
                           ),
                       ],
@@ -1042,7 +1038,7 @@ class _FollowUpChips extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.clrSurface,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: AppColors.primary.withValues(alpha: 0.4),

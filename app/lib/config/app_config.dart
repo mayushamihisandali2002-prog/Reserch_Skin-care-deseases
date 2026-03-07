@@ -31,7 +31,7 @@ class AppConfig {
 
     // Development URLs based on platform
     if (kIsWeb) {
-      return 'http://127.0.0.1:5001';
+      return 'http://localhost:5001';
     }
 
     if (!kIsWeb && Platform.isAndroid) {
@@ -47,7 +47,7 @@ class AppConfig {
     }
 
     // Windows, macOS, Linux desktop
-    return 'http://127.0.0.1:5001';
+    return 'http://localhost:5001';
   }
 
   /// API endpoints
@@ -88,6 +88,31 @@ class AppConfig {
     'Psoriasis',
     'Acne',
     'Urticaria',
+    'Pigmentation / Dark Spots',
+    'Ringworm',
+    'Rosacea',
+    'Shingles',
+    'Vitiligo',
+    'Impetigo',
+    'Molluscum Contagiosum',
+    'Folliculitis',
+    'Scabies',
+    'Warts',
+    'Seborrheic Dermatitis',
+    'Lichen Planus',
+    'Cellulitis',
+    'Herpes Simplex',
+    'Pityriasis Versicolor',
+    'Melanoma',
+    'Basal Cell Carcinoma',
+    'Actinic Keratosis',
+    'Seborrheic Keratosis',
+    'Dermatofibroma',
+    'Cherry Angioma',
+    'Melanocytic Nevi',
+    'Hidradenitis Suppurativa',
+    'Alopecia Areata',
+    'Melasma',
   ];
 
   /// Get color for confidence level

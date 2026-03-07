@@ -1,9 +1,11 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../services/api_service.dart';
 import '../services/supabase_service.dart';
 import '../utils/app_styles.dart';
+import '../utils/app_theme.dart';
 import 'instruction_screen.dart';
 import 'login_screen.dart';
 import 'progress_screen.dart';
@@ -20,6 +22,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   List<dynamic> _history = [];
   Map<String, dynamic> _stats = {};
+  List<Map<String, dynamic>> _journeys = [];
   bool _isLoading = true;
 
   @override
@@ -33,10 +36,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final history = await ApiService.getHistory();
       final stats = await ApiService.getStats();
+      final journeys = await SupabaseService.getJourneys();
       if (!mounted) return;
       setState(() {
         _history = history;
         _stats = stats;
+        _journeys = journeys;
       });
     } catch (_) {
       if (!mounted) return;
@@ -123,32 +128,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _metricTile(String title, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: AppDecor.softCard(
-        color: Colors.white.withValues(alpha: 0.92),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: context.clrSurface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: context.clrBorder.withValues(alpha: 0.4)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 36,
-            height: 36,
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(10),
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, size: 18, color: color),
+            child: Icon(icon, size: 22, color: color),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: AppTextStyles.caption),
-                Text(
-                  value,
-                  style: AppTextStyles.subHeading.copyWith(fontSize: 16),
-                ),
-              ],
+          const SizedBox(height: 16),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: context.clrTextMain,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: AppTextStyles.caption(context).copyWith(
+              fontWeight: FontWeight.w600,
+              color: context.clrTextSec,
             ),
           ),
         ],
@@ -165,33 +184,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(24),
       child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: AppDecor.softCard(),
+        padding: const EdgeInsets.all(16),
+        decoration: AppDecor.softCard(context, radius: 24),
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(12),
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(icon, color: color),
+              child: Icon(icon, color: color, size: 26),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: AppTextStyles.bodyStrong),
-                  const SizedBox(height: 2),
-                  Text(subtitle, style: AppTextStyles.caption),
+                  Text(
+                    title,
+                    style: AppTextStyles.bodyStrong(
+                      context,
+                    ).copyWith(fontSize: 16),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: AppTextStyles.caption(context)),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: color.withValues(alpha: 0.5),
+            ),
           ],
         ),
       ),
@@ -220,7 +248,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       height: 250,
       padding: const EdgeInsets.fromLTRB(14, 18, 14, 10),
-      decoration: AppDecor.softCard(),
+      decoration: AppDecor.softCard(context),
       child: LineChart(
         LineChartData(
           minY: 0,
@@ -233,7 +261,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             drawVerticalLine: false,
             horizontalInterval: 20,
             getDrawingHorizontalLine: (value) =>
-                const FlLine(strokeWidth: 1, color: Color(0xFFE8EEF1)),
+                FlLine(strokeWidth: 1, color: context.clrBorder.withValues(alpha: 0.1)),
           ),
           borderData: FlBorderData(show: false),
           titlesData: FlTitlesData(
@@ -261,7 +289,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
                       label.replaceAll('Week ', 'W'),
-                      style: AppTextStyles.caption.copyWith(fontSize: 11),
+                      style: AppTextStyles.caption(
+                        context,
+                      ).copyWith(fontSize: 11),
                     ),
                   );
                 },
@@ -284,7 +314,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   return FlDotCirclePainter(
                     radius: 3.4,
                     color: AppColors.primaryDark,
-                    strokeColor: Colors.white,
+                    strokeColor: context.clrSurface,
                     strokeWidth: 1.4,
                   );
                 },
@@ -321,7 +351,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: AppDecor.softCard(),
+      decoration: AppDecor.softCard(context),
       child: Column(
         children: [
           SizedBox(
@@ -336,7 +366,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   return PieChartSectionData(
                     value: value,
                     title: '${percent.toStringAsFixed(0)}%',
-                    titleStyle: const TextStyle(
+                    titleStyle: TextStyle(
                       fontSize: 11,
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
@@ -365,7 +395,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Text(displayLabels[index], style: AppTextStyles.caption),
+                  Text(
+                    displayLabels[index],
+                    style: AppTextStyles.caption(context),
+                  ),
                 ],
               );
             }),
@@ -379,10 +412,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (_history.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
-        decoration: AppDecor.softCard(),
+        decoration: AppDecor.softCard(context),
         child: Text(
           'No check-ins yet. Start with your first scan.',
-          style: AppTextStyles.body,
+          style: AppTextStyles.body(context),
         ),
       );
     }
@@ -399,7 +432,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(14),
-          decoration: AppDecor.softCard(color: const Color(0xFFFAFCFD)),
+          decoration: AppDecor.softCard(context, color: context.clrSurface),
           child: Row(
             children: [
               Container(
@@ -416,12 +449,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(week, style: AppTextStyles.bodyStrong),
-                    Text(status, style: AppTextStyles.caption),
+                    Text(week, style: AppTextStyles.bodyStrong(context)),
+                    Text(status, style: AppTextStyles.caption(context)),
                   ],
                 ),
               ),
-              Text(scoreText, style: AppTextStyles.bodyStrong),
+              Text(scoreText, style: AppTextStyles.bodyStrong(context)),
             ],
           ),
         );
@@ -435,6 +468,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
+          IconButton(
+            onPressed: () {
+              final tp = Provider.of<ThemeProvider>(context, listen: false);
+              tp.toggleTheme(!tp.isDarkMode);
+            },
+            icon: Icon(
+              context.isDarkMode
+                  ? Icons.light_mode_rounded
+                  : Icons.dark_mode_rounded,
+              color: AppColors.primary,
+            ),
+            tooltip: 'Toggle Theme',
+          ),
           IconButton(
             onPressed: _loadData,
             icon: const Icon(Icons.refresh),
@@ -462,8 +508,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_userName(), style: AppTextStyles.bodyStrong),
-                    Text(_userEmail(), style: AppTextStyles.caption),
+                    Text(_userName(), style: AppTextStyles.bodyStrong(context)),
+                    Text(_userEmail(), style: AppTextStyles.caption(context)),
                   ],
                 ),
               ),
@@ -484,148 +530,317 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppGradients.page),
+        decoration: BoxDecoration(gradient: AppGradients.page(context)),
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : RefreshIndicator(
                 onRefresh: _loadData,
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+                  padding: EdgeInsets.zero,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        gradient: AppGradients.hero,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
+                    Stack(
+                      children: [
+                        Container(
+                          height: 220,
+                          decoration: const BoxDecoration(
+                            gradient: AppGradients.premium,
+                            borderRadius: BorderRadius.only(
+                              bottomLeft: Radius.circular(40),
+                              bottomRight: Radius.circular(40),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Healing Journey',
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(alpha: 0.7),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: 1.2,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Hello, ${_userName().split(' ').first} ✨',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 32,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: -0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                                    ),
+                                    child: IconButton(
+                                      onPressed: _loadData,
+                                      icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 32),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _metricTile(
+                                      'Check-ins',
+                                      '${_historyCount()}',
+                                      Icons.insights_rounded,
+                                      AppColors.secondary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: _metricTile(
+                                      'Skin Score',
+                                      '${_latestScore().toStringAsFixed(0)}%',
+                                      Icons.auto_awesome_rounded,
+                                      AppColors.success,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Welcome, ${_userName().split(' ').first}',
-                            style: AppTextStyles.heading.copyWith(
-                              color: Colors.white,
-                              fontSize: 24,
-                            ),
+                            'Active Journeys',
+                            style: AppTextStyles.subHeading(context),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 16),
+                          _buildJourneysSection(),
+                          const SizedBox(height: 12),
+                          _quickAction(
+                            title: 'Smart Diagnosis',
+                            subtitle: 'AI multi-modal scan & advice.',
+                            icon: Icons.auto_awesome_rounded,
+                            color: AppColors.primary,
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const InstructionScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _quickAction(
+                            title: 'Skin Care AI',
+                            subtitle: 'Personalized routine guide.',
+                            icon: Icons.face_retouching_natural_rounded,
+                            color: AppColors.accent,
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const SkinCareScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _quickAction(
+                            title: 'Severity Track',
+                            subtitle: 'Face condition deep-scan.',
+                            icon: Icons.analytics_rounded,
+                            color: AppColors.highlight,
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const SeverityScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _quickAction(
+                            title: 'Healing Progress',
+                            subtitle: 'Weekly trends & history.',
+                            icon: Icons.history_edu_rounded,
+                            color: AppColors.success,
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const ProgressScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 32),
                           Text(
-                            'Track your skin journey, run AI analysis, and keep your care plan consistent.',
-                            style: AppTextStyles.body.copyWith(
-                              color: Colors.white.withValues(alpha: 0.9),
-                            ),
+                            'Skin Health Trend',
+                            style: AppTextStyles.subHeading(context),
                           ),
-                          const SizedBox(height: 14),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _metricTile(
-                                  'Check-ins',
-                                  '${_historyCount()}',
-                                  Icons.insights_outlined,
-                                  AppColors.secondary,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: _metricTile(
-                                  'Latest Score',
-                                  '${_latestScore().toStringAsFixed(0)}%',
-                                  Icons.monitor_heart_outlined,
-                                  AppColors.accent,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(height: 16),
+                          _buildScoreChart(),
+                          const SizedBox(height: 32),
+                          Text(
+                            'Symptom Breakdown',
+                            style: AppTextStyles.subHeading(context),
                           ),
+                          const SizedBox(height: 16),
+                          _buildSymptomsChart(),
+                          const SizedBox(height: 32),
+                          Text(
+                            'Recent Activity',
+                            style: AppTextStyles.subHeading(context),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildRecentHistory(),
+                          const SizedBox(height: 40),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Quick Actions',
-                      style: AppTextStyles.subHeading,
-                    ),
-                    const SizedBox(height: 10),
-                    _quickAction(
-                      title: 'Disease Diagnosis',
-                      subtitle: 'Image + symptoms + voice note workflow.',
-                      icon: Icons.camera_alt_outlined,
-                      color: AppColors.primary,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const InstructionScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    _quickAction(
-                      title: 'Skin Care Assistant',
-                      subtitle: 'Skin type + personalized routine guidance.',
-                      icon: Icons.spa_outlined,
-                      color: AppColors.accent,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const SkinCareScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    _quickAction(
-                      title: 'Face Severity Analysis',
-                      subtitle: 'Mild/Moderate/Severe with score and tracking.',
-                      icon: Icons.speed_outlined,
-                      color: AppColors.warning,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const SeverityScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    _quickAction(
-                      title: 'Progress History',
-                      subtitle: 'Open weekly logs and healing insights.',
-                      icon: Icons.timeline_outlined,
-                      color: AppColors.success,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const ProgressScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 22),
-                    const Text(
-                      'Skin Health Trend',
-                      style: AppTextStyles.subHeading,
-                    ),
-                    const SizedBox(height: 10),
-                    _buildScoreChart(),
-                    const SizedBox(height: 22),
-                    const Text(
-                      'Symptom Distribution',
-                      style: AppTextStyles.subHeading,
-                    ),
-                    const SizedBox(height: 10),
-                    _buildSymptomsChart(),
-                    const SizedBox(height: 22),
-                    const Text(
-                      'Recent Check-ins',
-                      style: AppTextStyles.subHeading,
-                    ),
-                    const SizedBox(height: 10),
-                    _buildRecentHistory(),
                   ],
                 ),
               ),
       ),
+    );
+  }
+
+  Widget _buildJourneysSection() {
+    return Column(
+      children: [
+        if (_journeys.isEmpty)
+          _quickAction(
+            title: 'Start New Journey',
+            subtitle: 'Track specific skin progress.',
+            icon: Icons.add_chart_rounded,
+            color: AppColors.success,
+            onTap: () async {
+              final result = await Navigator.pushNamed(
+                context,
+                '/journey-setup',
+              );
+              if (result == true) _loadData();
+            },
+          )
+        else
+          SizedBox(
+            height: 140,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _journeys.length + 1,
+              itemBuilder: (context, index) {
+                if (index == _journeys.length) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 20),
+                    child: InkWell(
+                      onTap: () async {
+                        final result = await Navigator.pushNamed(
+                          context,
+                          '/journey-setup',
+                        );
+                        if (result == true) _loadData();
+                      },
+                      child: Container(
+                        width: 140,
+                        decoration: AppDecor.softCard(
+                          context,
+                          color: context.clrSurface.withValues(alpha: 0.2),
+                          showBorder: true,
+                        ),
+                        child: const Icon(
+                          Icons.add_circle_outline,
+                          color: AppColors.primary,
+                          size: 40,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                final j = _journeys[index];
+                return Container(
+                  width: 220,
+                  margin: const EdgeInsets.only(right: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: AppDecor.softCard(
+                    context,
+                    color: context.clrSurface,
+                    showBorder: true,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              j['body_part'] ?? 'Skin',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.trending_up,
+                            color: AppColors.success,
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        j['title'] ?? 'Journey',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const Spacer(),
+                      Text(
+                        'Started: ${j['created_at'].toString().split('T').first}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: context.clrTextSec,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
     );
   }
 }

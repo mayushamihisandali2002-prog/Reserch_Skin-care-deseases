@@ -14,8 +14,10 @@ Endpoints:
 """
 
 import datetime
+import numpy as np
 import os
 import sys
+import io
 import logging
 import tempfile
 import shutil
@@ -86,16 +88,23 @@ from inference.config import (
     SKIN_TYPE_MODEL_PATH,
     get_model_status,
 )
-from inference.severity_model import get_severity_model
 from inference.skin_type_model import get_skin_type_model
+from inference.severity_model import get_severity_model
+from inference.knowledge_base import (
+    SEVERITY_INFO, LIFESTYLE_ADVICE, CAUSE_INFO, 
+    HEALING_INFO, WORSENING_INFO, DISEASE_KNOWLEDGE,
+    SKIN_TYPE_INFO, DISEASE_ROUTINES, DISEASE_TRIGGERS
+)
+
+from services.supabase_service import SupabaseService
 
 app = Flask(__name__)
 CORS(
     app,
     resources={r"/api/*": {"origins": "*"}},
     supports_credentials=False,
-    allow_headers=["Content-Type", "Authorization"],
-    methods=["GET", "POST", "OPTIONS"],
+    allow_headers="*",
+    methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
 )
 
 # Selected ffmpeg binary path (if discovered by _configure_pydub_ffmpeg)
@@ -133,11 +142,15 @@ def _configure_pydub_ffmpeg() -> None:
             logger.debug(f"imageio-ffmpeg lookup failed: {exc}")
 
     try:
+        # Recursive search for any ffmpeg.exe in the local ffmpeg directory
         for found in local_ffmpeg_dir.rglob("ffmpeg.exe"):
-            candidates.append(found)
-            break
-    except Exception:
-        pass
+            if found.is_file():
+                candidates.append(found)
+                # Don't break yet, we might find a better one if needed, 
+                # but for now we'll take the first real file we find.
+                break
+    except Exception as exc:
+        logger.debug(f"Local ffmpeg rglob failed: {exc}")
 
     selected = next((p for p in candidates if p and p.exists()), None)
     FFMPEG_BINARY_PATH = str(selected) if selected else None
@@ -279,7 +292,7 @@ try:
         metadata_path=SEVERITY_METADATA_PATH,
     )
     if severity_model.loaded:
-        print("Face severity model ready")
+        print("✅ Face skin severity model ready")
     else:
         print(f"Face severity model failed to load: {severity_model.load_error}")
 except Exception as exc:
@@ -404,64 +417,7 @@ def _build_next_steps(
 
 def _skin_type_profile(skin_type_raw: str) -> dict:
     key = str(skin_type_raw or "").strip().lower().replace(" ", "_")
-
-    profiles = {
-        "oily": {
-            "display": "Oily",
-            "recommendations": [
-                "Use a gentle gel or foaming cleanser twice daily.",
-                "Choose oil-free, non-comedogenic moisturizer.",
-                "Use broad-spectrum SPF 30+ every morning.",
-                "Use salicylic acid 2-3 times per week if tolerated.",
-            ],
-            "routine": {
-                "morning": "Foaming cleanser, lightweight moisturizer, SPF 30+.",
-                "night": "Cleanser, oil-control serum (optional), light moisturizer.",
-            },
-        },
-        "dry": {
-            "display": "Dry",
-            "recommendations": [
-                "Use a creamy, fragrance-free cleanser.",
-                "Apply rich moisturizer on damp skin after cleansing.",
-                "Use sunscreen SPF 30+ daily.",
-                "Avoid over-exfoliation and very hot water.",
-            ],
-            "routine": {
-                "morning": "Gentle cleanser, hydrating moisturizer, SPF 30+.",
-                "night": "Cleanser, barrier-repair moisturizer, optional occlusive layer.",
-            },
-        },
-        "combination": {
-            "display": "Combination",
-            "recommendations": [
-                "Use a gentle low-foam cleanser twice daily.",
-                "Apply lightweight moisturizer overall, extra on dry areas.",
-                "Use broad-spectrum SPF 30+ daily.",
-                "Target oily zones with mild exfoliation 1-2 times per week.",
-            ],
-            "routine": {
-                "morning": "Gentle cleanser, balanced moisturizer, SPF 30+.",
-                "night": "Cleanser, light moisturizer, spot treatment on oily areas if needed.",
-            },
-        },
-    }
-
-    return profiles.get(
-        key,
-        {
-            "display": "Unknown",
-            "recommendations": [
-                "Use a gentle cleanser and fragrance-free moisturizer.",
-                "Use broad-spectrum SPF 30+ daily.",
-                "Avoid introducing multiple new products at once.",
-            ],
-            "routine": {
-                "morning": "Gentle cleanser, moisturizer, SPF 30+.",
-                "night": "Gentle cleanser and moisturizer.",
-            },
-        },
-    )
+    return SKIN_TYPE_INFO.get(key, SKIN_TYPE_INFO["unknown"])
 
 
 def _parse_tag_list(raw_value: str | None) -> list[str]:
@@ -1065,134 +1021,58 @@ def _build_skin_care_assistant(
 @app.route("/api/analyze", methods=["POST", "OPTIONS"])
 def analyze():
     """
-    Image-only skin disease diagnosis using ResNet-18.
-    Accepts multipart/form-data with field 'image', OR falls back to mock data.
+    Image-only skin disease diagnosis via the automated smart_predict pipeline.
     """
     if request.method == "OPTIONS":
         return "", 204
 
-    if inference_pipeline is None:
+    pipe = get_inference_pipeline()
+    if pipe is None:
         return jsonify({"error": "Inference pipeline unavailable"}), 503
 
-    # Try to read uploaded image bytes
     image_file = request.files.get("image") or request.files.get("file")
-    if image_file:
-        image_bytes = image_file.read()
-        result = inference_pipeline.predict_from_image(image_bytes)
-    else:
-        # No image uploaded → use text fallback or return mock
-        result = {
-            "disease":    "Eczema",
-            "confidence": 0.85,
-            "treatments": [
-                {"medicine": "Topical Corticosteroids", "advice": "Apply 1–2× daily"},
-                {"medicine": "Emollients",              "advice": "Apply after bathing"},
-            ],
-            "model_used": "mock",
-        }
-
-    disease    = result.get("disease", "Unknown")
-    confidence = result.get("confidence", 0.0)
-    treatments = result.get("treatments", [])
-
-    # Build disease-specific symptom info
-    disease_symptoms = {
-        "Eczema": ["Itchy skin", "Dry, scaly patches", "Redness", "Cracked skin"],
-        "Dermatitis": ["Red rash", "Itching", "Swelling", "Blisters"],
-        "Psoriasis": ["Red patches with scales", "Dry cracked skin", "Itching/burning", "Thickened nails"],
-        "Acne": ["Pimples", "Blackheads", "Whiteheads", "Oily skin"],
-        "Urticaria": ["Raised welts", "Itching", "Swelling", "Redness"],
-    }
+    journey_id = request.form.get("journey_id")
+    user_id = request.form.get("user_id", "anonymous")
     
-    disease_triggers = {
-        "Eczema": ["Stress", "Dry weather", "Harsh soaps", "Allergens"],
-        "Dermatitis": ["Contact irritants", "Allergens", "Stress", "Weather changes"],
-        "Psoriasis": ["Stress", "Infections", "Skin injury", "Cold weather"],
-        "Acne": ["Hormones", "Stress", "Diet", "Oily products"],
-        "Urticaria": ["Allergens", "Stress", "Temperature", "Medications"],
-    }
+    if not image_file:
+        return jsonify({"error": "No image provided"}), 400
+
+    image_bytes = image_file.read()
     
-    disease_routines = {
-        "Eczema": {
-            "morning": "Gentle cleanser, thick moisturizer, SPF 30+ sunscreen",
-            "night": "Lukewarm bath, pat dry, apply emollient, topical steroid if prescribed",
-            "treatment": "Apply hydrocortisone cream or prescribed ointment to affected areas",
-        },
-        "Dermatitis": {
-            "morning": "Fragrance-free cleanser, barrier cream, sunscreen",
-            "night": "Gentle cleanse, cool compress if inflamed, apply prescribed cream",
-            "treatment": "Identify and avoid triggers, use antihistamines for itch relief",
-        },
-        "Psoriasis": {
-            "morning": "Gentle soap, moisturize immediately, vitamin D cream if prescribed",
-            "night": "Coal tar or salicylic acid treatment, heavy moisturizer",
-            "treatment": "Apply topical steroids or vitamin D analogs as directed",
-        },
-        "Acne": {
-            "morning": "Salicylic acid cleanser, oil-free moisturizer, non-comedogenic SPF",
-            "night": "Double cleanse, benzoyl peroxide or retinoid treatment",
-            "treatment": "Apply benzoyl peroxide or prescribed retinoid to affected areas",
-        },
-        "Urticaria": {
-            "morning": "Cool shower, fragrance-free products, antihistamine if needed",
-            "night": "Avoid hot water, loose clothing, calamine lotion for itch",
-            "treatment": "Take antihistamines, apply cool compresses, avoid known triggers",
-        },
-    }
+    # Journey context lookup
+    target_part = "Skin"
+    if journey_id:
+        try:
+            db_part = SupabaseService.get_journey_part(journey_id)
+            if db_part: target_part = db_part
+        except Exception:
+            pass
 
-    symptoms = disease_symptoms.get(disease, ["Skin irritation", "Discomfort"])
-    triggers = disease_triggers.get(disease, ["Environmental factors", "Stress"])
-    routine = disease_routines.get(disease, {
-        "morning": "Gentle cleanser, moisturizer",
-        "night": "Cleanse and apply treatment as prescribed",
-        "treatment": f"Apply {treatments[0]['medicine'] if treatments else 'prescribed ointment'} as directed.",
-    })
-
-    confidence_level = _normalize_confidence_level(
-        confidence, result.get("confidence_level")
-    )
-    expected_symptoms = result.get("expected_symptoms", symptoms)
-    top3_predictions = result.get("top3_predictions", [])
-    disease_explanation = result.get("disease_explanation")
-    next_steps = _build_next_steps(
-        confidence_level=confidence_level,
-        symptom_match_score=None,
-        has_transcript=False,
+    # Fully automated prediction
+    report = pipe.smart_predict(
+        text="", 
+        image_bytes=image_bytes, 
+        journey_id=journey_id,
+        target_body_part=target_part
     )
 
-    return jsonify({
-        "prediction":         disease,
-        "final_diagnosis":    disease,
-        "confidence":         confidence,
-        "confidence_percent": f"{confidence * 100:.1f}%",
-        "confidence_level":   confidence_level,
-        "symptoms":           symptoms,
-        "expected_symptoms":  expected_symptoms,
-        "extracted_symptoms": [],
-        "matched_symptoms":   [],
-        "symptom_match_score": 0.0,
-        "symptom_match_percent": "0%",
-        "top3_predictions":   top3_predictions,
-        "decision_mode":      "IMAGE_ONLY",
-        "triggers":           triggers,
-        "routine":            routine,
-        "warnings":           ["If symptoms worsen or spread, see a dermatologist."],
-        "next_steps":         next_steps,
-        "treatments":         treatments,
-        "model_used":         result.get("model_used", "resnet"),
-        "image_disease":      disease,
-        "image_confidence":   confidence,
-        "text_disease":       None,
-        "text_confidence":    0.0,
-        "image_weight":       1.0,
-        "text_weight":        0.0,
-        "agreement_score":    None,
-        "top_probability_gap": result.get("top_probability_gap", 0.0),
-        "disease_explanation": disease_explanation,
-        "transcript":          None,
-        "transcription_status": "not_requested",
-        "transcription_error":  None,
-    })
+    # Automated Logging
+    if user_id != "anonymous":
+        try:
+            SupabaseService.save_skin_analysis(
+                user_id=user_id,
+                image_url="uploaded_via_analyze",
+                predicted_disease=report["diagnosis"]["disease"],
+                confidence=report["diagnosis"]["confidence"],
+                confidence_level=report["diagnosis"]["confidence_level"],
+                journey_id=journey_id,
+                body_part_detected=report.get("anatomical_check", {}).get("detected_part"),
+                model_used="automated_analyze"
+            )
+        except Exception as e:
+            logger.warning(f"Auto-log failed: {e}")
+
+    return jsonify(report)
 
 
 # ── Speech-to-Text Helper ─────────────────────────────────────────────────────
@@ -1216,161 +1096,59 @@ def analyze_fused():
     if request.method == "OPTIONS":
         return "", 204
 
-    if inference_pipeline is None:
+    pipe = get_inference_pipeline()
+    if pipe is None:
         return jsonify({"error": "Inference pipeline unavailable"}), 503
 
     image_file = request.files.get("image") or request.files.get("file")
     text = request.form.get("text", "").strip()
     audio_file = request.files.get("audio")
+    journey_id = request.form.get("journey_id")
+    user_id = request.form.get("user_id", "anonymous")
 
     if not image_file:
         return jsonify({"error": "No image provided"}), 400
 
-    transcript = text
-    transcription_status = "frontend_text" if text else "not_requested"
-    transcription_error = None
-
-    # Handle server-side audio transcription only if text is empty
-    if audio_file and not text:
-        logger.info(f"Received audio file for transcription: {audio_file.filename}")
-        transcript, transcription_status, transcription_error = _transcribe_uploaded_audio(audio_file)
-        if transcript:
-            logger.info(f"Transcribed audio: '{transcript}'")
-        else:
-            logger.warning(
-                f"Audio transcription unavailable (status={transcription_status}): {transcription_error}"
-            )
-    elif audio_file and text:
-        transcription_status = "frontend_text_with_audio"
-
-    # If transcription is unavailable, keep text empty so inference falls back to image-only.
-    combined_text = transcript if transcript else text
-
-    logger.info(f"Resolved transcript for fused analysis: '{transcript}'")
-
     image_bytes = image_file.read()
     
-    # Pass transcript to inference pipeline for structured output
-    result = inference_pipeline.predict_fused(
-        combined_text, 
-        image_bytes, 
-        transcript=transcript if transcript else None
+    transcript = text
+    if audio_file and not text:
+        transcript, _, _ = _transcribe_uploaded_audio(audio_file)
+
+    # Journey target lookup
+    target_part = "Skin"
+    if journey_id:
+        try:
+            db_part = SupabaseService.get_journey_part(journey_id)
+            if db_part: target_part = db_part
+        except Exception:
+            pass
+
+    report = pipe.smart_predict(
+        text=transcript, 
+        image_bytes=image_bytes, 
+        journey_id=journey_id,
+        target_body_part=target_part
     )
 
-    # Return transcript only if available (avoid placeholder text such as "skin condition")
-    transcript_value = transcript if transcript else None
-    disease_explanation = result.get("disease_explanation")
+    # Automated Logging
+    if user_id != "anonymous" and report.get("diagnosis"):
+        try:
+            diag = report["diagnosis"]
+            SupabaseService.save_skin_analysis(
+                user_id=user_id,
+                image_url="uploaded_via_fused_analyze",
+                predicted_disease=diag.get("disease", "Unknown"),
+                confidence=diag.get("confidence", 0.0),
+                confidence_level=diag.get("confidence_level", "low"),
+                journey_id=journey_id,
+                body_part_detected=report.get("anatomical_check", {}).get("detected_part"),
+                model_used="automated_fused"
+            )
+        except Exception as e:
+            logger.warning(f"Auto-log failed: {e}")
 
-    disease = result["disease"]
-    confidence = result["confidence"]
-    confidence_level = _normalize_confidence_level(
-        confidence, result.get("confidence_level")
-    )
-    symptom_match_score = float(result.get("symptom_match_score", 0.0))
-    treatments = result["treatments"]
-    top3 = result.get("top3_predictions", [])
-    next_steps = _build_next_steps(
-        confidence_level=confidence_level,
-        symptom_match_score=symptom_match_score,
-        has_transcript=bool(transcript_value),
-    )
-
-    # Build disease-specific routine info
-    disease_routines = {
-        "Eczema": {
-            "morning": "Gentle cleanser, thick moisturizer, SPF 30+ sunscreen",
-            "night": "Lukewarm bath, pat dry, apply emollient, topical steroid if prescribed",
-            "treatment": "Apply hydrocortisone cream or prescribed ointment to affected areas",
-        },
-        "Dermatitis": {
-            "morning": "Fragrance-free cleanser, barrier cream, sunscreen",
-            "night": "Gentle cleanse, cool compress if inflamed, apply prescribed cream",
-            "treatment": "Identify and avoid triggers, use antihistamines for itch relief",
-        },
-        "Psoriasis": {
-            "morning": "Gentle soap, moisturize immediately, vitamin D cream if prescribed",
-            "night": "Coal tar or salicylic acid treatment, heavy moisturizer",
-            "treatment": "Apply topical steroids or vitamin D analogs as directed",
-        },
-        "Acne": {
-            "morning": "Salicylic acid cleanser, oil-free moisturizer, non-comedogenic SPF",
-            "night": "Double cleanse, benzoyl peroxide or retinoid treatment",
-            "treatment": "Apply benzoyl peroxide or prescribed retinoid to affected areas",
-        },
-        "Urticaria": {
-            "morning": "Cool shower, fragrance-free products, antihistamine if needed",
-            "night": "Avoid hot water, loose clothing, calamine lotion for itch",
-            "treatment": "Take antihistamines, apply cool compresses, avoid known triggers",
-        },
-    }
-
-    routine = disease_routines.get(disease, {
-        "morning": "Gentle cleanser, moisturizer, sunscreen",
-        "night": "Cleanse skin, apply treatment as directed",
-        "treatment": f"Apply {treatments[0]['medicine'] if treatments else 'prescribed medication'} as directed.",
-    })
-
-    warnings = ["If symptoms worsen or persist, consult a dermatologist."]
-    if transcription_error:
-        warnings.insert(0, f"Voice note transcription issue: {transcription_error}")
-
-    # Build full structured response (exact output format)
-    response_data = {
-        # ── 1. Final Diagnosis ──
-        "prediction":           disease,
-        "final_diagnosis":      disease,
-
-        # ── 2. Confidence Score ──
-        "confidence":           confidence,
-        "confidence_percent":   f"{confidence * 100:.1f}%",
-        "confidence_level":     confidence_level,
-
-        # ── 3. ASR Transcript ──
-        "transcript":           transcript_value,
-
-        # ── Disease Explanation ──
-        "disease_explanation":  disease_explanation,
-
-        # ── 4. Extracted Symptoms ──
-        "extracted_symptoms":   result.get("extracted_symptoms", []),
-
-        # ── 5. Expected Symptoms (KB) ──
-        "expected_symptoms":    result.get("expected_symptoms", []),
-
-        # ── 6. Symptom Match Score ──
-        "symptom_match_score":  symptom_match_score,
-        "symptom_match_percent": f"{symptom_match_score * 100:.0f}%",
-        "matched_symptoms":     result.get("matched_symptoms", []),
-
-        # ── 7. Top-3 Predictions ──
-        "top3_predictions":     top3,
-
-        # ── 8. Decision Mode ──
-        "decision_mode":        result.get("decision_mode", "UNKNOWN"),
-
-        # ── Additional UI data ──
-        "symptoms":             result.get("expected_symptoms", []),
-        "triggers":             ["Stress", "Environmental factors", "Allergens"],
-        "routine":              routine,
-        "warnings":             warnings,
-        "next_steps":           next_steps,
-        "treatments":           treatments,
-
-        # ── Model diagnostics ──
-        "model_used":           result["model_used"],
-        "image_disease":        result["image_disease"],
-        "image_confidence":     result["image_confidence"],
-        "text_disease":         result["text_disease"],
-        "text_confidence":      result["text_confidence"],
-        "image_weight":         result.get("image_weight"),
-        "text_weight":          result.get("text_weight"),
-        "agreement_score":      result.get("agreement_score"),
-        "top_probability_gap":  result.get("top_probability_gap", 0.0),
-        "transcription_status": transcription_status,
-        "transcription_error":  transcription_error,
-    }
-    
-    return jsonify(response_data)
+    return jsonify(report)
 
 
 @app.route("/api/analyze-skin-care", methods=["POST", "OPTIONS"])
@@ -1587,6 +1365,134 @@ def analyze_severity():
     })
 
 
+@app.route("/api/smart-scan", methods=["POST", "OPTIONS"])
+def smart_scan():
+    """
+    FULLY AUTOMATED MULTI-MODAL SCAN.
+    Coordinates all AI models to provide a comprehensive skin health report in one call.
+    Includes consistency checks for progress tracking journeys.
+    """
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        image_file = request.files.get("image") or request.files.get("file")
+        text_input = request.form.get("text", "").strip() or request.form.get("message", "").strip()
+        user_id = request.form.get("user_id", "anonymous")
+        journey_id = request.form.get("journey_id")
+
+        if not image_file and not text_input:
+            return jsonify({"error": "Automation requires at least an image or a symptom description."}), 400
+
+        image_bytes = None
+        if image_file:
+            image_bytes = image_file.read()
+
+        # ── Journey Context Lookup ──
+        target_part = "Skin"
+        if journey_id:
+            try:
+                # Real journey lookup
+                db_target_part = SupabaseService.get_journey_part(journey_id)
+                if db_target_part:
+                    target_part = db_target_part
+            except Exception:
+                logger.warning(f"Could not fetch target part for journey {journey_id}")
+
+        pipe = get_inference_pipeline()
+        report = pipe.smart_predict(
+            text=text_input, 
+            image_bytes=image_bytes, 
+            journey_id=journey_id,
+            target_body_part=target_part
+        )
+
+        # ── Automated Logging ──
+        if user_id and user_id != "anonymous":
+            try:
+                # In a real production app, we would upload to Supabase Storage first and get a URL
+                # For this integrated automation, we log the result data with the journey context
+                SupabaseService.save_skin_analysis(
+                    user_id=user_id,
+                    image_url="uploaded_via_smart_scan", # URL would be from storage upload
+                    predicted_disease=report["diagnosis"]["disease"],
+                    confidence=report["diagnosis"]["confidence"],
+                    confidence_level=report["diagnosis"]["confidence_level"],
+                    treatments=report["diagnosis"].get("treatments"),
+                    journey_id=journey_id,
+                    body_part_detected=report.get("anatomical_check", {}).get("detected_part"),
+                    model_used="smart_scan_fused"
+                )
+            except Exception as e:
+                logger.warning(f"Failed to auto-log analysis: {e}")
+
+        return jsonify(report)
+    except Exception as e:
+        logger.exception("Smart scan failed")
+        return jsonify({"status": "error", "message": f"Automated analysis failed: {str(e)}"}), 500
+
+# ── New Journey & Profile Endpoints ──
+
+@app.route("/api/profile", methods=["POST"])
+def update_profile():
+    """Update user personal details for automation."""
+    try:
+        data = request.json
+        user_id = data.get("user_id")
+        if not user_id:
+            return jsonify({"status": "error", "message": "user_id is required"}), 400
+            
+        profile = SupabaseService.update_user_profile(user_id, data)
+        return jsonify({
+            "status": "success", 
+            "message": "Profile updated successfully",
+            "profile": profile
+        })
+    except Exception as e:
+        logger.exception("Profile update failed")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/journey/start", methods=["POST"])
+def start_journey():
+    """Log the beginning of a skin journey (e.g., 'Forehead Acne Tracking')"""
+    try:
+        data = request.json
+        user_id = data.get("user_id")
+        title = data.get("title")
+        body_part = data.get("body_part", "Face")
+        frequency = data.get("frequency", "weekly")
+        
+        if not user_id or not title:
+            return jsonify({"status": "error", "message": "user_id and title are required"}), 400
+            
+        journey = SupabaseService.create_journey(user_id, title, body_part, frequency)
+        return jsonify({
+            "status": "success", 
+            "message": "Tracking journey started", 
+            "journey": journey
+        })
+    except Exception as e:
+        logger.exception("Journey start failed")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/journey/list", methods=["GET"])
+def list_journeys():
+    """List all progress tracking journeys for a user."""
+    try:
+        user_id = request.args.get("user_id")
+        if not user_id:
+            return jsonify({"status": "error", "message": "user_id is required"}), 400
+            
+        journeys = SupabaseService.get_user_journeys(user_id)
+        return jsonify({
+            "status": "success", 
+            "journeys": journeys
+        })
+    except Exception as e:
+        logger.exception("Listing journeys failed")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 # ── Vague Message Detection ───────────────────────────────────────────────────
 
 def is_message_vague(message: str) -> tuple:
@@ -1686,9 +1592,17 @@ def chat():
         from inference.intent_classifier import get_intent_classifier
         from inference.session_manager import get_session_manager
 
-        data         = request.get_json(force=True, silent=True) or {}
-        user_message = data.get("message", "").strip()
-        session_id   = data.get("session_id")
+        if request.is_json:
+            data = request.get_json(force=True, silent=True) or {}
+            user_message = data.get("message", "").strip()
+            session_id = data.get("session_id")
+            image_bytes = None
+        else:
+            # Automation: allow form-data for message + image
+            user_message = request.form.get("message", "").strip()
+            session_id = request.form.get("session_id")
+            image_file = request.files.get("image") or request.files.get("file")
+            image_bytes = image_file.read() if image_file else None
 
         # ── Empty message guard ───────────────────────────────────────────────
         if not user_message:
@@ -1854,6 +1768,17 @@ def chat():
             if any(k in lowered for k in CAUSE_KEYWORDS) and intent not in NON_OVERRIDE_INTENTS:
                 intent = "ask_causes"
 
+        # ── Automated Image Analysis (if present) ─────────────────────────────
+        automated_result = None
+        if image_bytes:
+            try:
+                automated_result = inference_pipeline.smart_predict(user_message, image_bytes)
+                # Sync intent if we have an image
+                if automated_result["diagnosis"]["confidence"] > 0.4:
+                    intent = "symptom_description"
+            except Exception as e:
+                logger.error(f"Chat automated scan failed: {e}")
+
         # ── Build response skeleton ───────────────────────────────────────────
         response: dict = {
             "session_id":            session_id,
@@ -1865,17 +1790,33 @@ def chat():
             "recommended_treatments": [],
             "reply":                 "",
             "model_status":          "online",
+            "automated_scan":        automated_result,
         }
 
         # ── Intent routing ────────────────────────────────────────────────────
 
         if intent == "symptom_description":
             # ──────────────────────────────────────────────────────────────────
-            # First check if the message is too vague
-            # ──────────────────────────────────────────────────────────────────
-            is_vague, missing_info, vague_followup = is_message_vague(user_message)
+            # Run prediction (either automated or text-only)
+            if automated_result:
+                # Use results from smart scan
+                diag_res = automated_result["diagnosis"]
+                disease = diag_res["disease"]
+                confidence = diag_res["confidence"]
+                probs = np.array(list(diag_res.get("top3_predictions", {}).values())) # simplistic mapping
+            else:
+                disease, confidence, probs = inference_pipeline._text_probs(user_message)
             
-            if is_vague and len(missing_info) >= 3:
+            # ──────────────────────────────────────────────────────────────────
+            # Vagueness check (skip if image is present - automation)
+            if automated_result:
+                is_vague = False
+                missing_info = []
+                vague_followup = []
+            else:
+                is_vague, missing_info, vague_followup = is_message_vague(user_message)
+            
+            if is_vague and len(missing_info) >= 3 and not automated_result:
                 # Very vague message — need more info before prediction
                 response.update({
                     "predicted_disease":     None,
@@ -2063,39 +2004,6 @@ def chat():
             # ──────────────────────────────────────────────────────────────────
             disease = session.last_predicted_disease
             
-            SEVERITY_INFO = {
-                "Eczema": {
-                    "level": "Mild to Moderate",
-                    "description": "Eczema is generally not dangerous but can significantly impact quality of life.",
-                    "warning_signs": ["Severe cracking or bleeding", "Signs of infection (pus, fever)", "Spreading rapidly", "Affecting sleep or daily activities"],
-                    "outlook": "Most cases are manageable with proper treatment. Flare-ups come and go, but symptoms can be controlled."
-                },
-                "Dermatitis": {
-                    "level": "Usually Mild",
-                    "description": "Contact dermatitis is typically not serious and resolves once the irritant is removed.",
-                    "warning_signs": ["Widespread rash covering large areas", "Difficulty breathing (allergic reaction)", "Blistering or oozing", "No improvement after 2 weeks"],
-                    "outlook": "Excellent prognosis. Identifying and avoiding triggers prevents recurrence."
-                },
-                "Psoriasis": {
-                    "level": "Chronic but Manageable",
-                    "description": "Psoriasis is a chronic autoimmune condition. While not life-threatening, it requires ongoing management.",
-                    "warning_signs": ["Joint pain or stiffness (psoriatic arthritis)", "Plaques covering >10% of body", "Pustular or erythrodermic flare-ups", "Severe nail changes"],
-                    "outlook": "Not curable but highly treatable. Many people achieve significant symptom control with modern treatments."
-                },
-                "Acne": {
-                    "level": "Mild to Moderate",
-                    "description": "Acne is very common and not dangerous, though severe cases can cause scarring.",
-                    "warning_signs": ["Deep, painful cysts or nodules", "Scarring occurring", "No response to over-the-counter treatments", "Significant emotional distress"],
-                    "outlook": "Most acne clears with treatment. Early intervention prevents scarring."
-                },
-                "Urticaria": {
-                    "level": "Usually Mild (Can Be Urgent)",
-                    "description": "Hives are typically harmless and temporary, but watch for signs of anaphylaxis.",
-                    "warning_signs": ["Difficulty breathing or swallowing", "Swelling of face, lips, or throat", "Dizziness or feeling faint", "Rapid heartbeat"],
-                    "outlook": "Acute hives usually resolve within 24-48 hours. Chronic cases may need investigation."
-                }
-            }
-            
             if disease and disease in SEVERITY_INFO:
                 info = SEVERITY_INFO[disease]
                 response.update({
@@ -2130,34 +2038,6 @@ def chat():
             # "What else can I do?" — lifestyle and self-care advice
             # ──────────────────────────────────────────────────────────────────
             disease = session.last_predicted_disease
-            
-            LIFESTYLE_ADVICE = {
-                "Eczema": {
-                    "do": ["Moisturize immediately after bathing", "Use fragrance-free products", "Wear soft, breathable fabrics (cotton)", "Keep nails short to reduce scratching damage", "Use a humidifier in dry weather"],
-                    "avoid": ["Hot showers (use lukewarm water)", "Harsh soaps and detergents", "Wool and synthetic fabrics", "Known triggers (dust, certain foods)", "Scratching when itchy"],
-                    "home_remedies": ["Oatmeal baths can soothe itching", "Coconut oil as a natural moisturizer", "Cool compresses for flare-ups", "Wet wrap therapy for severe patches"]
-                },
-                "Dermatitis": {
-                    "do": ["Identify and remove the irritant/allergen", "Keep the area clean and dry", "Apply cool compresses", "Use hypoallergenic products", "Wear protective gloves when cleaning"],
-                    "avoid": ["Contact with known irritants", "Scratching or rubbing the area", "Tight clothing on affected areas", "Overheating", "Strong fragrances"],
-                    "home_remedies": ["Aloe vera gel for soothing", "Cold compresses to reduce itching", "Gentle cleansing with mild soap", "Petroleum jelly as a barrier"]
-                },
-                "Psoriasis": {
-                    "do": ["Take daily baths (brief, lukewarm)", "Moisturize heavily after bathing", "Get moderate sun exposure", "Manage stress levels", "Maintain a healthy weight"],
-                    "avoid": ["Alcohol consumption", "Smoking", "Skin injuries (cuts, scrapes)", "Stress", "Certain medications (consult doctor)"],
-                    "home_remedies": ["Dead Sea salt baths", "Tea tree oil (diluted)", "Aloe vera for scaling", "Fish oil supplements (consult doctor)"]
-                },
-                "Acne": {
-                    "do": ["Wash face twice daily gently", "Use non-comedogenic products", "Change pillowcases frequently", "Stay hydrated", "Maintain consistent sleep schedule"],
-                    "avoid": ["Touching your face", "Popping or picking pimples", "Heavy makeup", "Over-washing (irritates skin)", "Greasy hair products near face"],
-                    "home_remedies": ["Tea tree oil (spot treatment)", "Honey masks (antibacterial)", "Green tea extract", "Ice cubes for inflammation"]
-                },
-                "Urticaria": {
-                    "do": ["Keep a symptom diary", "Wear loose, comfortable clothing", "Stay cool", "Take antihistamines as needed", "Apply calamine lotion"],
-                    "avoid": ["Known triggers (foods, medications)", "Extreme temperatures", "Tight clothing", "Stress and anxiety", "Alcohol"],
-                    "home_remedies": ["Cool compresses", "Oatmeal baths", "Aloe vera gel", "Baking soda paste for itching"]
-                }
-            }
             
             if disease and disease in LIFESTYLE_ADVICE:
                 advice = LIFESTYLE_ADVICE[disease]
@@ -2195,42 +2075,9 @@ def chat():
             # ──────────────────────────────────────────────────────────────────
             disease = session.last_predicted_disease
             
-            CAUSE_INFO = {
-                "Eczema": {
-                    "main_causes": ["Genetic factors (family history)", "Immune system dysfunction", "Skin barrier defects"],
-                    "triggers": ["Dry skin", "Irritants (soaps, detergents)", "Allergens (dust, pollen, pet dander)", "Stress", "Hot/cold temperatures", "Certain foods"],
-                    "is_contagious": False,
-                    "risk_factors": ["Family history of eczema, allergies, or asthma", "Living in urban areas", "Having sensitive skin"]
-                },
-                "Dermatitis": {
-                    "main_causes": ["Direct contact with irritants or allergens", "Sensitivity to chemicals"],
-                    "triggers": ["Soaps and detergents", "Metals (nickel)", "Plants (poison ivy)", "Cosmetics and perfumes", "Latex", "Certain fabrics"],
-                    "is_contagious": False,
-                    "risk_factors": ["Occupational exposure (healthcare, cleaning)", "Pre-existing allergies", "Frequent hand washing"]
-                },
-                "Psoriasis": {
-                    "main_causes": ["Autoimmune disorder", "Genetic predisposition", "Overactive immune response"],
-                    "triggers": ["Stress", "Skin injuries", "Infections (strep throat)", "Certain medications", "Cold weather", "Smoking and alcohol"],
-                    "is_contagious": False,
-                    "risk_factors": ["Family history", "Viral infections", "Smoking", "Obesity", "Stress"]
-                },
-                "Acne": {
-                    "main_causes": ["Excess sebum production", "Clogged hair follicles", "Bacteria (P. acnes)", "Hormonal changes"],
-                    "triggers": ["Hormonal fluctuations", "Certain medications", "Diet (high glycemic foods)", "Stress", "Friction from helmets/clothing", "Oily cosmetics"],
-                    "is_contagious": False,
-                    "risk_factors": ["Puberty", "Family history", "Hormonal conditions", "Certain medications"]
-                },
-                "Urticaria": {
-                    "main_causes": ["Allergic reactions", "Histamine release", "Unknown (chronic idiopathic)"],
-                    "triggers": ["Foods (shellfish, nuts, eggs)", "Medications (NSAIDs, antibiotics)", "Insect stings", "Physical stimuli (pressure, cold, heat)", "Infections", "Stress"],
-                    "is_contagious": False,
-                    "risk_factors": ["History of allergies", "Autoimmune conditions", "Infections", "Family history"]
-                }
-            }
-            
             if disease and disease in CAUSE_INFO:
                 info = CAUSE_INFO[disease]
-                contagious_text = "❌ **Not contagious** — you cannot spread this to others." if not info['is_contagious'] else "⚠️ **May be contagious** — consult a doctor about precautions."
+                contagious_text = "❌ **Not contagious** — you cannot spread this to others." if not info['is_contagious'] else "⚠️ **May be contagious**"
                 response.update({
                     "predicted_disease": disease,
                     "confidence": session.last_confidence,
@@ -2261,44 +2108,6 @@ def chat():
             # "Is this healing?" "How long to heal?" "Am I getting better?"
             # ──────────────────────────────────────────────────────────────────
             disease = session.last_predicted_disease
-            
-            HEALING_INFO = {
-                "Eczema": {
-                    "timeline": "2-4 weeks with proper treatment",
-                    "signs_improving": ["Less itching", "Reduced redness", "Skin becoming smoother", "Smaller affected areas", "Less frequent flare-ups"],
-                    "factors": "Healing depends on avoiding triggers, consistent moisturizing, and following treatment plans. Most people see improvement within the first week.",
-                    "can_cure": False,
-                    "outlook": "Eczema is manageable but chronic. With proper care, you can have long periods without flare-ups."
-                },
-                "Dermatitis": {
-                    "timeline": "1-3 weeks after removing the irritant",
-                    "signs_improving": ["Itching subsides", "Redness fades", "Skin texture normalizes", "No new patches forming"],
-                    "factors": "Once the trigger is removed, skin usually heals well. Avoidance of the irritant is key to staying clear.",
-                    "can_cure": True,
-                    "outlook": "Contact dermatitis can fully resolve if you avoid what caused it."
-                },
-                "Psoriasis": {
-                    "timeline": "4-8 weeks for significant improvement",
-                    "signs_improving": ["Scales thinning", "Patches shrinking", "Less silvery appearance", "Reduced itching"],
-                    "factors": "Psoriasis is chronic but treatable. Consistency with medication and lifestyle changes helps a lot.",
-                    "can_cure": False,
-                    "outlook": "While there's no cure, many people achieve clear or nearly clear skin with treatment."
-                },
-                "Acne": {
-                    "timeline": "4-8 weeks to see improvement",
-                    "signs_improving": ["Fewer new breakouts", "Existing pimples healing", "Less inflammation", "Smaller pores appearance"],
-                    "factors": "Patience is key with acne treatment. It often gets slightly worse before getting better as skin purges.",
-                    "can_cure": True,
-                    "outlook": "Most acne clears up with consistent treatment, though it may take a few months."
-                },
-                "Urticaria": {
-                    "timeline": "24-48 hours for acute episodes",
-                    "signs_improving": ["Hives fading", "Less itching", "No new welts appearing", "Swelling reducing"],
-                    "factors": "Acute hives often resolve quickly. Chronic urticaria may take longer to manage.",
-                    "can_cure": True,
-                    "outlook": "Most cases resolve on their own. Chronic cases need ongoing management but are controllable."
-                }
-            }
             
             if disease and disease in HEALING_INFO:
                 info = HEALING_INFO[disease]
@@ -2333,39 +2142,6 @@ def chat():
             # ──────────────────────────────────────────────────────────────────
             disease = session.last_predicted_disease
             
-            WORSENING_INFO = {
-                "Eczema": {
-                    "warning_signs": ["Spreading to new areas rapidly", "Skin cracking or bleeding", "Yellow crusting (possible infection)", "Fever or feeling unwell", "Severe pain instead of just itching"],
-                    "when_urgent": "If you see signs of infection (oozing, yellow crust, red streaks, fever), see a doctor within 24 hours.",
-                    "prevention": "Keep skin moisturized, avoid scratching, identify and avoid triggers.",
-                    "spreading": "Eczema isn't contagious and typically stays localized, but scratching can cause it to spread on your own body."
-                },
-                "Dermatitis": {
-                    "warning_signs": ["Blistering or weeping", "Signs of infection", "Spreading despite treatment", "Affecting your face or genitals", "Difficulty breathing (allergic reaction)"],
-                    "when_urgent": "Seek immediate care if you have trouble breathing, severe swelling, or widespread blistering.",
-                    "prevention": "Identify and completely avoid the irritant/allergen.",
-                    "spreading": "It spreads only if you continue contact with the irritant. It's not contagious to others."
-                },
-                "Psoriasis": {
-                    "warning_signs": ["Rapid spread to large areas", "Pustules forming", "Joint pain or stiffness", "Entire body turning red (erythrodermic)", "Fever with skin symptoms"],
-                    "when_urgent": "Erythrodermic psoriasis (full body redness) is a medical emergency. Also seek care for joint pain.",
-                    "prevention": "Manage stress, avoid skin injuries, limit alcohol, and stay consistent with treatment.",
-                    "spreading": "Psoriasis can spread to new areas on your body but is NOT contagious to others."
-                },
-                "Acne": {
-                    "warning_signs": ["Deep, painful cysts forming", "Scarring developing", "Spreading to neck, chest, back", "Not responding to OTC treatment for 3+ months", "Causing emotional distress"],
-                    "when_urgent": "See a dermatologist if you develop cystic acne or scarring, or if OTC treatments aren't working.",
-                    "prevention": "Don't pick or squeeze, keep routine consistent, avoid touching your face.",
-                    "spreading": "Acne isn't contagious. Spreading on your body is due to hormones/oil production, not infection."
-                },
-                "Urticaria": {
-                    "warning_signs": ["Swelling of lips, tongue, or throat", "Difficulty breathing", "Dizziness or fainting", "Hives lasting more than 6 weeks", "Fever with hives"],
-                    "when_urgent": "**EMERGENCY:** If you have throat swelling, difficulty breathing, or dizziness, call emergency services immediately.",
-                    "prevention": "Identify triggers, carry antihistamines, consider an epinephrine auto-injector if you have severe allergies.",
-                    "spreading": "Hives can appear anywhere and move around your body, but they're not contagious."
-                }
-            }
-            
             if disease and disease in WORSENING_INFO:
                 info = WORSENING_INFO[disease]
                 response.update({
@@ -2389,6 +2165,7 @@ def chat():
                         "That way I can give you specific guidance on what changes might be concerning."
                     ),
                     "needs_more_info": True,
+                    "follow_up_questions": ["What skin symptoms are you experiencing?"]
                 })
 
         elif intent == "general_question":
@@ -2397,45 +2174,6 @@ def chat():
             # ──────────────────────────────────────────────────────────────────
             disease = session.last_predicted_disease
             lowered = user_message.lower()
-            
-            # Comprehensive disease knowledge base
-            DISEASE_KNOWLEDGE = {
-                "Eczema": {
-                    "overview": "Eczema, also known as atopic dermatitis, is a chronic inflammatory skin condition that affects about 10-20% of people worldwide.",
-                    "symptoms": "dry, itchy skin that can become red, cracked, and inflamed. It often appears in patches on the face, inside elbows, behind knees, and on hands.",
-                    "causes": "a combination of genetic factors, immune system dysfunction, and environmental triggers. It's not contagious.",
-                    "treatments": "moisturizers to keep skin hydrated, topical corticosteroids for flare-ups, antihistamines for itching, and avoiding known triggers.",
-                    "tips": "Moisturize regularly, use fragrance-free products, avoid hot showers, wear soft cotton clothing, and manage stress."
-                },
-                "Dermatitis": {
-                    "overview": "Dermatitis refers to inflammation of the skin and covers several types including contact dermatitis and seborrheic dermatitis.",
-                    "symptoms": "red, itchy, swollen skin that may blister, ooze, or become scaly. The appearance depends on the type and cause.",
-                    "causes": "contact with irritants (soaps, chemicals), allergens (nickel, plants), or it can be related to sebum production on the scalp.",
-                    "treatments": "avoiding triggers, topical corticosteroids, moisturizers, and antihistamines. For seborrheic dermatitis, medicated shampoos help.",
-                    "tips": "Identify and avoid your triggers, patch test new products, keep skin moisturized, and wear protective gloves when needed."
-                },
-                "Psoriasis": {
-                    "overview": "Psoriasis is a chronic autoimmune condition where skin cells multiply 10x faster than normal, causing thick, scaly patches.",
-                    "symptoms": "red, raised patches covered with silvery-white scales, often on elbows, knees, scalp, and lower back. Can be itchy or painful.",
-                    "causes": "an overactive immune system that attacks healthy skin cells. It's genetic and can be triggered by stress, infections, or injuries.",
-                    "treatments": "topical treatments (corticosteroids, vitamin D), phototherapy (UV light), and systemic medications for severe cases.",
-                    "tips": "Keep skin moisturized, avoid skin injuries, manage stress, limit alcohol, and get regular sun exposure (but avoid sunburn)."
-                },
-                "Acne": {
-                    "overview": "Acne is the most common skin condition, affecting up to 85% of people between ages 12-24. It can persist into adulthood.",
-                    "symptoms": "pimples, blackheads, whiteheads, and in severe cases, painful cysts or nodules. Usually appears on face, chest, and back.",
-                    "causes": "excess oil production, clogged pores, bacteria (P. acnes), and hormonal changes. Diet and stress can worsen it.",
-                    "treatments": "benzoyl peroxide, salicylic acid, retinoids, antibiotics (topical or oral), and for severe cases, isotretinoin.",
-                    "tips": "Wash face twice daily, don't pick at acne, use non-comedogenic products, change pillowcases regularly, and stay hydrated."
-                },
-                "Urticaria": {
-                    "overview": "Urticaria, commonly known as hives, are raised, itchy welts that can appear suddenly and usually resolve within 24 hours.",
-                    "symptoms": "red or skin-colored welts of various sizes that blanch (turn white) when pressed. They can appear anywhere and may merge together.",
-                    "causes": "allergic reactions (food, medications), infections, stress, temperature changes, or sometimes no identifiable cause.",
-                    "treatments": "antihistamines are the main treatment, avoiding known triggers, and for severe cases, corticosteroids or epinephrine.",
-                    "tips": "Keep a diary to identify triggers, avoid tight clothing, use cool compresses for relief, and manage stress."
-                }
-            }
             
             if disease and disease in DISEASE_KNOWLEDGE:
                 info = DISEASE_KNOWLEDGE[disease]
@@ -2491,40 +2229,6 @@ def chat():
             
             # Check if asking about causes
             if target_disease and any(w in lowered for w in ['cause', 'causes', 'why', 'trigger', 'contagious']):
-                # Redirect to causes handler logic
-                CAUSE_INFO = {
-                    "Eczema": {
-                        "main_causes": ["Genetic factors (family history)", "Immune system dysfunction", "Skin barrier defects"],
-                        "triggers": ["Dry skin", "Irritants (soaps, detergents)", "Allergens (dust, pollen, pet dander)", "Stress", "Hot/cold temperatures", "Certain foods"],
-                        "is_contagious": False,
-                        "description": "Eczema is a chronic inflammatory skin condition that causes dry, itchy, and inflamed skin."
-                    },
-                    "Dermatitis": {
-                        "main_causes": ["Direct contact with irritants or allergens", "Sensitivity to chemicals"],
-                        "triggers": ["Soaps and detergents", "Metals (nickel)", "Plants (poison ivy)", "Cosmetics and perfumes", "Latex"],
-                        "is_contagious": False,
-                        "description": "Dermatitis refers to skin inflammation, often from contact with irritants or allergens."
-                    },
-                    "Psoriasis": {
-                        "main_causes": ["Autoimmune disorder", "Genetic predisposition", "Overactive immune response"],
-                        "triggers": ["Stress", "Skin injuries", "Infections (strep throat)", "Certain medications", "Cold weather"],
-                        "is_contagious": False,
-                        "description": "Psoriasis is a chronic autoimmune condition that speeds up skin cell growth, causing thick, scaly patches."
-                    },
-                    "Acne": {
-                        "main_causes": ["Excess sebum production", "Clogged hair follicles", "Bacteria (P. acnes)", "Hormonal changes"],
-                        "triggers": ["Hormonal fluctuations", "Certain medications", "Diet (high glycemic foods)", "Stress", "Oily cosmetics"],
-                        "is_contagious": False,
-                        "description": "Acne is a skin condition where hair follicles become clogged with oil and dead skin cells."
-                    },
-                    "Urticaria": {
-                        "main_causes": ["Allergic reactions", "Histamine release", "Unknown (chronic idiopathic)"],
-                        "triggers": ["Foods (shellfish, nuts, eggs)", "Medications", "Insect stings", "Physical stimuli", "Infections"],
-                        "is_contagious": False,
-                        "description": "Urticaria (hives) are itchy, raised welts caused by histamine release in the skin."
-                    }
-                }
-                
                 if target_disease in CAUSE_INFO:
                     info = CAUSE_INFO[target_disease]
                     contagious_text = "❌ **Not contagious** — you cannot spread this to others." if not info['is_contagious'] else "⚠️ **May be contagious**"
@@ -2549,61 +2253,18 @@ def chat():
                         ),
                         "follow_up_questions": ["Which skin condition would you like to learn about?"],
                     })
-            elif target_disease:
-                # General info about the disease - provide comprehensive information like ChatGPT
-                DISEASE_FULL_INFO = {
-                    "Eczema": (
-                        "**Eczema** (atopic dermatitis) is a chronic inflammatory skin condition affecting 10-20% of people.\n\n"
-                        "**What it looks like:** Dry, itchy patches that can be red, cracked, or oozing. Common on face, "
-                        "elbows, knees, and hands.\n\n"
-                        "**Causes:** Genetic factors, immune dysfunction, and a compromised skin barrier. "
-                        "Triggered by dry air, irritants, stress, and allergens.\n\n"
-                        "**Treatment:** Daily moisturizing, topical corticosteroids during flares, antihistamines for itch, "
-                        "and avoiding triggers. Severe cases may need immunosuppressants."
-                    ),
-                    "Dermatitis": (
-                        "**Dermatitis** refers to skin inflammation from various causes.\n\n"
-                        "**What it looks like:** Red, itchy, swollen skin that may blister or peel. Location depends on the trigger.\n\n"
-                        "**Causes:** Contact with irritants (soaps, chemicals) or allergens (nickel, latex, plants). "
-                        "Seborrheic dermatitis affects oily areas like the scalp.\n\n"
-                        "**Treatment:** Identify and avoid triggers, topical steroids, moisturizers, and for seborrheic type, "
-                        "medicated shampoos with ketoconazole or selenium sulfide."
-                    ),
-                    "Psoriasis": (
-                        "**Psoriasis** is a chronic autoimmune condition where skin cells multiply 10x faster than normal.\n\n"
-                        "**What it looks like:** Thick, red patches covered with silvery scales. Common on elbows, knees, "
-                        "scalp, and lower back. Can affect nails too.\n\n"
-                        "**Causes:** Overactive immune system with genetic factors. Triggered by stress, infections, "
-                        "skin injuries, and certain medications.\n\n"
-                        "**Treatment:** Topical treatments (steroids, vitamin D), phototherapy with UV light, and "
-                        "systemic medications (methotrexate, biologics) for severe cases."
-                    ),
-                    "Acne": (
-                        "**Acne** is the most common skin condition, affecting up to 85% of teenagers and many adults.\n\n"
-                        "**What it looks like:** Pimples, blackheads, whiteheads, and in severe cases, painful cysts. "
-                        "Usually on face, chest, shoulders, and back.\n\n"
-                        "**Causes:** Excess oil, clogged pores, bacteria (P. acnes), and hormones. Worsened by stress, "
-                        "certain foods, and some cosmetics.\n\n"
-                        "**Treatment:** Benzoyl peroxide, salicylic acid, retinoids for mild cases. Antibiotics or "
-                        "isotretinoin (Accutane) for moderate to severe acne."
-                    ),
-                    "Urticaria": (
-                        "**Urticaria** (hives) are raised, itchy welts that appear suddenly and usually fade within 24 hours.\n\n"
-                        "**What it looks like:** Red or skin-colored bumps of varying sizes. They blanch (turn white) "
-                        "when pressed and can appear anywhere on the body.\n\n"
-                        "**Causes:** Allergic reactions (food, medications), infections, stress, temperature changes, "
-                        "or sometimes no identifiable cause (chronic idiopathic urticaria).\n\n"
-                        "**Treatment:** Antihistamines are first-line treatment. Avoid known triggers. Severe reactions "
-                        "may require corticosteroids or epinephrine."
-                    )
-                }
-                
+            elif target_disease and target_disease in DISEASE_KNOWLEDGE:
+                # General info about the disease
+                info = DISEASE_KNOWLEDGE[target_disease]
                 response.update({
                     "predicted_disease": target_disease,
                     "confidence": session.last_confidence if target_disease == session.last_predicted_disease else 0.0,
                     "reply": (
-                        DISEASE_FULL_INFO.get(target_disease, f"**{target_disease}** is a skin condition. Let me know what specific aspect you'd like to learn about.") +
-                        f"\n\nWould you like more details about anything specific?"
+                        f"**{target_disease}** - {info['overview']}\n\n"
+                        f"**What it looks like:** {info['symptoms']}\n\n"
+                        f"**Causes:** {info['causes']}\n\n"
+                        f"**Treatment:** {info['treatments']}\n\n"
+                        f"Would you like more details about anything specific?"
                     ),
                 })
             else:

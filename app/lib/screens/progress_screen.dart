@@ -113,12 +113,12 @@ class _ProgressScreenState extends State<ProgressScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 // Trend Chart
-                const Text('Healing Trend', style: AppTextStyles.subHeading),
+                Text('Healing Trend', style: AppTextStyles.subHeading(context)),
                 const SizedBox(height: 16),
                 _buildTrendChart(),
                 const SizedBox(height: 24),
 
-                const Text('History', style: AppTextStyles.subHeading),
+                Text('History', style: AppTextStyles.subHeading(context)),
                 const SizedBox(height: 16),
 
                 ...List.generate(_history.length, (index) {
@@ -133,12 +133,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         ),
                       );
                     },
-                    child: Card(
+                    child: Container(
                       margin: const EdgeInsets.only(bottom: 16),
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                      decoration: AppDecor.softCard(context),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Row(
@@ -149,12 +146,12 @@ class _ProgressScreenState extends State<ProgressScreen> {
                               width: 80,
                               height: 80,
                               decoration: BoxDecoration(
-                                color: Colors.grey[200],
+                                color: context.clrBackgroundAlt,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.image,
-                                color: Colors.grey,
+                                color: context.clrTextSec,
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -233,17 +230,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
     return Container(
       height: 200,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
+      decoration: AppDecor.softCard(context),
       child: LineChart(
         LineChartData(
           gridData: FlGridData(show: false),

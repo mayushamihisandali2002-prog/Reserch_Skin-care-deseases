@@ -15,12 +15,13 @@ class SkinCareScreen extends StatefulWidget {
 }
 
 class _SkinCareScreenState extends State<SkinCareScreen> {
-  static const Color _brand = Color(0xFF2B7A78);
-  static const Color _brandDark = Color(0xFF1E5B58);
-  static const Color _positive = Color(0xFF2F9E63);
-  static const Color _warning = Color(0xFFC27B2A);
-  static const Color _danger = Color(0xFFC44D5A);
-  static const Color _border = Color(0xFFDCE4E8);
+  // Using getters for theme-aware brand colors
+  Color get _brand => AppColors.primary;
+  Color get _brandDark => AppColors.primaryDark;
+  Color get _positive => AppColors.success;
+  Color get _warning => AppColors.warning;
+  Color get _danger => AppColors.error;
+  Color get _border => context.clrBorder;
 
   XFile? _selectedImage;
   bool _isLoading = false;
@@ -236,17 +237,18 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
     required Widget child,
     String? subtitle,
     IconData? icon,
-    Color accentColor = _brand,
+    Color? accentColor,
     EdgeInsetsGeometry padding = const EdgeInsets.all(16),
   }) {
+    final effectiveAccent = accentColor ?? _brand;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.clrSurface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: _border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: context.isDarkMode ? Colors.black26 : Colors.black.withValues(alpha: 0.04),
             blurRadius: 14,
             offset: const Offset(0, 8),
           ),
@@ -263,17 +265,17 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.12),
+                    color: effectiveAccent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, size: 18, color: accentColor),
+                  child: Icon(icon, size: 18, color: effectiveAccent),
                 ),
                 const SizedBox(width: 10),
               ],
               Expanded(
                 child: Text(
                   title,
-                  style: AppTextStyles.subHeading.copyWith(
+                  style: AppTextStyles.subHeading(context).copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -282,7 +284,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
           ),
           if (subtitle != null) ...[
             const SizedBox(height: 6),
-            Text(subtitle, style: AppTextStyles.body),
+            Text(subtitle, style: AppTextStyles.body(context)),
           ],
           const SizedBox(height: 14),
           child,
@@ -299,7 +301,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
         height: 260,
         width: double.infinity,
         decoration: BoxDecoration(
-          color: const Color(0xFFF3F7F9),
+          color: context.clrBackground,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: _brand.withValues(alpha: 0.35), width: 1.4),
         ),
@@ -320,7 +322,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
                   const SizedBox(height: 4),
                   Text(
                     'Frontal face, good lighting, minimal filters',
-                    style: AppTextStyles.body,
+                    style: AppTextStyles.body(context),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -402,7 +404,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
               ),
               color: selected
                   ? _brand.withValues(alpha: 0.08)
-                  : const Color(0xFFFBFDFE),
+                  : context.clrSurface,
             ),
             child: CheckboxListTile(
               dense: true,
@@ -412,7 +414,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 10),
               title: Text(
                 entry.value,
-                style: const TextStyle(fontWeight: FontWeight.w500),
+                style: TextStyle(fontWeight: FontWeight.w500),
               ),
               onChanged: (value) => onChanged(entry.key, value ?? false),
             ),
@@ -434,7 +436,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: const Color(0xFFF9FCFD),
+        fillColor: context.clrSurface,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -593,7 +595,10 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             gradient: LinearGradient(
-              colors: [_brand.withValues(alpha: 0.18), const Color(0xFFF4FBF8)],
+              colors: [
+                _brand.withValues(alpha: 0.18), 
+                context.isDarkMode ? Colors.black26 : const Color(0xFFF4FBF8)
+              ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -604,12 +609,12 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
             children: [
               Text(
                 'Personal Skin Care Assistant',
-                style: AppTextStyles.heading.copyWith(fontSize: 22),
+                style: AppTextStyles.heading(context).copyWith(fontSize: 22),
               ),
               const SizedBox(height: 8),
               Text(
                 'Upload one selfie and choose dropdown/checkbox options. The app returns skin type, confidence, and a safety-filtered routine.',
-                style: AppTextStyles.body.copyWith(height: 1.45),
+                style: AppTextStyles.body(context).copyWith(height: 1.45),
               ),
             ],
           ),
@@ -674,7 +679,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [_brand, _brandDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -696,7 +701,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
               children: [
                 Text(
                   'Predicted Skin Type',
-                  style: AppTextStyles.body.copyWith(
+                  style: AppTextStyles.body(context).copyWith(
                     color: Colors.white.withValues(alpha: 0.86),
                     fontSize: 13,
                   ),
@@ -781,7 +786,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
             decoration: BoxDecoration(
               color: isTop
                   ? _brand.withValues(alpha: 0.12)
-                  : const Color(0xFFF7FAFC),
+                  : context.clrBackground,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: isTop
@@ -793,7 +798,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
               '${_titleCaseFromSlug(entry.key)}: $probability%',
               style: TextStyle(
                 fontWeight: isTop ? FontWeight.w700 : FontWeight.w500,
-                color: isTop ? _brandDark : AppColors.textMain,
+                color: isTop ? (context.isDarkMode ? AppColors.success : _brandDark) : context.clrTextMain,
               ),
             ),
           );
@@ -808,7 +813,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
     required IconData icon,
   }) {
     if (values.isEmpty) {
-      return Text('None selected', style: AppTextStyles.body);
+      return Text('None selected', style: AppTextStyles.body(context));
     }
 
     return Wrap(
@@ -858,14 +863,14 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
         children: [
           Text(
             'Goals',
-            style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w700),
+            style: AppTextStyles.body(context).copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           _buildTagChips(goals, color: _positive, icon: Icons.flag),
           const SizedBox(height: 14),
           Text(
             'Allergies / Sensitivities',
-            style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w700),
+            style: AppTextStyles.body(context).copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           _buildTagChips(
@@ -893,13 +898,17 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F6F8),
+        color: context.clrBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _border),
       ),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
+        style: TextStyle(
+          fontSize: 13.5, 
+          fontWeight: FontWeight.w500,
+          color: context.clrTextMain,
+        ),
       ),
     );
   }
@@ -911,7 +920,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
     String emptyState = 'No items available',
   }) {
     if (values.isEmpty) {
-      return Text(emptyState, style: AppTextStyles.body);
+      return Text(emptyState, style: AppTextStyles.body(context));
     }
 
     return Column(
@@ -927,9 +936,10 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
                   Expanded(
                     child: Text(
                       item,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w500,
+                        color: context.clrTextMain,
                       ),
                     ),
                   ),
@@ -1107,7 +1117,10 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
               Expanded(
                 child: Text(
                   note,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: context.isDarkMode ? Colors.orangeAccent : _warning,
+                  ),
                 ),
               ),
             ],
@@ -1141,7 +1154,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Skin Care Assistant'),
-        backgroundColor: AppColors.surface,
+        backgroundColor: context.clrSurface,
         surfaceTintColor: Colors.transparent,
         shadowColor: Colors.black.withValues(alpha: 0.08),
       ),

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import '../config/app_config.dart';
+import 'supabase_service.dart';
 
 class ApiService {
   // Session ID for tracking conversations across the app lifetime
@@ -13,21 +14,25 @@ class ApiService {
   static String get baseUrl => AppConfig.apiBaseUrl;
 
   /// Analyze skin image only (image-based diagnosis)
-  /// Works on both web and mobile/desktop platforms
   static Future<Map<String, dynamic>> analyzeSkin(
     Uint8List imageBytes,
-    String fileName,
-  ) async {
+    String fileName, {
+    String? journeyId,
+  }) async {
     try {
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl/api/analyze'),
       );
 
-      // Add the image file using bytes (works on all platforms)
       request.files.add(
         http.MultipartFile.fromBytes('image', imageBytes, filename: fileName),
       );
+
+      if (journeyId != null) request.fields['journey_id'] = journeyId;
+      if (SupabaseService.userId != null) {
+        request.fields['user_id'] = SupabaseService.userId!;
+      }
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
@@ -52,6 +57,7 @@ class ApiService {
     String symptoms, {
     Uint8List? audioBytes,
     String? audioFileName,
+    String? journeyId,
   }) async {
     try {
       var request = http.MultipartRequest(
@@ -70,6 +76,10 @@ class ApiService {
 
       // Add the symptom text
       request.fields['text'] = symptoms;
+      if (journeyId != null) request.fields['journey_id'] = journeyId;
+      if (SupabaseService.userId != null) {
+        request.fields['user_id'] = SupabaseService.userId!;
+      }
 
       // Add audio file if provided
       if (audioBytes != null && audioFileName != null) {
@@ -97,20 +107,19 @@ class ApiService {
   }
 
   /// Analyze skin with image and audio file (audio will be transcribed on server)
-  /// Works on both web and mobile/desktop platforms
   static Future<Map<String, dynamic>> analyzeFusedWithAudio(
     Uint8List imageBytes,
     String imageFileName,
     Uint8List audioBytes,
-    String audioFileName,
-  ) async {
+    String audioFileName, {
+    String? journeyId,
+  }) async {
     try {
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl/api/analyze-fused'),
       );
 
-      // Add the image file using bytes (works on all platforms)
       request.files.add(
         http.MultipartFile.fromBytes(
           'image',
@@ -119,7 +128,6 @@ class ApiService {
         ),
       );
 
-      // Add audio file for server-side transcription
       request.files.add(
         http.MultipartFile.fromBytes(
           'audio',
@@ -128,19 +136,57 @@ class ApiService {
         ),
       );
 
-      // Empty text - server will transcribe audio
       request.fields['text'] = '';
+      if (journeyId != null) request.fields['journey_id'] = journeyId;
+      if (SupabaseService.userId != null) {
+        request.fields['user_id'] = SupabaseService.userId!;
+      }
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Failed to analyze: ${response.body}');
-      }
+      if (response.statusCode == 200) return json.decode(response.body);
+      throw Exception('Failed to analyze: ${response.body}');
     } catch (e) {
       print("Error in fused analysis with audio: $e");
+      rethrow;
+    }
+  }
+
+  /// FULLY AUTOMATED SMART SCAN
+  static Future<Map<String, dynamic>> smartScan({
+    Uint8List? imageBytes,
+    String? imageFileName,
+    String? message,
+    String? journeyId,
+  }) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/smart-scan'),
+      );
+
+      if (imageBytes != null && imageFileName != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'image',
+            imageBytes,
+            filename: imageFileName,
+          ),
+        );
+      }
+
+      if (message != null) request.fields['message'] = message;
+      if (journeyId != null) request.fields['journey_id'] = journeyId;
+      if (SupabaseService.userId != null) {
+        request.fields['user_id'] = SupabaseService.userId!;
+      }
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+      if (response.statusCode == 200) return json.decode(response.body);
+      throw Exception('Smart scan failed: ${response.body}');
+    } catch (e) {
+      print("Error in smart scan: $e");
       rethrow;
     }
   }
