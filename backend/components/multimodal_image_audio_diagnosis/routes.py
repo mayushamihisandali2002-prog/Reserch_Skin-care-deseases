@@ -49,12 +49,19 @@ def register_routes(app) -> None:
             except Exception:
                 pass
 
-        report = pipe.smart_predict(
-            text="",
-            image_bytes=image_bytes,
-            journey_id=journey_id,
-            target_body_part=target_part,
-        )
+        try:
+            report = pipe.smart_predict(
+                text="",
+                image_bytes=image_bytes,
+                journey_id=journey_id,
+                target_body_part=target_part,
+            )
+        except Exception as exc:
+            msg = str(exc)
+            if "cannot identify image file" in msg.lower():
+                return jsonify({"error": "Invalid image file format", "detail": msg}), 400
+            logger.exception("Image prediction failed")
+            return jsonify({"error": f"Analysis failed: {exc}"}), 500
 
         # Automated Logging
         if user_id != "anonymous":
@@ -117,12 +124,19 @@ def register_routes(app) -> None:
             except Exception:
                 pass
 
-        report = pipe.smart_predict(
-            text=transcript,
-            image_bytes=image_bytes,
-            journey_id=journey_id,
-            target_body_part=target_part,
-        )
+        try:
+            report = pipe.smart_predict(
+                text=transcript,
+                image_bytes=image_bytes,
+                journey_id=journey_id,
+                target_body_part=target_part,
+            )
+        except Exception as exc:
+            msg = str(exc)
+            if "cannot identify image file" in msg.lower():
+                return jsonify({"error": "Invalid image file format", "detail": msg}), 400
+            logger.exception("Fused prediction failed")
+            return jsonify({"error": f"Fused analysis failed: {exc}"}), 500
 
         # Automated Logging
         if user_id != "anonymous" and report.get("diagnosis"):

@@ -181,9 +181,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                                           vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: AppColors.success.withOpacity(
-                                            0.1,
-                                          ),
+                                          color: AppColors.success.withValues(alpha: 0.1),
                                           borderRadius: BorderRadius.circular(
                                             20,
                                           ),
@@ -274,7 +272,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
               dotData: FlDotData(show: true),
               belowBarData: BarAreaData(
                 show: true,
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
               ),
             ),
           ],

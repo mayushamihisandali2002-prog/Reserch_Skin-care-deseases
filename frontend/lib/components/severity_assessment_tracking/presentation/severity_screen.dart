@@ -17,7 +17,6 @@ class SeverityScreen extends StatefulWidget {
 class _SeverityScreenState extends State<SeverityScreen> {
   Color get _brand => AppColors.primary;
   Color get _warning => AppColors.warning;
-  Color get _error => AppColors.error;
 
   XFile? _selectedImage;
   bool _isLoading = false;

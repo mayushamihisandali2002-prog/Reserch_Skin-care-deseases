@@ -23,7 +23,7 @@ class HealingAnalysisScreen extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.warning.withOpacity(0.1),
+                color: AppColors.warning.withValues(alpha: 0.1),
                 border: Border.all(color: AppColors.warning),
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -55,7 +55,7 @@ class HealingAnalysisScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
                     child: Text(data['status'] ?? 'Unknown', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ],
@@ -123,7 +123,7 @@ class HealingAnalysisScreen extends StatelessWidget {
           },
           dataSets: [
             RadarDataSet(
-              fillColor: AppColors.primary.withOpacity(0.4),
+              fillColor: AppColors.primary.withValues(alpha: 0.4),
               borderColor: AppColors.primary,
               entryRadius: 3,
               dataEntries: values.map((e) => RadarEntry(value: e)).toList(),
@@ -160,7 +160,7 @@ class HealingAnalysisScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: context.isDarkMode ? Colors.black26 : Colors.grey.withOpacity(0.1), 
+                color: context.isDarkMode ? Colors.black26 : Colors.grey.withValues(alpha: 0.1), 
                 blurRadius: 4,
               ),
             ],

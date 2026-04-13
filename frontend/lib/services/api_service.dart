@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
@@ -43,7 +42,7 @@ class ApiService {
         throw Exception('Failed to analyze skin: ${response.body}');
       }
     } catch (e) {
-      print("Error analyzing skin: $e");
+      debugPrint("Error analyzing skin: $e");
       rethrow;
     }
   }
@@ -101,7 +100,7 @@ class ApiService {
         throw Exception('Failed to analyze: ${response.body}');
       }
     } catch (e) {
-      print("Error in fused analysis: $e");
+      debugPrint("Error in fused analysis: $e");
       rethrow;
     }
   }
@@ -147,7 +146,7 @@ class ApiService {
       if (response.statusCode == 200) return json.decode(response.body);
       throw Exception('Failed to analyze: ${response.body}');
     } catch (e) {
-      print("Error in fused analysis with audio: $e");
+      debugPrint("Error in fused analysis with audio: $e");
       rethrow;
     }
   }
@@ -186,7 +185,7 @@ class ApiService {
       if (response.statusCode == 200) return json.decode(response.body);
       throw Exception('Smart scan failed: ${response.body}');
     } catch (e) {
-      print("Error in smart scan: $e");
+      debugPrint("Error in smart scan: $e");
       rethrow;
     }
   }
@@ -235,7 +234,7 @@ class ApiService {
         throw Exception('Failed to analyze skin care: ${response.body}');
       }
     } catch (e) {
-      print("Error analyzing skin care: $e");
+      debugPrint("Error analyzing skin care: $e");
       rethrow;
     }
   }
@@ -267,7 +266,7 @@ class ApiService {
         throw Exception('Failed to analyze severity: ${response.body}');
       }
     } catch (e) {
-      print("Error analyzing severity: $e");
+      debugPrint("Error analyzing severity: $e");
       rethrow;
     }
   }
@@ -301,14 +300,17 @@ class ApiService {
         throw Exception('Failed to log progress: ${response.body}');
       }
     } catch (e) {
-      print("Error logging progress: $e");
+      debugPrint("Error logging progress: $e");
       rethrow;
     }
   }
 
   static Future<List<dynamic>> getHistory({String? userId}) async {
     try {
-      final uid = userId ?? SupabaseService.userId ?? 'anonymous';
+      final uid = userId ?? SupabaseService.userId;
+      if (uid == null || uid.trim().isEmpty || uid == 'anonymous') {
+        return [];
+      }
       final response = await http.get(Uri.parse('$baseUrl/api/history?user_id=$uid'));
 
       if (response.statusCode == 200) {
@@ -317,14 +319,21 @@ class ApiService {
         throw Exception('Failed to load history');
       }
     } catch (e) {
-      print("Error getting history: $e");
+      debugPrint("Error getting history: $e");
       return [];
     }
   }
 
   static Future<Map<String, dynamic>> getStats({String? userId}) async {
     try {
-      final uid = userId ?? SupabaseService.userId ?? 'anonymous';
+      final uid = userId ?? SupabaseService.userId;
+      if (uid == null || uid.trim().isEmpty || uid == 'anonymous') {
+        return {
+          'labels': ['Redness', 'Inflammation', 'Scaling', 'Texture'],
+          'values': [0, 0, 0, 0],
+          'note': 'Login is required to view tracking statistics.',
+        };
+      }
       final response = await http.get(Uri.parse('$baseUrl/api/stats?user_id=$uid'));
 
       if (response.statusCode == 200) {
@@ -333,10 +342,11 @@ class ApiService {
         throw Exception('Failed to load stats');
       }
     } catch (e) {
-      print("Error getting stats: $e");
+      debugPrint("Error getting stats: $e");
       return {
         'labels': ['Redness', 'Inflammation', 'Scaling', 'Texture'],
-        'values': [0, 0, 0, 0]
+        'values': [0, 0, 0, 0],
+        'note': 'Tracking statistics are currently unavailable.',
       };
     }
   }
@@ -351,7 +361,7 @@ class ApiService {
         throw Exception('Failed to load system status');
       }
     } catch (e) {
-      print("Error getting system status: $e");
+      debugPrint("Error getting system status: $e");
       return {};
     }
   }
@@ -375,7 +385,7 @@ class ApiService {
         throw Exception('Failed to send message');
       }
     } catch (e) {
-      print("Error chatting: $e");
+      debugPrint("Error chatting: $e");
       return {
         "reply": "Error: Could not connect to assistant.",
         "predicted_disease": null,

@@ -1212,67 +1212,6 @@ class _FollowUpChips extends StatelessWidget {
   }
 }
 
-/// Animated send button.
-class _SendButton extends StatelessWidget {
-  final VoidCallback? onTap;
-  final bool isTyping;
-  final bool hasText;
-  const _SendButton({
-    required this.onTap,
-    required this.isTyping,
-    this.hasText = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isDisabled = isTyping || !hasText;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDisabled
-                ? [const Color(0xFFE5E7EB), const Color(0xFFD1D5DB)]
-                : [AppColors.primary, AppColors.primaryDark],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          shape: BoxShape.circle,
-          boxShadow: isDisabled
-              ? []
-              : [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.35),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-        ),
-        child: Center(
-          child: isTyping
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: Colors.white,
-                  ),
-                )
-              : Icon(
-                  Icons.send_rounded,
-                  color: isDisabled ? const Color(0xFF9CA3AF) : Colors.white,
-                  size: 22,
-                ),
-        ),
-      ),
-    );
-  }
-}
-
 /// Three bouncing dots typing animation.
 class _DotsAnimation extends StatelessWidget {
   final Animation<double> animation;

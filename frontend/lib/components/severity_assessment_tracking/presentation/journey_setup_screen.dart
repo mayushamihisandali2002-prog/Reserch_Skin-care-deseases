@@ -11,7 +11,6 @@ class JourneySetupScreen extends StatefulWidget {
 
 class _JourneySetupScreenState extends State<JourneySetupScreen> {
   final _titleController = TextEditingController();
-  final _locationController = TextEditingController();
   String _selectedPart = 'Face';
   String _selectedFrequency = 'weekly';
   bool _isLoading = false;
@@ -32,8 +31,10 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> {
         bodyPart: _selectedPart,
         frequency: _selectedFrequency,
       );
-      if (mounted) Navigator.pop(context, true);
+      if (!mounted) return;
+      Navigator.pop(context, true);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -171,7 +172,7 @@ class _JourneySetupScreenState extends State<JourneySetupScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: AppDecor.softCard(context, color: Colors.white),
       child: DropdownButtonFormField<String>(
-        value: value,
+        initialValue: value,
         items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
         onChanged: onChanged,
         decoration: InputDecoration(

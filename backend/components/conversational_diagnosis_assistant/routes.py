@@ -237,6 +237,11 @@ def register_routes(app) -> None:
             image_file = request.files.get("image") or request.files.get("file")
             image_bytes = image_file.read() if image_file else None
 
+        user_id = (request.json or {}).get("user_id") if request.is_json else request.form.get("user_id")
+        if user_id and user_id != "anonymous":
+            if not re.match(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", str(user_id).lower()):
+                return jsonify({"error": "Invalid user_id format. Must be a valid UUID or 'anonymous'."}), 400
+
         if not user_message:
             return jsonify(
                 {

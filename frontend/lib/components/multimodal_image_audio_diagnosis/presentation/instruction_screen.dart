@@ -32,7 +32,6 @@ class _InstructionScreenState extends State<InstructionScreen> {
   Uint8List? _uploadedAudioBytes;
   String? _uploadedAudioName;
   bool _hasUploadedAudio = false;
-  bool _isAnalyzing = false;
   List<Map<String, dynamic>> _journeys = [];
   String? _selectedJourneyId;
 
@@ -833,7 +832,7 @@ class _InstructionScreenState extends State<InstructionScreen> {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: _selectedJourneyId,
+            initialValue: _selectedJourneyId,
             hint: const Text('Continue a tracking journey...'),
             isExpanded: true,
             decoration: const InputDecoration(

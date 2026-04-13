@@ -12,7 +12,6 @@ AI-assisted skin-health project organized around four main product components:
 ```text
 Reserch_Skin-care-deseases/
   frontend/
-    docs/
     lib/
       components/
         conversational_diagnosis_assistant/
@@ -61,14 +60,17 @@ Reserch_Skin-care-deseases/
       admin/
       debug/
       legacy/
+      pilot/
       validation/
+    docs/
+      README.md
+      PILOT_READINESS.md
+      PROJECT_SETUP_SUMMARY.md
+      CHAT_WORKFLOW_GUIDE.md
+      SETUP_COMPLETE.md
+      four-component-architecture.md
     database/
     app.py
-  docs/
-    CHAT_WORKFLOW_GUIDE.md
-    PROJECT_SETUP_SUMMARY.md
-    SETUP_COMPLETE.md
-    four-component-architecture.md
 ```
 
 ## Runtime Ownership
@@ -78,7 +80,8 @@ Reserch_Skin-care-deseases/
 - `backend/components/*` contains the four feature backends.
 - `backend/inference/*` is shared configuration and label-space support only.
 - `backend/tools/*`, `backend/tests/*`, `backend/logs/*`, and `backend/reports/*` hold shared support files that do not belong to one feature.
-- `frontend/docs/*`, `frontend/scripts/*`, `frontend/tools/*`, and `frontend/logs/*` hold Flutter-side support material outside runtime source code.
+- `backend/docs/*` holds shared project documentation.
+- `backend/tools/pilot/pilot_self_check_v1.py` is the pilot verification script.
 - `backend/app.py` remains the Flask bootstrap and route registration entry point.
 
 The repo is organized in two layers:

@@ -194,7 +194,7 @@ class _AnalyzeScreenState extends State<AnalyzeScreen> {
                                                   (value) {
                                                     return FlLine(
                                                       color: Colors.grey
-                                                          .withOpacity(0.15),
+                                                          .withValues(alpha: 0.15),
                                                       strokeWidth: 1,
                                                     );
                                                   },
@@ -355,7 +355,7 @@ class _AnalyzeScreenState extends State<AnalyzeScreen> {
                                                 belowBarData: BarAreaData(
                                                   show: true,
                                                   color: AppColors.primary
-                                                      .withOpacity(0.12),
+                                                      .withValues(alpha: 0.12),
                                                 ),
                                               ),
                                             ],
@@ -376,22 +376,22 @@ class _AnalyzeScreenState extends State<AnalyzeScreen> {
                                     children: [
                                       _chip(
                                         "Bad",
-                                        Colors.red.withOpacity(0.15),
+                                        Colors.red.withValues(alpha: 0.15),
                                         Colors.red,
                                       ),
                                       _chip(
                                         "Fair",
-                                        Colors.orange.withOpacity(0.15),
+                                        Colors.orange.withValues(alpha: 0.15),
                                         Colors.orange,
                                       ),
                                       _chip(
                                         "Good",
-                                        Colors.green.withOpacity(0.15),
+                                        Colors.green.withValues(alpha: 0.15),
                                         Colors.green,
                                       ),
                                       _chip(
                                         "Tap dot for details",
-                                        Colors.blue.withOpacity(0.12),
+                                        Colors.blue.withValues(alpha: 0.12),
                                         Colors.blue,
                                       ),
                                     ],
@@ -568,7 +568,7 @@ class _AnalyzeScreenState extends State<AnalyzeScreen> {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: fg.withOpacity(0.35)),
+        border: Border.all(color: fg.withValues(alpha: 0.35)),
       ),
       child: Text(
         text,
@@ -589,7 +589,7 @@ class _AnalyzeScreenState extends State<AnalyzeScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: context.isDarkMode ? Colors.black26 : Colors.grey.withOpacity(0.08),
+            color: context.isDarkMode ? Colors.black26 : Colors.grey.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),

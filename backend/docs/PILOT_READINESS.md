@@ -3,7 +3,7 @@
 This report summarizes the comprehensive QA and pilot-readiness verification of the Skin Care Assistant system.
 
 ## 1. Structural & Architectural Integrity
-- **Consistency**: The repository maintains a clean `frontend/`, `backend/`, and `docs/` separation.
+- **Consistency**: The repository maintains a clean `frontend/` and `backend/` split, with shared documentation stored under `backend/docs/`.
 - **Entry Points**: `backend/app.py` successfully registers all four core components and provides a centralized `/api/status` health check.
 - **Pathing**: Cross-component imports and model file references in `backend/inference/config.py` were audited and confirmed to be correct.
 

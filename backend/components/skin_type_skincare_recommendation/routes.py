@@ -395,6 +395,9 @@ def register_routes(app) -> None:
         try:
             prediction = model.predict_from_bytes(image_file.read())
         except Exception as exc:
+            msg = str(exc)
+            if "cannot identify image file" in msg.lower():
+                return jsonify({"error": "Invalid image file format", "detail": msg}), 400
             logger.exception("Skin-type prediction failed")
             return jsonify({"error": f"Skin-type prediction failed: {exc}"}), 500
 

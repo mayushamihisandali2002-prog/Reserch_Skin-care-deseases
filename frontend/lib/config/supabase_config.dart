@@ -45,6 +45,16 @@ class SupabaseConfig {
   static const String googleIosClientId =
       'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com';
 
+  static bool get isGoogleAuthConfigured {
+    const placeholders = {
+      'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+      'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com',
+      'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
+    };
+    return !placeholders.contains(googleWebClientId) &&
+        googleWebClientId.trim().isNotEmpty;
+  }
+
   // ============================================================================
   // SUPABASE GOOGLE PROVIDER SETUP:
   // 1. Go to Supabase Dashboard > Authentication > Providers

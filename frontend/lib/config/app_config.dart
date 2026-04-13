@@ -24,6 +24,11 @@ class AppConfig {
 
   /// Get the API base URL based on platform and environment
   static String get apiBaseUrl {
+    const override = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+    if (override.isNotEmpty) {
+      return override;
+    }
+
     // Production URL (when deployed)
     if (environment == Environment.production) {
       return 'https://your-production-api.com';
@@ -35,15 +40,13 @@ class AppConfig {
     }
 
     if (!kIsWeb && Platform.isAndroid) {
-      // Use PC's LAN IP address for Android device connection
-      // Make sure your PC and phone are on the same WiFi network
-      // Update this IP to match your PC's IP (run `ipconfig` on Windows)
-      return 'http://10.185.72.24:5001';
+      // Emulator-safe default. For a physical device, pass:
+      // flutter run --dart-define=API_BASE_URL=http://YOUR_PC_IP:5001
+      return 'http://10.0.2.2:5001';
     }
 
     if (!kIsWeb && Platform.isIOS) {
-      // For physical iOS device, use the PC's LAN IP address
-      return 'http://172.28.2.98:5001';
+      return 'http://localhost:5001';
     }
 
     // Windows, macOS, Linux desktop

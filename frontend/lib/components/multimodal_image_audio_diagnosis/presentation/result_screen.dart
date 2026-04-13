@@ -62,10 +62,6 @@ class _ResultScreenState extends State<ResultScreen> {
     final String? diseaseExplanation = diag['disease_explanation']?.toString();
 
     final double symptomMatchScore = _toDouble(diag['symptom_match_score']);
-    final String symptomMatchPercent =
-        diag['symptom_match_percent']?.toString() ??
-        '${(symptomMatchScore * 100).toStringAsFixed(0)}%';
-
     final List<String> expectedSymptoms = _normalizeStringList(
       diag['expected_symptoms'] ?? diag['symptoms'],
     );
@@ -991,50 +987,6 @@ class _ResultScreenState extends State<ResultScreen> {
           ),
           const SizedBox(height: 20),
           child,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMetricChip({
-    required String label,
-    required String value,
-    required Color color,
-    required IconData icon,
-  }) {
-    return Container(
-      constraints: const BoxConstraints(minWidth: 120),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: context.clrSurface.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.28)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 6),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: context.clrTextSec,
-                ),
-              ),
-              Text(
-                value,
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );

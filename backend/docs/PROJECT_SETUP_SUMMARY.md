@@ -14,7 +14,6 @@ The project is organized around four main product components:
 ```text
 Reserch_Skin-care-deseases/
   frontend/
-    docs/
     lib/
       components/
         conversational_diagnosis_assistant/
@@ -55,7 +54,9 @@ Reserch_Skin-care-deseases/
       admin/
       debug/
       legacy/
+      pilot/
       validation/
+    docs/
     app.py
 ```
 
@@ -78,6 +79,8 @@ Reserch_Skin-care-deseases/
 ## Setup Status
 
 - Top-level runtime split: `frontend/` + `backend/`
+- Shared project documentation is stored in `backend/docs/`
+- Pilot verification tooling is stored in `backend/tools/pilot/`
 - Flutter app structure: aligned to the 4-category layout
 - Backend module structure: aligned to the 4-category layout
 - Legacy single-folder screen layer: removed

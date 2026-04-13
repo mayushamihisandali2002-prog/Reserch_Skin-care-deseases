@@ -85,13 +85,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         allergies: allergies,
       );
 
-      if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/home',
-          (route) => false,
-        );
-      }
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/home',
+        (route) => false,
+      );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
@@ -327,7 +327,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: AppDecor.softCard(context, color: Colors.white),
       child: DropdownButtonFormField<String>(
-        value: value,
+        initialValue: value,
         items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
         onChanged: onChanged,
         decoration: InputDecoration(

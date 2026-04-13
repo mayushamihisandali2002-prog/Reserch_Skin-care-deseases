@@ -1,3 +1,4 @@
+import 'package:app/config/supabase_config.dart';
 import 'package:app/services/supabase_service.dart';
 import 'package:app/utils/app_styles.dart';
 import 'package:flutter/material.dart';
@@ -291,61 +292,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const SizedBox(height: 16),
                     ],
 
-                    // Google Sign In Button
-                    OutlinedButton(
-                      onPressed: _isGoogleLoading ? null : _signInWithGoogle,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        side: BorderSide(color: context.clrBorder.withValues(alpha: 0.3)),
-                        backgroundColor: context.clrSurface,
-                      ),
-                      child: _isGoogleLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.network(
-                                  'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
-                                  height: 22,
-                                  width: 22,
-                                  errorBuilder: (_, _, _) => const Icon(Icons.g_mobiledata, size: 24, color: Colors.blue),
-                                ),
-                                const SizedBox(width: 14),
-                                  Text(
-                                    'Sign up with Google',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: context.clrTextMain,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Divider
-                    Row(
-                      children: [
-                        Expanded(child: Divider(color: context.clrBorder.withValues(alpha: 0.5))),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'OR',
-                            style: TextStyle(color: context.clrTextSec, fontSize: 12),
+                    if (SupabaseConfig.isGoogleAuthConfigured) ...[
+                      OutlinedButton(
+                        onPressed: _isGoogleLoading ? null : _signInWithGoogle,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
+                          side: BorderSide(color: context.clrBorder.withValues(alpha: 0.3)),
+                          backgroundColor: context.clrSurface,
                         ),
-                        Expanded(child: Divider(color: context.clrBorder.withValues(alpha: 0.5))),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+                        child: _isGoogleLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Image.network(
+                                    'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
+                                    height: 22,
+                                    width: 22,
+                                    errorBuilder: (_, _, _) => const Icon(Icons.g_mobiledata, size: 24, color: Colors.blue),
+                                  ),
+                                  const SizedBox(width: 14),
+                                    Text(
+                                      'Sign up with Google',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: context.clrTextMain,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(child: Divider(color: context.clrBorder.withValues(alpha: 0.5))),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'OR',
+                              style: TextStyle(color: context.clrTextSec, fontSize: 12),
+                            ),
+                          ),
+                          Expanded(child: Divider(color: context.clrBorder.withValues(alpha: 0.5))),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                    ],
 
                     // Name Field
                     _buildInputField(
@@ -375,7 +375,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.grey.withOpacity(0.1),
+                            color: Colors.grey.withValues(alpha: 0.1),
                             blurRadius: 10,
                           ),
                         ],
@@ -419,7 +419,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.grey.withOpacity(0.1),
+                            color: Colors.grey.withValues(alpha: 0.1),
                             blurRadius: 10,
                           ),
                         ],

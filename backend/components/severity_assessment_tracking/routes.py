@@ -22,6 +22,14 @@ logger = logging.getLogger(__name__)
 
 SEVERITY_VISITS_CSV = Path(SEVERITY_TRACK_DIR) / "visits.csv"
 SEVERITY_WEEKS_JSON = Path(SEVERITY_TRACK_DIR) / "_weeks.json"
+SEVERITY_VISIT_FIELDS = [
+    "timestamp",
+    "user_id",
+    "severity_level",
+    "severity_score",
+    "confidence",
+    "metrics_json",
+]
 
 
 
@@ -117,6 +125,35 @@ def _parse_track_flag(raw_value: str | None) -> bool:
     return value in {"1", "true", "yes", "y", "on"}
 
 
+def _ensure_visits_csv_schema() -> None:
+    if not SEVERITY_VISITS_CSV.exists():
+        return
+
+    with open(SEVERITY_VISITS_CSV, "r", encoding="utf-8", newline="") as f:
+        rows = list(csv.reader(f))
+
+    if not rows:
+        return
+
+    header = rows[0]
+    if header == SEVERITY_VISIT_FIELDS:
+        return
+
+    normalized_rows: list[dict[str, str]] = []
+    for row in rows[1:]:
+        if not row:
+            continue
+        padded = list(row[: len(SEVERITY_VISIT_FIELDS)])
+        if len(padded) < len(SEVERITY_VISIT_FIELDS):
+            padded.extend([""] * (len(SEVERITY_VISIT_FIELDS) - len(padded)))
+        normalized_rows.append(dict(zip(SEVERITY_VISIT_FIELDS, padded)))
+
+    with open(SEVERITY_VISITS_CSV, "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=SEVERITY_VISIT_FIELDS)
+        writer.writeheader()
+        writer.writerows(normalized_rows)
+
+
 def _append_severity_visit(
     user_id: str,
     severity_level: str,
@@ -125,6 +162,7 @@ def _append_severity_visit(
     features: dict[str, float] = None,
 ) -> None:
     Path(SEVERITY_TRACK_DIR).mkdir(parents=True, exist_ok=True)
+    _ensure_visits_csv_schema()
 
     file_exists = SEVERITY_VISITS_CSV.exists()
     timestamp = datetime.datetime.now().isoformat()
@@ -140,14 +178,7 @@ def _append_severity_visit(
     with open(SEVERITY_VISITS_CSV, "a", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(
             f,
-            fieldnames=[
-                "timestamp",
-                "user_id",
-                "severity_level",
-                "severity_score",
-                "confidence",
-                "metrics_json",
-            ],
+            fieldnames=SEVERITY_VISIT_FIELDS,
         )
         if not file_exists:
             writer.writeheader()
@@ -176,6 +207,7 @@ def _build_severity_tracking_summary(user_id: str) -> dict:
             },
         }
 
+    _ensure_visits_csv_schema()
     rows: list[dict] = []
     with open(SEVERITY_VISITS_CSV, "r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
@@ -252,6 +284,7 @@ def _load_real_history(user_id: str) -> list[dict]:
     if not SEVERITY_VISITS_CSV.exists():
         return []
 
+    _ensure_visits_csv_schema()
     history = []
     try:
         with open(SEVERITY_VISITS_CSV, "r", encoding="utf-8", newline="") as f:
@@ -332,6 +365,9 @@ def register_routes(app) -> None:
         try:
             prediction = model.predict_from_bytes(image_file.read())
         except Exception as exc:
+            msg = str(exc)
+            if "cannot identify image file" in msg.lower():
+                return jsonify({"error": "Invalid image file format", "detail": msg}), 400
             logger.exception("Severity prediction failed")
             return jsonify({"error": f"Severity prediction failed: {exc}"}), 500
 
@@ -477,7 +513,10 @@ def register_routes(app) -> None:
 
     @app.route("/api/history", methods=["GET"])
     def history():
-        user_id = request.args.get("user_id", "anonymous")
+        user_id = request.args.get("user_id")
+        if not user_id or user_id == "anonymous":
+            return jsonify({"error": "user_id parameter is required for history retrieval"}), 400
+        
         real_data = _load_real_history(user_id)
         if not real_data:
             return jsonify([]) # Honestly return empty if no real visits
@@ -485,7 +524,10 @@ def register_routes(app) -> None:
 
     @app.route("/api/stats", methods=["GET"])
     def stats():
-        user_id = request.args.get("user_id", "anonymous")
+        user_id = request.args.get("user_id")
+        if not user_id or user_id == "anonymous":
+            return jsonify({"error": "user_id parameter is required for statistics retrieval"}), 400
+        
         real_history = _load_real_history(user_id)
         
         if not real_history:
@@ -536,7 +578,14 @@ def register_routes(app) -> None:
                 if model is None or not model.loaded:
                     return jsonify({"error": "Severity model unavailable"}), 503
                 
-                prediction = model.predict_from_bytes(image_file.read())
+                try:
+                    prediction = model.predict_from_bytes(image_file.read())
+                except Exception as exc:
+                    msg = str(exc)
+                    if "cannot identify image file" in msg.lower():
+                        return jsonify({"error": "Invalid image file format", "detail": msg}), 400
+                    raise exc
+                
                 severity_level = str(prediction.get("severity_level", "Moderate"))
                 severity_score = float(prediction.get("severity_score", 0.0))
                 confidence = float(prediction.get("confidence", 0.0))

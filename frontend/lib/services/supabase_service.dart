@@ -59,6 +59,13 @@ class SupabaseService {
   /// Requires Google OAuth to be configured in Supabase Dashboard:
   /// Authentication > Providers > Google
   static Future<AuthResponse> signInWithGoogle() async {
+    if (!SupabaseConfig.isGoogleAuthConfigured) {
+      throw Exception(
+        'Google sign-in is not configured for this build. '
+        'Use email/password login or configure Google OAuth client IDs first.',
+      );
+    }
+
     final GoogleSignIn googleSignIn = GoogleSignIn(
       clientId: kIsWeb ? SupabaseConfig.googleWebClientId : null,
       serverClientId: SupabaseConfig.googleWebClientId,

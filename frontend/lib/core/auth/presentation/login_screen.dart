@@ -1,4 +1,5 @@
 import 'package:app/core/auth/presentation/register_screen.dart';
+import 'package:app/config/supabase_config.dart';
 import 'package:app/services/supabase_service.dart';
 import 'package:app/utils/app_styles.dart';
 import 'package:flutter/material.dart';
@@ -121,10 +122,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _showForgotPasswordDialog() async {
     final emailController = TextEditingController(text: _emailController.text);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Reset Password'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -156,19 +158,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 await SupabaseService.resetPassword(
                   email: emailController.text.trim(),
                 );
-                if (mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Password reset email sent! Check your inbox.',
-                      ),
-                      backgroundColor: Colors.green,
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext);
+                scaffoldMessenger.showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Password reset email sent! Check your inbox.',
                     ),
-                  );
-                }
+                    backgroundColor: Colors.green,
+                  ),
+                );
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                if (!dialogContext.mounted) return;
+                scaffoldMessenger.showSnackBar(
                   SnackBar(
                     content: Text('Error: ${e.toString()}'),
                     backgroundColor: Colors.red,
@@ -370,9 +372,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         elevation: 2,
-                        disabledBackgroundColor: AppColors.primary.withOpacity(
-                          0.6,
-                        ),
+                        disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.6),
                       ),
                       child: _isLoading
                           ? const SizedBox(
@@ -393,61 +393,61 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Divider
-                    Row(
-                      children: [
-                         Expanded(child: Divider(color: context.clrBorder.withValues(alpha: 0.5))),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'OR',
-                            style: TextStyle(color: context.clrTextSec, fontSize: 12),
-                          ),
-                        ),
-                        Expanded(child: Divider(color: context.clrBorder.withValues(alpha: 0.5))),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Google Sign In Button
-                    OutlinedButton(
-                      onPressed: _isGoogleLoading ? null : _signInWithGoogle,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        side: BorderSide(color: context.clrBorder.withValues(alpha: 0.3)),
-                        backgroundColor: context.clrSurface,
-                      ),
-                      child: _isGoogleLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.network(
-                                  'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
-                                  height: 22,
-                                  width: 22,
-                                  errorBuilder: (_, _, _) => const Icon(Icons.g_mobiledata, size: 24, color: Colors.blue),
-                                ),
-                                const SizedBox(width: 14),
-                                  Text(
-                                    'Continue with Google',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: context.clrTextMain,
-                                    ),
-                                  ),
-                              ],
+                    if (SupabaseConfig.isGoogleAuthConfigured) ...[
+                      Row(
+                        children: [
+                           Expanded(child: Divider(color: context.clrBorder.withValues(alpha: 0.5))),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'OR',
+                              style: TextStyle(color: context.clrTextSec, fontSize: 12),
                             ),
-                    ),
-                    const SizedBox(height: 32),
+                          ),
+                          Expanded(child: Divider(color: context.clrBorder.withValues(alpha: 0.5))),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      OutlinedButton(
+                        onPressed: _isGoogleLoading ? null : _signInWithGoogle,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          side: BorderSide(color: context.clrBorder.withValues(alpha: 0.3)),
+                          backgroundColor: context.clrSurface,
+                        ),
+                        child: _isGoogleLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Image.network(
+                                    'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
+                                    height: 22,
+                                    width: 22,
+                                    errorBuilder: (_, _, _) => const Icon(Icons.g_mobiledata, size: 24, color: Colors.blue),
+                                  ),
+                                  const SizedBox(width: 14),
+                                    Text(
+                                      'Continue with Google',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: context.clrTextMain,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                      ),
+                      const SizedBox(height: 32),
+                    ] else
+                      const SizedBox(height: 32),
 
                     // Register Link
                     Row(
