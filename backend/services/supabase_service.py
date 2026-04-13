@@ -6,20 +6,36 @@
 import os
 from datetime import datetime
 from typing import Optional, List, Dict, Any
+from pathlib import Path
 from supabase import create_client, Client
+from dotenv import load_dotenv
+
+BACKEND_ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
+
+if BACKEND_ENV_PATH.exists():
+    load_dotenv(BACKEND_ENV_PATH, override=False)
 
 class SupabaseService:
     """Supabase service for Python backend database operations."""
     
     _client: Optional[Client] = None
     
-    # Supabase credentials (can be overridden by environment variables)
-    SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://bsgvtoaadjulgccwqrdj.supabase.co')
-    SUPABASE_KEY = os.getenv('SUPABASE_SERVICE_KEY', 'sb_publishable_WcVdg4dwPA_XPim3oSQ2bQ_EgS1O69P')
+    # Backend must use a server-side key, never the publishable/anon key.
+    SUPABASE_URL = os.getenv('SUPABASE_URL', '').strip()
+    SUPABASE_KEY = (
+        os.getenv('SUPABASE_SECRET_KEY')
+        or os.getenv('SUPABASE_SERVICE_KEY')
+        or ''
+    ).strip()
     
     @classmethod
     def get_client(cls) -> Client:
         """Get or create Supabase client."""
+        if not cls.SUPABASE_URL or not cls.SUPABASE_KEY:
+            raise RuntimeError(
+                "Supabase backend is not configured. Set SUPABASE_URL and "
+                "SUPABASE_SECRET_KEY in the local .env file."
+            )
         if cls._client is None:
             cls._client = create_client(cls.SUPABASE_URL, cls.SUPABASE_KEY)
         return cls._client
@@ -33,6 +49,38 @@ class SupabaseService:
             cls.SUPABASE_KEY = key
         cls._client = create_client(cls.SUPABASE_URL, cls.SUPABASE_KEY)
     
+    # =========================================================================
+    # CHAT SESSION OPERATIONS
+    # =========================================================================
+
+    @classmethod
+    def ensure_chat_session(
+        cls,
+        user_id: str,
+        session_id: str,
+        title: str = "New Conversation",
+    ) -> Optional[Dict[str, Any]]:
+        """Return an existing chat session or create it if missing."""
+        client = cls.get_client()
+
+        existing = (
+            client.table('chat_sessions')
+            .select('*')
+            .eq('id', session_id)
+            .limit(1)
+            .execute()
+        )
+        if existing.data:
+            return existing.data[0]
+
+        data = {
+            'id': session_id,
+            'user_id': user_id,
+            'title': title,
+        }
+        result = client.table('chat_sessions').insert(data).execute()
+        return result.data[0] if result.data else None
+
     # =========================================================================
     # CHAT MESSAGE OPERATIONS
     # =========================================================================
@@ -132,16 +180,24 @@ class SupabaseService:
         return result.data[0] if result.data else None
     
     @classmethod
-    def get_user_analyses(cls, user_id: str, limit: int = 20) -> List[Dict]:
+    def get_user_analyses(
+        cls,
+        user_id: str,
+        limit: int = 20,
+        journey_id: str = None,
+    ) -> List[Dict]:
         """Get skin analysis history for a user."""
         client = cls.get_client()
-        
-        result = client.table('skin_analyses') \
-            .select('*') \
-            .eq('user_id', user_id) \
-            .order('created_at', desc=True) \
-            .limit(limit) \
-            .execute()
+
+        query = (
+            client.table('skin_analyses')
+            .select('*')
+            .eq('user_id', user_id)
+        )
+        if journey_id:
+            query = query.eq('journey_id', journey_id)
+
+        result = query.order('created_at', desc=True).limit(limit).execute()
         
         return result.data or []
     

@@ -1,0 +1,13 @@
+{
+  "model_path": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\models\\multimodal_image_audio_diagnosis\\image_best_finetuned.pt",
+  "selection_notes": "Operating point tuned against the deployed raw-feature head to preserve top-1 accuracy while reducing overconfident prototype blending.",
+  "recommended_operating_point": {
+    "logit_temperature": 0.9,
+    "logit_blend_weight": 0.95,
+    "prototype_blend_weight": 0.05,
+    "top1": 0.4908,
+    "top3": 0.9633,
+    "ece": 0.0407,
+    "nll": 0.9614
+  }
+}

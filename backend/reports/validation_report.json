@@ -1,0 +1,331 @@
+{
+  "generated_at_utc": "2026-04-07T08:29:25.424365+00:00",
+  "dataset_availability": {
+    "research_dataset_exists": true,
+    "skin_type_dataset_exists": true,
+    "severity_tracking_exists": true
+  },
+  "limits": {
+    "image_max_per_class": 40,
+    "fused_max_per_class": 8
+  },
+  "artifact_integrity": {
+    "text_label_integrity": {
+      "source_label_count": 20,
+      "target_label_count": 30,
+      "covered_label_count": 20,
+      "missing_labels": [
+        "Actinic Keratosis",
+        "Alopecia Areata",
+        "Basal Cell Carcinoma",
+        "Cherry Angioma",
+        "Dermatofibroma",
+        "Hidradenitis Suppurativa",
+        "Melanocytic Nevi",
+        "Melanoma",
+        "Melasma",
+        "Seborrheic Keratosis"
+      ],
+      "unexpected_labels": [],
+      "is_exact_match": false
+    },
+    "image_label_integrity": {
+      "source_label_count": 30,
+      "target_label_count": 30,
+      "covered_label_count": 30,
+      "missing_labels": [],
+      "unexpected_labels": [],
+      "is_exact_match": true
+    },
+    "skin_type_label_map": {
+      "oily": 0,
+      "dry": 1,
+      "combination": 2
+    },
+    "severity_artifact_checks": {
+      "threshold_order_valid": true,
+      "severity_levels": [
+        "mild",
+        "moderate",
+        "severe"
+      ],
+      "feature_columns": [
+        "redness_index",
+        "saturation_mean",
+        "edge_density",
+        "texture_entropy",
+        "spotness"
+      ],
+      "tracking_history_rows": 3
+    }
+  },
+  "text_component": {
+    "status": "needs_calibration",
+    "loaded": true,
+    "runtime_text_stack": {
+      "distilbert_loaded": true,
+      "sklearn_loaded": true,
+      "mode": "hybrid_text"
+    },
+    "prompt_count": 90,
+    "top1_accuracy": 1.0,
+    "top3_accuracy": 1.0,
+    "ece": 0.3091,
+    "mean_brier_score": 0.0055,
+    "confidence": {
+      "mean": 0.6909,
+      "median": 0.7176,
+      "min": 0.2709,
+      "max": 0.9803
+    },
+    "artifact_label_integrity": {
+      "source_label_count": 20,
+      "target_label_count": 30,
+      "covered_label_count": 20,
+      "missing_labels": [
+        "Actinic Keratosis",
+        "Alopecia Areata",
+        "Basal Cell Carcinoma",
+        "Cherry Angioma",
+        "Dermatofibroma",
+        "Hidradenitis Suppurativa",
+        "Melanocytic Nevi",
+        "Melanoma",
+        "Melasma",
+        "Seborrheic Keratosis"
+      ],
+      "unexpected_labels": [],
+      "is_exact_match": false
+    },
+    "artifact_output_labels": 20,
+    "canonical_output_labels": 30,
+    "per_class_accuracy": {
+      "Acne": 1.0,
+      "Actinic Keratosis": 1.0,
+      "Alopecia Areata": 1.0,
+      "Basal Cell Carcinoma": 1.0,
+      "Cellulitis": 1.0,
+      "Cherry Angioma": 1.0,
+      "Dermatitis": 1.0,
+      "Dermatofibroma": 1.0,
+      "Eczema": 1.0,
+      "Folliculitis": 1.0,
+      "Herpes Simplex": 1.0,
+      "Hidradenitis Suppurativa": 1.0,
+      "Impetigo": 1.0,
+      "Lichen Planus": 1.0,
+      "Melanocytic Nevi": 1.0,
+      "Melanoma": 1.0,
+      "Melasma": 1.0,
+      "Molluscum Contagiosum": 1.0,
+      "Pigmentation / Dark Spots": 1.0,
+      "Pityriasis Versicolor": 1.0,
+      "Psoriasis": 1.0,
+      "Ringworm": 1.0,
+      "Rosacea": 1.0,
+      "Scabies": 1.0,
+      "Seborrheic Dermatitis": 1.0,
+      "Seborrheic Keratosis": 1.0,
+      "Shingles": 1.0,
+      "Urticaria": 1.0,
+      "Vitiligo": 1.0,
+      "Warts": 1.0
+    },
+    "sample_failures": []
+  },
+  "image_component": {
+    "status": "not_ready",
+    "loaded": true,
+    "dataset_dir": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\multimodal_image_audio_diagnosis\\research_dataset",
+    "images_evaluated": 1200,
+    "max_images_per_class": 40,
+    "top1_accuracy": 0.1892,
+    "top3_accuracy": 0.4667,
+    "ece": 0.0579,
+    "mean_brier_score": 0.0297,
+    "confidence": {
+      "mean": 0.1384,
+      "median": 0.109,
+      "min": 0.05,
+      "max": 0.7279
+    },
+    "artifact_label_integrity": {
+      "source_label_count": 30,
+      "target_label_count": 30,
+      "covered_label_count": 30,
+      "missing_labels": [],
+      "unexpected_labels": [],
+      "is_exact_match": true
+    },
+    "artifact_output_labels": 30,
+    "canonical_output_labels": 30,
+    "per_class_accuracy": {
+      "Acne": 0.05,
+      "Actinic Keratosis": 0.05,
+      "Alopecia Areata": 0.525,
+      "Basal Cell Carcinoma": 0.25,
+      "Cellulitis": 0.0,
+      "Cherry Angioma": 0.2,
+      "Dermatitis": 0.15,
+      "Dermatofibroma": 0.15,
+      "Eczema": 0.15,
+      "Folliculitis": 0.0,
+      "Herpes Simplex": 0.05,
+      "Hidradenitis Suppurativa": 0.425,
+      "Impetigo": 0.05,
+      "Lichen Planus": 0.05,
+      "Melanocytic Nevi": 0.8,
+      "Melanoma": 0.025,
+      "Melasma": 0.025,
+      "Molluscum Contagiosum": 0.275,
+      "Pigmentation / Dark Spots": 0.05,
+      "Pityriasis Versicolor": 0.3,
+      "Psoriasis": 0.225,
+      "Ringworm": 0.55,
+      "Rosacea": 0.175,
+      "Scabies": 0.425,
+      "Seborrheic Dermatitis": 0.35,
+      "Seborrheic Keratosis": 0.05,
+      "Shingles": 0.05,
+      "Urticaria": 0.1,
+      "Vitiligo": 0.15,
+      "Warts": 0.025
+    },
+    "top_confusions": [
+      {
+        "true": "Melanoma",
+        "predicted": "Melanocytic Nevi",
+        "count": 33
+      },
+      {
+        "true": "Rosacea",
+        "predicted": "Hidradenitis Suppurativa",
+        "count": 19
+      },
+      {
+        "true": "Eczema",
+        "predicted": "Seborrheic Dermatitis",
+        "count": 18
+      },
+      {
+        "true": "Pityriasis Versicolor",
+        "predicted": "Ringworm",
+        "count": 17
+      },
+      {
+        "true": "Acne",
+        "predicted": "Hidradenitis Suppurativa",
+        "count": 16
+      },
+      {
+        "true": "Actinic Keratosis",
+        "predicted": "Basal Cell Carcinoma",
+        "count": 13
+      },
+      {
+        "true": "Lichen Planus",
+        "predicted": "Psoriasis",
+        "count": 13
+      },
+      {
+        "true": "Warts",
+        "predicted": "Molluscum Contagiosum",
+        "count": 13
+      },
+      {
+        "true": "Herpes Simplex",
+        "predicted": "Molluscum Contagiosum",
+        "count": 12
+      },
+      {
+        "true": "Shingles",
+        "predicted": "Molluscum Contagiosum",
+        "count": 12
+      },
+      {
+        "true": "Dermatofibroma",
+        "predicted": "Pityriasis Versicolor",
+        "count": 11
+      },
+      {
+        "true": "Acne",
+        "predicted": "Rosacea",
+        "count": 10
+      },
+      {
+        "true": "Dermatitis",
+        "predicted": "Seborrheic Dermatitis",
+        "count": 9
+      },
+      {
+        "true": "Actinic Keratosis",
+        "predicted": "Scabies",
+        "count": 8
+      },
+      {
+        "true": "Folliculitis",
+        "predicted": "Ringworm",
+        "count": 8
+      }
+    ]
+  },
+  "fused_component": {
+    "status": "ready_for_internal_testing",
+    "available": true,
+    "samples_evaluated": 240,
+    "max_images_per_class": 8,
+    "top1_accuracy": 1.0,
+    "top3_accuracy": 1.0,
+    "confidence": {
+      "mean": 0.4263,
+      "median": 0.4485,
+      "min": 0.1813,
+      "max": 0.6456
+    },
+    "decision_modes": {
+      "BALANCED_FUSION": 3,
+      "CONFIDENCE_WEIGHTED_FUSION": 237
+    },
+    "sample_failures": []
+  },
+  "skin_type_component": {
+    "status": "validation_missing",
+    "loaded": true,
+    "validation_available": false,
+    "note": "No labeled skin-type image dataset is stored locally. No accuracy metric can be reported honestly.",
+    "label_map": {
+      "oily": 0,
+      "dry": 1,
+      "combination": 2
+    }
+  },
+  "severity_component": {
+    "status": "validation_missing",
+    "loaded": true,
+    "validation_available": false,
+    "note": "No labeled image-level severity benchmark is stored locally. Only artifact sanity checks are available.",
+    "artifact_checks": {
+      "threshold_order_valid": true,
+      "severity_levels": [
+        "mild",
+        "moderate",
+        "severe"
+      ],
+      "feature_columns": [
+        "redness_index",
+        "saturation_mean",
+        "edge_density",
+        "texture_entropy",
+        "spotness"
+      ],
+      "tracking_history_rows": 3
+    }
+  },
+  "deployment_readiness": {
+    "text_component": "needs_calibration",
+    "image_component": "not_ready",
+    "fused_component": "ready_for_internal_testing",
+    "skin_type_component": "validation_missing",
+    "severity_component": "validation_missing"
+  }
+}

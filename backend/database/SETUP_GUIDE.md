@@ -61,13 +61,13 @@ Go to **Table Editor** in the sidebar. You should see:
 ### Step 1: Install Dependencies
 
 ```bash
-cd app
+cd frontend
 flutter pub get
 ```
 
 ### Step 2: Add Your Credentials
 
-Edit `app/lib/config/supabase_config.dart`:
+Edit `frontend/lib/config/supabase_config.dart`:
 
 ```dart
 class SupabaseConfig {

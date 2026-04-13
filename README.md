@@ -1,201 +1,133 @@
-# 🩺 Skin Care Assistant
+# Skin Care Assistant
 
-AI-powered skin disease diagnosis and treatment recommendation system using deep learning.
+AI-assisted skin-health project organized around four main product components:
 
-## 📋 Features
+1. Conversational diagnosis assistant
+2. Multimodal image/audio diagnosis
+3. Skin-type based skincare recommendation
+4. Severity assessment and tracking
 
-- **AI-Powered Diagnosis**: Uses fine-tuned DistilBERT (text) and ResNet-18 (image) models
-- **Multi-Modal Analysis**: Combine text symptoms and skin images for accurate diagnosis
-- **Treatment Recommendations**: Evidence-based treatment suggestions from a curated knowledge base
-- **Real-time Chat**: Interactive symptom checker with conversation memory
-- **Progress Tracking**: Monitor skin condition improvement over time
-- **User Authentication**: Secure accounts via Supabase Auth
-- **Cloud Database**: Persistent storage with Supabase PostgreSQL
+## Project Structure
 
-## 🏗️ Project Structure
-
-```
+```text
 Reserch_Skin-care-deseases/
-├── app/                          # Flutter mobile/web app
-│   ├── lib/
-│   │   ├── config/               # App & Supabase configuration
-│   │   ├── screens/              # UI screens
-│   │   ├── services/             # API & database services
-│   │   └── utils/                # Shared utilities
-│   └── pubspec.yaml              # Flutter dependencies
-│
-├── backend/                      # Flask API server
-│   ├── app.py                    # Main Flask application
-│   ├── requirements.txt          # Python dependencies
-│   ├── .env                      # Environment configuration
-│   ├── assets/
-│   │   ├── models/               # AI models
-│   │   │   ├── distilbert/       # Text classification model
-│   │   │   ├── image_best_finetuned.pt  # Image classification model
-│   │   │   └── *.pkl             # Legacy sklearn models
-│   │   └── data/                 # Knowledge base CSVs
-│   ├── database/                 # Database schema
-│   │   └── schema.sql            # PostgreSQL tables
-│   ├── inference/                # AI inference modules
-│   │   ├── config.py             # Model paths & settings
-│   │   ├── distilbert_model.py   # DistilBERT text classifier
-│   │   ├── image_model.py        # ResNet-18 image classifier
-│   │   └── inference.py          # Unified inference pipeline
-│   └── services/                 # Backend services
-│       └── supabase_service.py   # Database operations
-│
-└── README.md
+  frontend/
+    docs/
+    lib/
+      components/
+        conversational_diagnosis_assistant/
+        multimodal_image_audio_diagnosis/
+        skin_type_skincare_recommendation/
+        severity_assessment_tracking/
+      config/
+      core/
+        auth/
+        navigation/
+        overview/
+      services/
+      utils/
+      main.dart
+    logs/
+    scripts/
+    tools/
+  backend/
+    components/
+      conversational_diagnosis_assistant/
+      multimodal_image_audio_diagnosis/
+      skin_type_skincare_recommendation/
+      severity_assessment_tracking/
+    assets/
+      root_assets_legacy/
+      data/
+        conversational_diagnosis_assistant/
+        multimodal_image_audio_diagnosis/
+        skin_type_skincare_recommendation/
+        severity_assessment_tracking/
+      models/
+        conversational_diagnosis_assistant/
+        multimodal_image_audio_diagnosis/
+        skin_type_skincare_recommendation/
+        severity_assessment_tracking/
+    inference/
+      config.py
+      label_space.py
+    logs/
+    reports/
+    scripts/
+    services/
+    tests/
+      shared/
+    tools/
+      admin/
+      debug/
+      legacy/
+      validation/
+    database/
+    app.py
+  docs/
+    CHAT_WORKFLOW_GUIDE.md
+    PROJECT_SETUP_SUMMARY.md
+    SETUP_COMPLETE.md
+    four-component-architecture.md
 ```
 
-## 🚀 Quick Start
+## Runtime Ownership
 
-### Prerequisites
+- `frontend/lib/components/*` contains the four feature UIs.
+- `frontend/lib/core/*` contains auth, app shell, and overview/navigation.
+- `backend/components/*` contains the four feature backends.
+- `backend/inference/*` is shared configuration and label-space support only.
+- `backend/tools/*`, `backend/tests/*`, `backend/logs/*`, and `backend/reports/*` hold shared support files that do not belong to one feature.
+- `frontend/docs/*`, `frontend/scripts/*`, `frontend/tools/*`, and `frontend/logs/*` hold Flutter-side support material outside runtime source code.
+- `backend/app.py` remains the Flask bootstrap and route registration entry point.
 
-- Python 3.10+
-- Flutter 3.0+
-- Supabase account (free tier works)
+The repo is organized in two layers:
 
-### 1. Backend Setup
+1. `frontend/` contains the Flutter application.
+2. `backend/` contains the Flask API, model inference, persistence, and evaluation code.
+
+Inside both runtimes, implementation is grouped by the same four major product components so frontend and backend stay aligned.
+
+## Quick Start
+
+### Backend
 
 ```bash
 cd backend
-
-# Create virtual environment
 python -m venv .venv
-.venv\Scripts\activate  # Windows
-# source .venv/bin/activate  # Linux/Mac
-
-# Install dependencies
+.venv\Scripts\activate
 pip install -r requirements.txt
-
-# Configure environment
-# Edit .env with your Supabase credentials
-
-# Start server
 python app.py
 ```
 
-The API will be available at `http://127.0.0.1:5000`
-
-### 2. Flutter App Setup
+### Flutter App
 
 ```bash
-cd app
-
-# Install dependencies
+cd frontend
 flutter pub get
-
-# Run on Chrome (recommended for development)
 flutter run -d chrome
-
-# Or run on Android
-flutter run -d android
 ```
 
-### 3. Database Setup (Supabase)
-
-1. Create account at [supabase.com](https://supabase.com)
-2. Create new project
-3. Go to SQL Editor → Run `backend/database/schema.sql`
-4. Create storage bucket named `skin-images`
-5. Update credentials in:
-   - `app/lib/config/supabase_config.dart`
-   - `backend/.env`
-
-## 🔌 API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | Health check |
-| GET | `/api/status` | Model availability |
-| POST | `/api/chat` | Text-based diagnosis |
-| POST | `/api/analyze` | Image-based diagnosis |
-| POST | `/api/analyze-fused` | Combined image + text |
-| GET | `/api/history` | Progress history |
-| GET | `/api/stats` | Symptom statistics |
-
-### Example: Chat API
+## Validation Commands
 
 ```bash
-curl -X POST http://127.0.0.1:5000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "I have red itchy patches on my arms", "session_id": "123"}'
-```
-
-## 🧠 AI Models
-
-### DistilBERT Text Classifier
-- **Architecture**: DistilBERT base (66M params)
-- **Training**: Fine-tuned on skin disease symptoms
-- **Classes**: Eczema, Dermatitis, Psoriasis, Acne, Urticaria
-- **Location**: `backend/assets/models/distilbert/`
-
-### ResNet-18 Image Classifier
-- **Architecture**: ResNet-18 (11M params)
-- **Training**: Fine-tuned on skin condition images
-- **Classes**: Same 5 diseases
-- **Location**: `backend/assets/models/image_best_finetuned.pt`
-
-### Fusion Strategy
-When both text and image are provided:
-```
-P_final = 0.6 × P_image + 0.4 × P_text
-```
-
-## 📱 App Screens
-
-- **Login/Register**: User authentication
-- **Dashboard**: Overview and quick stats
-- **Chat**: Interactive symptom checker
-- **Analyze**: Upload images for diagnosis
-- **Progress**: Track healing over time
-
-## 🔐 Environment Variables
-
-### Backend (.env)
-```env
-FLASK_ENV=development
-FLASK_DEBUG=true
-HOST=0.0.0.0
-PORT=5000
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_SERVICE_KEY=your_service_key
-LOG_LEVEL=DEBUG
-```
-
-### Flutter (supabase_config.dart)
-```dart
-static const String supabaseUrl = 'https://xxx.supabase.co';
-static const String supabaseAnonKey = 'your_anon_key';
-```
-
-## 🧪 Testing
-
-```bash
-# Test inference pipeline
 cd backend
-python -c "from inference import get_inference_pipeline; p = get_inference_pipeline(); print(p.predict_disease('red itchy skin'))"
-
-# Test API
-curl http://127.0.0.1:5000/api/status
+python tools/validation/evaluate_models.py --image-max-per-class 3 --fused-max-per-class 1 --output reports/validation_report_quick.json
 ```
 
-## 📦 Production Deployment
-
-### Backend (e.g., Railway, Render)
-1. Set environment variables in hosting platform
-2. Use `gunicorn app:app` for production WSGI
-
-### Flutter Web (e.g., Firebase Hosting)
 ```bash
-flutter build web
-# Deploy build/web folder
+cd backend
+python -c "from components.multimodal_image_audio_diagnosis import get_inference_pipeline; print(bool(get_inference_pipeline()))"
 ```
 
-## ⚠️ Disclaimer
+## Current Readiness Snapshot
 
-This application provides AI-based suggestions only and is **NOT** a substitute for professional medical diagnosis. Always consult a qualified dermatologist for proper medical advice.
+- Conversational diagnosis assistant: ready for internal testing
+- Multimodal fused diagnosis: ready for internal testing
+- Skin-type recommendation: ready for internal testing on unlabeled operational checks
+- Severity assessment and tracking: ready for internal testing on unlabeled operational checks
+- Image-only diagnosis: improved, but still not ready by the current benchmark threshold
 
-## 📄 License
+## Disclaimer
 
-MIT License - See LICENSE file for details.
+This project provides AI-assisted guidance only and is not a substitute for diagnosis by a qualified dermatologist.

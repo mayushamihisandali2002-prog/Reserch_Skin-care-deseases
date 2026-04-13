@@ -1,0 +1,9 @@
+{
+  "embedding_dim": 2048,
+  "samples": 6000,
+  "classes": 30,
+  "best_epoch": 40,
+  "holdout_top1": 0.1317,
+  "holdout_top3": 0.5683,
+  "output_path": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\models\\multimodal_image_audio_diagnosis\\image_best_finetuned_embedding_head.npz"
+}

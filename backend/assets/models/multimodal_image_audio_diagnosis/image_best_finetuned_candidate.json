@@ -1,0 +1,29 @@
+{
+  "source_model": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\models\\multimodal_image_audio_diagnosis\\image_best_finetuned.pt",
+  "candidate_model": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\models\\multimodal_image_audio_diagnosis\\image_best_finetuned_candidate.pt",
+  "cache_path": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\models\\multimodal_image_audio_diagnosis\\image_best_finetuned_raw_features.npz",
+  "epochs": 60,
+  "batch_size": 128,
+  "seed": 42,
+  "samples": 6000,
+  "classes": 30,
+  "holdout_head_metrics": {
+    "top1": 0.2883,
+    "top3": 0.8633
+  },
+  "best_epoch": 5,
+  "recommended_operating_point": {
+    "logit_temperature": 1.1,
+    "logit_blend_weight": 0.4,
+    "prototype_blend_weight": 0.6,
+    "top1": 0.3025,
+    "top3": 0.8417,
+    "ece": 0.1086,
+    "nll": 2.0805
+  },
+  "recommended_blend": {
+    "alpha_logits": 0.4,
+    "top1": 0.3025,
+    "top3": 0.8417
+  }
+}
