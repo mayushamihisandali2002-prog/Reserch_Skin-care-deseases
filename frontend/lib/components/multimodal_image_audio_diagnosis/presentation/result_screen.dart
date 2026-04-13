@@ -1122,7 +1122,7 @@ class _ResultScreenState extends State<ResultScreen> {
     if (value is num) return value != 0;
     if (value is String) {
       final normalized = value.trim().toLowerCase();
-      return const {'true', '1', 'yes', 'y', 'required'}.contains(normalized);
+      return const {'true', '1', 'yes', 'y', 'required', 'success'}.contains(normalized);
     }
     return false;
   }
@@ -1171,7 +1171,6 @@ class _ResultScreenState extends State<ResultScreen> {
     if (value is List) return value.map((e) => e.toString()).toList();
     if (value is String) {
       if (value.startsWith('[') && value.endsWith(']')) {
-        // Simple cleanup for stringified lists if any
         return value
             .substring(1, value.length - 1)
             .split(',')
@@ -1202,49 +1201,10 @@ class _ResultScreenState extends State<ResultScreen> {
     }
     if (value is Map) {
       return value.entries
-          .map((e) => {'disease': e.key, 'probability': _toDouble(e.value)})
-        return AppColors.error;
-      default:
-        return AppColors.primary;
-    }
-  }
-
-  List<String> _normalizeStringList(dynamic value) {
-    if (value is List) return value.map((e) => e.toString()).toList();
-    if (value is String) {
-      if (value.startsWith('[') && value.endsWith(']')) {
-        // Simple cleanup for stringified lists if any
-        return value
-            .substring(1, value.length - 1)
-            .split(',')
-            .map((e) => e.trim().replaceAll("'", "").replaceAll("\"", ""))
-            .toList();
-      }
-      return [value];
-    }
-    return [];
-  }
-
-  List<Map<String, dynamic>> _normalizeMapList(dynamic value) {
-    if (value is List) {
-      return value
-          .whereType<Map>()
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-    }
-    return [];
-  }
-
-  List<Map<String, dynamic>> _normalizePredictionList(dynamic value) {
-    if (value is List) {
-      return value
-          .whereType<Map>()
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-    }
-    if (value is Map) {
-      return value.entries
-          .map((e) => {'disease': e.key, 'probability': _toDouble(e.value)})
+          .map((e) => {
+                'disease': e.key.toString(),
+                'probability': _toDouble(e.value),
+              })
           .toList();
     }
     return [];
@@ -1253,13 +1213,6 @@ class _ResultScreenState extends State<ResultScreen> {
   Map<String, dynamic> _normalizeMap(dynamic value) {
     if (value is Map) return Map<String, dynamic>.from(value);
     return {};
-  }
-
-  bool _toBool(dynamic value) {
-    if (value is bool) return value;
-    if (value is num) return value != 0;
-    final normalized = value?.toString().trim().toLowerCase() ?? '';
-    return const {'true', '1', 'yes', 'y', 'required'}.contains(normalized);
   }
 
   Widget _buildFinalDisclaimer() {
