@@ -17,9 +17,9 @@ Endpoints:
   POST /api/journey/start      - start tracking journey (Supabase)
   GET  /api/journey/list       - list journeys (Supabase)
 
-  GET  /api/history            - mock history
-  GET  /api/stats              - mock stats
-  POST /api/progress           - mock progress write
+  GET  /api/history            - historical tracking logs (CSV-backed)
+  GET  /api/stats              - severity trend statistics (CSV-backed)
+  POST /api/progress           - analyzed check-in log (image or summary)
 """
 
 import datetime

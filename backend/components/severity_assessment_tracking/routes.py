@@ -24,38 +24,6 @@ SEVERITY_VISITS_CSV = Path(SEVERITY_TRACK_DIR) / "visits.csv"
 SEVERITY_WEEKS_JSON = Path(SEVERITY_TRACK_DIR) / "_weeks.json"
 
 
-MOCK_HISTORY = [
-    {
-        "week": "Week 1 (Demo)",
-        "date": "2025-11-01",
-        "image_url": "assets/images/week1.png",
-        "status": "Bad",
-        "score": 30,
-        "metrics": {"redness": 90, "inflammation": 85, "scaling": 70, "texture": 60},
-    },
-    {
-        "week": "Week 2 (Demo)",
-        "date": "2025-11-08",
-        "image_url": "assets/images/week2.png",
-        "status": "Poor",
-        "score": 45,
-        "metrics": {"redness": 80, "inflammation": 75, "scaling": 65, "texture": 65},
-    },
-    {
-        "week": "Week 3 (Demo)",
-        "date": "2025-11-15",
-        "image_url": "assets/images/week3.png",
-        "status": "Improving",
-        "score": 60,
-        "metrics": {"redness": 60, "inflammation": 55, "scaling": 50, "texture": 70},
-    },
-]
-
-MOCK_STATS = {
-    "labels": ["Redness", "Itch", "Dryness", "Scaling"],
-    "values": [20, 40, 25, 15],
-}
-
 
 def _normalize_confidence_level(confidence: float) -> str:
     if confidence >= 0.75:
@@ -549,19 +517,58 @@ def register_routes(app) -> None:
     def add_progress():
         """
         Log current severity and generate a real tracking entry.
-        In the pilot, this endpoint expects a request with user_id and optionally 
-        the latest analysis score.
+        Supports:
+        - Multipart: 'image' file + optional 'user_id' and 'journey_id'
+        - JSON: {'score': float, 'level': str, 'user_id': str} (legacy fallback)
         """
+        user_id = "anonymous"
+        
+        # 1. Handle Multipart Image (Real Analysis Check-in)
+        if 'image' in request.files or 'file' in request.files:
+            image_file = request.files.get("image") or request.files.get("file")
+            user_id = request.form.get("user_id", "anonymous").strip() or "anonymous"
+            
+            try:
+                model = get_severity_model(
+                    model_path=SEVERITY_MODEL_PATH,
+                    metadata_path=SEVERITY_METADATA_PATH,
+                )
+                if model is None or not model.loaded:
+                    return jsonify({"error": "Severity model unavailable"}), 503
+                
+                prediction = model.predict_from_bytes(image_file.read())
+                severity_level = str(prediction.get("severity_level", "Moderate"))
+                severity_score = float(prediction.get("severity_score", 0.0))
+                confidence = float(prediction.get("confidence", 0.0))
+                
+                # Persistence
+                _append_severity_visit(
+                    user_id=user_id,
+                    severity_level=severity_level,
+                    severity_score=severity_score,
+                    confidence=confidence,
+                    features=prediction.get("normalized_features"),
+                )
+                
+                return jsonify({
+                    "status": "success",
+                    "message": "Weekly check-in analyzed and logged successfully.",
+                    "severity_level": severity_level,
+                    "severity_score": round(severity_score, 2),
+                    "analysis": f"Severity {severity_level} ({(severity_score):.1f}%) recorded."
+                })
+            except Exception as exc:
+                logger.exception("In-flow progress analysis failed")
+                return jsonify({"status": "error", "message": str(exc)}), 500
+
+        # 2. Handle JSON Summary (Confirmation loop)
         data = request.json or {}
         user_id = data.get("user_id", "anonymous")
-        
-        # If the user just ran an analysis, the frontend can pass those results here
-        # to confirm 'logging' it to the long-term journey.
         score = data.get("score")
         level = data.get("level")
         
         if score is not None and level is not None:
-             # Already analyzed, just confirming the entry
+             # This is a manual confirmation of a previously run analysis
              return jsonify({
                  "status": "success",
                  "message": "Visit confirmed and logged to journey.",
@@ -570,6 +577,6 @@ def register_routes(app) -> None:
              
         return jsonify({
             "status": "info",
-            "message": "To log new progress, please use the 'Scan Skin' feature which performs a real AI analysis.",
-            "action_required": "analysis_needed"
+            "message": "To log new progress, please upload a clear photo of the area.",
+            "action_required": "image_required"
         })
