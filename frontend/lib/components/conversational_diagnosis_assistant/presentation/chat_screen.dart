@@ -1,7 +1,10 @@
 import 'dart:async';
-import 'package:app/components/conversational_diagnosis_assistant/data/chat_api.dart';
+import 'package:app/services/api_service.dart';
+import 'package:app/services/supabase_service.dart';
 import 'package:app/utils/app_styles.dart';
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 //
 // DATA MODELS
@@ -9,11 +12,10 @@ import 'package:flutter/material.dart';
 
 enum MessageSender { user, bot }
 
-/// Holds a single conversation turn.
 class ChatMessage {
   final MessageSender sender;
   final String text;
-  final Map<String, dynamic>? apiResponse; // full JSON for bot AI replies
+  final Map<String, dynamic>? apiResponse;
   final DateTime timestamp;
 
   const ChatMessage({
@@ -24,53 +26,92 @@ class ChatMessage {
   });
 }
 
+class ChatSession {
+  final String id;
+  final String title;
+  final DateTime updatedAt;
+
+  ChatSession({
+    required this.id,
+    required this.title,
+    required this.updatedAt,
+  });
+
+  factory ChatSession.fromJson(Map<String, dynamic> json) {
+    return ChatSession(
+      id: json['id'] as String,
+      title: json['title'] as String? ?? 'New Conversation',
+      updatedAt: DateTime.parse(json['created_at'] as String), // or updated_at
+    );
+  }
+}
+
 //
 // SCREEN
 //
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  final String? initialMessage;
+  const ChatScreen({super.key, this.initialMessage});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
-  // Messages list
-  final List<ChatMessage> _messages = [
-    ChatMessage(
-      sender: MessageSender.bot,
-      text:
-          'Hello! I\'m your AI Skin Care Assistant.\n\n'
-          'I can help identify skin conditions, suggest treatments, '
-          'and answer your questions about skin health.\n\n'
-          'How can I help you today?',
-      timestamp: DateTime.now(),
-    ),
-  ];
+  final List<ChatMessage> _messages = [];
+  List<ChatSession> _sessions = [];
+  String? _currentSessionId;
+  bool _isLoadingSessions = false;
+  bool _isInitialLoad = true;
 
-  // Input / UX state
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
 
   bool _isTyping = false;
   bool _isConnected = true;
-  String? _followupPlaceholder; // set when user taps a follow-up chip
   String? _lastDisease;
 
-  // Typing dots animation
   late AnimationController _dotController;
   late Animation<double> _dotAnimation;
 
   @override
   void initState() {
     super.initState();
+    _currentSessionId = ApiService.sessionId;
     _dotController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
     _dotAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(_dotController);
+    
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    await _loadSessions();
+    if (!mounted) return;
+    if (_sessions.isNotEmpty) {
+      // Pick the most recent session automatically if current is empty?
+      // For now, stick with the global sessionId if it has messages, or start fresh.
+    }
+    setState(() {
+      _messages.add(
+        ChatMessage(
+          sender: MessageSender.bot,
+          text: 'Hello! I\'m your SkinAI Assistant. I can help you identify skin conditions and provide care recommendations. How can I help you today?',
+          timestamp: DateTime.now(),
+        ),
+      );
+      _isInitialLoad = false;
+    });
+
+    if (widget.initialMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _sendMessage(override: widget.initialMessage);
+      });
+    }
   }
 
   @override
@@ -82,7 +123,130 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  //
+  Future<void> _loadSessions() async {
+    final uid = SupabaseService.userId;
+    if (uid == null || uid == 'anonymous') {
+      // For guest users, we still want to show the current session in the sidebar
+      if (mounted) {
+        setState(() {
+          if (_currentSessionId != null && !_sessions.any((s) => s.id == _currentSessionId)) {
+            _sessions = [
+              ChatSession(
+                id: _currentSessionId!, 
+                title: 'Current Consultation', 
+                updatedAt: DateTime.now()
+              )
+            ];
+          }
+        });
+      }
+      return;
+    }
+    
+    if (mounted) setState(() => _isLoadingSessions = true);
+    try {
+      final data = await ApiService.getChatSessions();
+      if (mounted) {
+        setState(() {
+          _sessions = data.map((json) => ChatSession.fromJson(json)).toList();
+          
+          // Ensure current session is in the list even if DB hasn't updated yet
+          if (_currentSessionId != null && !_sessions.any((s) => s.id == _currentSessionId)) {
+            _sessions.insert(0, ChatSession(
+              id: _currentSessionId!,
+              title: 'Current Consultation',
+              updatedAt: DateTime.now(),
+            ));
+          }
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingSessions = false);
+    }
+  }
+
+  Future<void> _selectSession(String sid) async {
+    if (_isTyping) return;
+    
+    setState(() {
+      _currentSessionId = sid;
+      _messages.clear();
+      _isTyping = true;
+      _lastDisease = null;
+    });
+
+    try {
+      final history = await ApiService.getChatMessages(sid);
+      if (mounted) {
+        setState(() {
+          for (var raw in history) {
+            _messages.add(ChatMessage(
+              sender: raw['sender'] == 'user' ? MessageSender.user : MessageSender.bot,
+              text: raw['message'] ?? '',
+              timestamp: DateTime.parse(raw['created_at']),
+              apiResponse: raw,
+            ));
+            
+            if (raw['sender'] == 'bot' && raw['predicted_disease'] != null) {
+              _lastDisease = raw['predicted_disease'];
+            }
+          }
+          _isTyping = false;
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isTyping = false);
+    }
+  }
+
+  Future<void> _deleteSession(String sid) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Conversation?'),
+        content: const Text('This will permanently delete this chat history.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true), 
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await ApiService.deleteChatSession(sid);
+      if (_currentSessionId == sid) {
+         _startNewChat();
+      } else {
+        _loadSessions();
+      }
+    } catch (e) {
+      debugPrint("Delete failed: $e");
+    }
+  }
+
+  void _startNewChat() {
+    final newId = const Uuid().v4();
+    ApiService.sessionId = newId;
+    setState(() {
+      _currentSessionId = newId;
+      _messages.clear();
+      _lastDisease = null;
+      _messages.add(
+        ChatMessage(
+          sender: MessageSender.bot,
+          text: 'New conversation started. Describe your symptoms or ask a question.',
+          timestamp: DateTime.now(),
+        ),
+      );
+    });
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -95,38 +259,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     });
   }
 
-  double _contentMaxWidth(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    if (width >= 1400) return 1160;
-    if (width >= 1000) return 940;
-    return width;
-  }
-
-  Widget _constrainedPane(BuildContext context, Widget child) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: _contentMaxWidth(context)),
-        child: child,
-      ),
-    );
-  }
-
-  bool get _showStarterPrompts =>
-      !_isTyping &&
-      _messages.length == 1 &&
-      _messages.first.sender == MessageSender.bot;
-
-  static const List<String> _starterPrompts = [
-    'I have acne and redness on my cheeks.',
-    'Suggest a simple routine for dry skin.',
-    'My skin is itchy and flaky. What could it be?',
-    'How can I reduce dark spots safely?',
-  ];
-
-  //
   Future<void> _sendMessage({String? override}) async {
     final text = override ?? _controller.text.trim();
     if (text.isEmpty || _isTyping) return;
+
+    final sid = _currentSessionId ?? ApiService.sessionId;
 
     setState(() {
       _messages.add(
@@ -137,16 +274,16 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ),
       );
       _isTyping = true;
-      _followupPlaceholder = null;
-      _controller.clear();
     });
+    
+    // Clear the controller immediately for a snappier feel
+    _controller.clear();
     _scrollToBottom();
 
     try {
-      final response = await ChatApi.sendMessage(text);
+      final response = await ApiService.sendChatMessage(text, customSessionId: sid);
       if (!mounted) return;
 
-      // Cache last predicted state for status bar
       final disease = response['predicted_disease'] as String?;
       if (disease != null && disease != 'Unable to determine') {
         _lastDisease = disease;
@@ -163,21 +300,48 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         );
         _isConnected = true;
       });
+      
+      // If the AI returned a chat title, update our local session title immediately
+      final suggestedTitle = response['chat_title'] as String?;
+      if (suggestedTitle != null) {
+        setState(() {
+          // Find the current session in our list and update its title
+          final index = _sessions.indexWhere((s) => s.id == sid);
+          if (index != -1) {
+            _sessions[index] = ChatSession(
+              id: sid,
+              title: suggestedTitle,
+              updatedAt: DateTime.now(),
+            );
+          } else {
+            // If for some reason it's not in the list, add it
+            _sessions.insert(0, ChatSession(
+              id: sid,
+              title: suggestedTitle,
+              updatedAt: DateTime.now(),
+            ));
+          }
+        });
+      }
+
+      // Also trigger a background load to sync with DB if logged in
+      if (SupabaseService.userId != null && SupabaseService.userId != 'anonymous') {
+        _loadSessions();
+      }
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isConnected = false;
-        _messages.add(
-          ChatMessage(
-            sender: MessageSender.bot,
-            text:
-                'Could not connect to the assistant. Please check your '
-                'connection and tap Retry.',
-            apiResponse: {'_error': true, '_originalText': text},
-            timestamp: DateTime.now(),
-          ),
-        );
-      });
+      if (mounted) {
+        setState(() {
+          _isConnected = false;
+          _messages.add(
+            ChatMessage(
+              sender: MessageSender.bot,
+              text: 'Could not connect. Please check your connection.',
+              apiResponse: {'_error': true},
+              timestamp: DateTime.now(),
+            ),
+          );
+        });
+      }
     } finally {
       if (mounted) {
         setState(() => _isTyping = false);
@@ -186,44 +350,243 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
   }
 
-  //
-  // BUILD
-  //
-
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width > 900;
+
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
-      body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: Container(
-          decoration: BoxDecoration(gradient: AppGradients.page(context)),
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: _constrainedPane(
-                  context,
-                  Stack(
-                    children: [
-                      _buildMessageList(),
-                      if (_lastDisease != null)
-                        Positioned(
-                          top: 10,
-                          left: 16,
-                          right: 16,
-                          child: _buildDiagnosisBanner(),
-                        ),
-                    ],
+      drawer: isDesktop ? null : Drawer(child: _buildSidebar()),
+      body: Row(
+        children: [
+          if (isDesktop) 
+            SizedBox(width: 280, child: _buildSidebar()),
+          Expanded(
+            child: Container(
+              color: context.isDarkMode ? const Color(0xFF0D1117) : const Color(0xFFFAFBFC),
+              child: Column(
+                children: [
+                  _buildHeader(!isDesktop),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        _buildMessageList(),
+                        if (_lastDisease != null)
+                          Positioned(
+                            top: 10,
+                            left: 0,
+                            right: 0,
+                            child: _buildDiagnosisBanner(),
+                          ),
+                      ],
+                    ),
                   ),
+                  if (_isTyping) _buildTypingIndicator(),
+                  _buildInputBar(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF10252D), // Original deep clinical teal
+        border: Border(right: BorderSide(color: Colors.white.withOpacity(0.1))),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 60),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: InkWell(
+              onTap: _startNewChat,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.add, color: Colors.white, size: 20),
+                    const SizedBox(width: 12),
+                    const Text('New Consultation', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ],
                 ),
               ),
-              if (_isTyping)
-                _constrainedPane(context, _buildTypingIndicator()),
-              if (!_isConnected)
-                _constrainedPane(context, _buildOfflineBanner()),
-              _buildInputBar(),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('CHAT HISTORY', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            ),
+          ),
+          Expanded(
+            child: _isLoadingSessions 
+              ? const Center(child: CircularProgressIndicator(color: Colors.white54))
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  itemCount: _sessions.length,
+                  itemBuilder: (_, i) {
+                    final s = _sessions[i];
+                    final isSelected = s.id == _currentSessionId;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: ListTile(
+                        dense: true,
+                        selected: isSelected,
+                        selectedTileColor: Colors.white.withOpacity(0.08),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        leading: Icon(Icons.chat_outlined, size: 16, color: isSelected ? Colors.white : Colors.white60),
+                        title: Text(
+                          s.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isSelected ? Colors.white : Colors.white70,
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          ),
+                        ),
+                        trailing: isSelected 
+                          ? IconButton(
+                              icon: const Icon(Icons.delete_outline, size: 14, color: Colors.white54),
+                              onPressed: () => _deleteSession(s.id),
+                            ) 
+                          : null,
+                        onTap: () {
+                          _selectSession(s.id);
+                          if (MediaQuery.of(context).size.width <= 900) Navigator.pop(context);
+                        },
+                      ),
+                    );
+                  },
+                ),
+          ),
+          _buildUserActionSection(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserActionSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1)))),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: Colors.white24,
+            child: const Icon(Icons.person, size: 16, color: Colors.white),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              SupabaseService.currentUser?.userMetadata?['full_name'] ?? 'User Profile',
+              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(bool showMenu) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 10, 20, 16),
+      decoration: BoxDecoration(
+        color: context.isDarkMode ? const Color(0xFF161B22) : Colors.white,
+        border: Border(bottom: BorderSide(color: context.clrBorder.withOpacity(0.1))),
+      ),
+      child: Row(
+        children: [
+          if (showMenu) IconButton(icon: const Icon(Icons.menu), onPressed: () => Scaffold.of(context).openDrawer()),
+          const Icon(Icons.auto_awesome_rounded, color: AppColors.primary, size: 20),
+          const SizedBox(width: 12),
+          Text('Clinical Assistant', style: AppTextStyles.subHeading(context).copyWith(fontSize: 16)),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, size: 18),
+            onPressed: () => setState(() => _messages.clear()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDiagnosisBanner() {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.biotech, size: 16, color: AppColors.primary),
+            const SizedBox(width: 8),
+            Text('Analyzing: ', style: TextStyle(fontSize: 12, color: Colors.grey[700])),
+            Text(_lastDisease!, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 12)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessageList() {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 800),
+        child: ListView.builder(
+          controller: _scrollController,
+          padding: const EdgeInsets.fromLTRB(20, 30, 20, 10),
+          itemCount: _messages.length,
+          itemBuilder: (_, i) => _messages[i].sender == MessageSender.user 
+            ? _UserBubble(message: _messages[i]) 
+            : _BotBubble(message: _messages[i]),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputBar() {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 800),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(20, 0, 20, 30),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+          decoration: BoxDecoration(
+            color: context.clrSurface,
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: context.clrBorder.withOpacity(0.3)),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 4))],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  decoration: const InputDecoration(hintText: 'Ask about a skin condition...', border: InputBorder.none),
+                  onSubmitted: (_) => _sendMessage(),
+                ),
+              ),
+              IconButton(icon: const Icon(Icons.send_rounded, color: AppColors.primary), onPressed: _sendMessage),
             ],
           ),
         ),
@@ -231,409 +594,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-  //
-  Widget _buildHeader() {
-    return ClipRRect(
-      child: Container(
-        padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.85),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: _constrainedPane(
-          context,
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 10, 16),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.auto_awesome_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Skin Health AI',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 18,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF4ADE80),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Online & Learning',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_sweep_rounded, color: Colors.white70),
-                  onPressed: _clearChat,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _clearChat() {
-    setState(() {
-      _messages.clear();
-      _lastDisease = null;
-      _messages.add(
-        ChatMessage(
-          sender: MessageSender.bot,
-          text:
-              'Chat cleared. Describe your symptoms and I\'ll help diagnose your '
-              'skin condition.',
-          timestamp: DateTime.now(),
-        ),
-      );
-    });
-  }
-
-  //
-  Widget _buildDiagnosisBanner() {
-    const color = AppColors.primaryDark;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.24)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.biotech_outlined, size: 16, color: color),
-          const SizedBox(width: 8),
-          Text(
-            'Active diagnosis: ',
-            style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-          ),
-          Text(
-            _lastDisease ?? '',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-          const Spacer(),
-        ],
-      ),
-    );
-  }
-
-  // Message list
-  Widget _buildMessageList() {
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
-      itemCount: _messages.length + (_showStarterPrompts ? 1 : 0),
-      itemBuilder: (_, i) {
-        if (i < _messages.length) {
-          return _buildMessageItem(_messages[i]);
-        }
-        return _buildStarterPrompts();
-      },
-    );
-  }
-
-  Widget _buildMessageItem(ChatMessage msg) {
-    if (msg.sender == MessageSender.user) {
-      return _UserBubble(message: msg);
-    }
-    // Bot: check for error flag
-    final isError = msg.apiResponse?['_error'] == true;
-    if (isError) {
-      return _ErrorBubble(
-        message: msg,
-        onRetry: () {
-          final orig = msg.apiResponse?['_originalText'] as String?;
-          if (orig != null) _sendMessage(override: orig);
-        },
-      );
-    }
-    return _BotResponseCard(
-      message: msg,
-      onFollowupTap: (question) {
-        setState(() => _followupPlaceholder = question);
-        _focusNode.requestFocus();
-      },
-    );
-  }
-
-  //
   Widget _buildTypingIndicator() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 0, 8),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.medical_services_outlined,
-              size: 18,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: context.clrSurface.withValues(alpha: 0.98),
-              borderRadius: BorderRadius.circular(
-                20,
-              ).copyWith(bottomLeft: Radius.zero),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: _DotsAnimation(animation: _dotAnimation),
-          ),
-        ],
-      ),
-    );
-  }
-
-  //
-  Widget _buildOfflineBanner() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.warning.withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.wifi_off_rounded,
-            color: AppColors.warning,
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          const Expanded(
-            child: Text(
-              'Connection issue. Check that the backend server is running.',
-              style: TextStyle(color: AppColors.warning, fontSize: 12),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Input bar
-  Widget _buildInputBar() {
-    final hasContent = _controller.text.trim().isNotEmpty;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      decoration: BoxDecoration(
-        color: context.clrSurface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: _constrainedPane(
-        context,
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: context.clrBackground,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  maxLines: 4,
-                  minLines: 1,
-                  decoration: InputDecoration(
-                    hintText: _followupPlaceholder ?? 'Describe symptoms...',
-                    border: InputBorder.none,
-                    hintStyle: AppTextStyles.caption(context).copyWith(fontSize: 15),
-                  ),
-                  onChanged: (_) => setState(() {}),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            GestureDetector(
-              onTap: _isTyping || !hasContent ? null : () => _sendMessage(),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: hasContent ? AppGradients.premium : null,
-                  color: hasContent ? null : (context.isDarkMode ? Colors.grey[800] : Colors.grey[200]),
-                  shape: BoxShape.circle,
-                  boxShadow: hasContent ? [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    )
-                  ] : null,
-                ),
-                child: Icon(
-                  _isTyping ? Icons.hourglass_empty_rounded : Icons.send_rounded,
-                  color: hasContent ? Colors.white : Colors.grey[400],
-                  size: 22,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStarterPrompts() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(44, 4, 44, 18),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: context.clrSurface.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: context.clrBorder.withValues(alpha: 0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Start with one of these',
-            style: AppTextStyles.bodyStrong(context).copyWith(fontSize: 15),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'The assistant works best when you describe symptoms, body area, duration, and anything that makes it worse or better.',
-            style: AppTextStyles.caption(context).copyWith(height: 1.45),
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: _starterPrompts
-                .map(
-                  (prompt) => InkWell(
-                    onTap: () => _sendMessage(override: prompt),
-                    borderRadius: BorderRadius.circular(22),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.15),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.arrow_outward_rounded,
-                            size: 16,
-                            color: AppColors.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 260),
-                            child: Text(
-                              prompt,
-                              style: AppTextStyles.body(context).copyWith(
-                                color: AppColors.primaryDark,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-        ],
-      ),
-    );
+     return Center(child: Padding(padding: const EdgeInsets.all(20), child: _DotsAnimation(animation: _dotAnimation)));
   }
 }
 
-//
-// SUB-WIDGETS
-//
-
-/// User message bubble (right-aligned, gradient).
 class _UserBubble extends StatelessWidget {
   final ChatMessage message;
   const _UserBubble({required this.message});
@@ -642,271 +607,55 @@ class _UserBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.centerRight,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 620),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 16, left: 64),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          decoration: BoxDecoration(
-            gradient: AppGradients.premium,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
-              bottomLeft: Radius.circular(24),
-              bottomRight: Radius.circular(8),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.2),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Text(
-            message.text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              height: 1.4,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 24, left: 100),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: AppGradients.premium,
+          borderRadius: BorderRadius.circular(20).copyWith(bottomRight: Radius.zero),
         ),
+        child: Text(message.text, style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.45)),
       ),
     );
   }
 }
 
-/// Bot AI response card with all rich information panels.
-class _BotResponseCard extends StatefulWidget {
+class _BotBubble extends StatelessWidget {
   final ChatMessage message;
-  final void Function(String question) onFollowupTap;
-
-  const _BotResponseCard({required this.message, required this.onFollowupTap});
-
-  @override
-  State<_BotResponseCard> createState() => _BotResponseCardState();
-}
-
-class _BotResponseCardState extends State<_BotResponseCard>
-    with SingleTickerProviderStateMixin {
-  bool _treatmentsExpanded = false;
-  late AnimationController _fadeCtrl;
-  late Animation<double> _fadeAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _fadeCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    )..forward();
-    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
-  }
-
-  @override
-  void dispose() {
-    _fadeCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final resp = widget.message.apiResponse;
-    final hasApiData = resp != null && resp['_error'] != true;
-
-    final reply = widget.message.text;
-    final disease = hasApiData ? resp['predicted_disease'] as String? : null;
-    final treatments = hasApiData
-        ? (resp['recommended_treatments'] as List<dynamic>?) ?? []
-        : <dynamic>[];
-    final followUps = hasApiData
-        ? (resp['follow_up_questions'] as List<dynamic>?) ?? []
-        : <dynamic>[];
-    final needsMoreInfo = hasApiData
-        ? resp['needs_more_info'] as bool? ?? false
-        : false;
-
-    final showDisease = disease != null && disease != 'Unable to determine';
-
-    return FadeTransition(
-      opacity: _fadeAnim,
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 16, right: 48),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Bot avatar
-              Container(
-                width: 34,
-                height: 34,
-                margin: const EdgeInsets.only(top: 2, right: 10),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppColors.primary, AppColors.secondary],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.medical_services_outlined,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-
-              Flexible(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      //
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: context.clrSurface.withValues(alpha: 0.96),
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(4),
-                            topRight: Radius.circular(20),
-                            bottomLeft: Radius.circular(20),
-                            bottomRight: Radius.circular(20),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: _FormattedText(text: reply),
-                      ),
-
-                      //
-                      if (showDisease) ...[
-                        const SizedBox(height: 10),
-                        _DiseaseBadge(disease: disease),
-                      ],
-
-                      //
-                      if (treatments.isNotEmpty && showDisease) ...[
-                        const SizedBox(height: 10),
-                        _TreatmentsPanel(
-                          treatments: treatments,
-                          expanded: _treatmentsExpanded,
-                          onToggle: () => setState(
-                            () => _treatmentsExpanded = !_treatmentsExpanded,
-                          ),
-                        ),
-                      ],
-
-                      //
-                      if (followUps.isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        _FollowUpChips(
-                          questions: followUps.cast<String>(),
-                          label: needsMoreInfo
-                              ? 'Help me understand better:'
-                              : 'You might also ask:',
-                          onTap: widget.onFollowupTap,
-                        ),
-                      ],
-
-                      //
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6, left: 2),
-                        child: Text(
-                          _formatTime(widget.message.timestamp),
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey[400],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _formatTime(DateTime t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-}
-
-/// Error bubble with retry button.
-class _ErrorBubble extends StatelessWidget {
-  final ChatMessage message;
-  final VoidCallback onRetry;
-  const _ErrorBubble({required this.message, required this.onRetry});
+  const _BotBubble({required this.message});
 
   @override
   Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 14, right: 48),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.error.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.error.withValues(alpha: 0.36)),
-        ),
+        margin: const EdgeInsets.only(bottom: 30, right: 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(
-                  Icons.wifi_off_rounded,
-                  size: 16,
-                  color: AppColors.error,
-                ),
+                const Icon(Icons.auto_awesome, size: 14, color: AppColors.primary),
                 const SizedBox(width: 8),
-                Text(
-                  'Could not reach server',
-                  style: TextStyle(
-                    color: AppColors.error.withValues(alpha: 0.9),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
+                Text('SkinAI Assistant', style: AppTextStyles.bodyStrong(context).copyWith(fontSize: 12, color: AppColors.primary)),
               ],
             ),
-            const SizedBox(height: 6),
-            Text(
-              message.text,
-              style: const TextStyle(color: AppColors.error, fontSize: 12),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16).copyWith(topLeft: Radius.circular(0)),
+                border: Border.all(color: Colors.black.withOpacity(0.05)),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 2))],
+              ),
+              child: _RichBotText(text: message.text),
             ),
-            const SizedBox(height: 10),
-            GestureDetector(
-              onTap: onRetry,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.error,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'Retry',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8, left: 4),
+              child: Text(
+                '${message.timestamp.hour}:${message.timestamp.minute.toString().padLeft(2, '0')}',
+                style: TextStyle(fontSize: 10, color: Colors.grey[400]),
               ),
             ),
           ],
@@ -916,327 +665,31 @@ class _ErrorBubble extends StatelessWidget {
   }
 }
 
-//
-// REUSABLE COMPONENTS
-//
-
-/// Renders plain text with simple **bold** support.
-class _FormattedText extends StatelessWidget {
+class _RichBotText extends StatelessWidget {
   final String text;
-  const _FormattedText({required this.text});
+  const _RichBotText({required this.text});
 
   @override
   Widget build(BuildContext context) {
-    final spans = <TextSpan>[];
-    final parts = text.split('**');
-    for (int i = 0; i < parts.length; i++) {
-      spans.add(
-        TextSpan(
-          text: parts[i],
-          style: TextStyle(
-            fontWeight: i.isOdd ? FontWeight.w700 : FontWeight.normal,
-            color: context.clrTextMain,
-            fontSize: 13.5,
-            height: 1.55,
-          ),
-        ),
-      );
-    }
-    return SelectableText.rich(TextSpan(children: spans));
-  }
-}
-
-/// Disease prediction badge with confidence bar.
-class _DiseaseBadge extends StatelessWidget {
-  final String disease;
-
-  const _DiseaseBadge({required this.disease});
-
-  @override
-  Widget build(BuildContext context) {
-    // Simplified badge without confidence display
-    const color = AppColors.primaryDark;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            color.withValues(alpha: 0.12),
-            color.withValues(alpha: 0.04),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.verified, size: 18, color: color),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Identified Condition',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  disease,
-                  style: const TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+    return MarkdownBody(
+      data: text,
+      selectable: true,
+      styleSheet: MarkdownStyleSheet(
+        p: AppTextStyles.body(context).copyWith(height: 1.6, fontSize: 14),
+        h3: AppTextStyles.subHeading(context).copyWith(color: AppColors.primary, fontSize: 18, fontWeight: FontWeight.bold),
+        listBullet: const TextStyle(color: AppColors.primary),
+        strong: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent),
       ),
     );
   }
 }
 
-/// Expandable treatments panel.
-class _TreatmentsPanel extends StatelessWidget {
-  final List<dynamic> treatments;
-  final bool expanded;
-  final VoidCallback onToggle;
-
-  const _TreatmentsPanel({
-    required this.treatments,
-    required this.expanded,
-    required this.onToggle,
-  });
-
+class _DotsAnimation extends AnimatedWidget {
+  const _DotsAnimation({required Animation<double> animation}) : super(listenable: animation);
   @override
   Widget build(BuildContext context) {
-    final shown = expanded ? treatments : treatments.take(2).toList();
-
-    return Container(
-      decoration: BoxDecoration(
-        color: context.isDarkMode ? const Color(0xFF064E3B) : const Color(0xFFF0FDF4),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.isDarkMode ? const Color(0xFF047857) : const Color(0xFF86EFAC)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.local_pharmacy_outlined,
-                  size: 16,
-                  color: Color(0xFF16A34A),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'Treatment Options',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color: context.isDarkMode ? const Color(0xFF6EE7B7) : const Color(0xFF15803D),
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: onToggle,
-                  child: Row(
-                    children: [
-                      Text(
-                        expanded ? 'Less' : 'All ${treatments.length}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: context.isDarkMode ? const Color(0xFF34D399) : const Color(0xFF16A34A),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Icon(
-                        expanded
-                            ? Icons.keyboard_arrow_up
-                            : Icons.keyboard_arrow_down,
-                        size: 16,
-                        color: const Color(0xFF16A34A),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Treatment items
-          ...shown.map((t) {
-            final medicine = t is Map
-                ? (t['medicine'] as String? ?? 'Unknown')
-                : t.toString();
-            final advice = t is Map ? (t['advice'] as String? ?? '') : '';
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(top: 3),
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF16A34A),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          medicine,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: context.isDarkMode ? const Color(0xFFA7F3D0) : const Color(0xFF166534),
-                          ),
-                        ),
-                        if (advice.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              advice,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: context.isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                                ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
-    );
+    final animation = listenable as Animation<double>;
+    return Row(mainAxisSize: MainAxisSize.min, children: List.generate(3, (i) => Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: Opacity(opacity: animation.value, child: Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle))))));
   }
 }
 
-/// Follow-up suggestion chips.
-//
-class _FollowUpChips extends StatelessWidget {
-  final List<String> questions;
-  final String label;
-  final void Function(String) onTap;
-
-  const _FollowUpChips({
-    required this.questions,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
-            color: Color(0xFF6B7280),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: questions.map((q) {
-            return GestureDetector(
-              onTap: () => onTap(q),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: context.clrSurface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.4),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.touch_app_outlined,
-                      size: 12,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      q,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-}
-
-/// Three bouncing dots typing animation.
-class _DotsAnimation extends StatelessWidget {
-  final Animation<double> animation;
-  const _DotsAnimation({required this.animation});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, child) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(3, (i) {
-          // Stagger the dots
-          final stagger = (animation.value - i * 0.15).clamp(0.3, 1.0);
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 3),
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: stagger),
-              shape: BoxShape.circle,
-            ),
-          );
-        }),
-      ),
-    );
-  }
-}

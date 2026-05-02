@@ -8,7 +8,9 @@ class MultimodalDiagnosisApi {
     String fileName, {
     String? journeyId,
   }) {
-    return ApiService.analyzeSkin(imageBytes, fileName, journeyId: journeyId);
+    throw UnsupportedError(
+      'Image-only diagnosis is disabled. Use analyzeFused with symptom text or audio.',
+    );
   }
 
   static Future<Map<String, dynamic>> analyzeFused(

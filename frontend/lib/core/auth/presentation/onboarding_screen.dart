@@ -248,8 +248,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 Text(
                   type.toUpperCase(),
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
                     color: isSelected ? Colors.white : context.clrTextMain,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _getSkinTypeDesc(type),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isSelected ? Colors.white.withValues(alpha: 0.8) : context.clrTextSec,
                   ),
                 ),
               ],
@@ -268,6 +278,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       case 'combination': return Icons.exposure_outlined;
       case 'sensitive': return Icons.favorite_border;
       default: return Icons.help_outline;
+    }
+  }
+
+  String _getSkinTypeDesc(String type) {
+    switch (type) {
+      case 'oily': return 'Shiny or greasy face';
+      case 'dry': return 'Feels tight or flaky';
+      case 'normal': return 'Balanced and healthy';
+      case 'combination': return 'Oily nose, dry cheeks';
+      case 'sensitive': return 'Stings or turns red easily';
+      default: return '';
     }
   }
 

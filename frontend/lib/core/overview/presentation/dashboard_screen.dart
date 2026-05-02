@@ -167,16 +167,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _metricTile(String title, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
       decoration: BoxDecoration(
         color: context.clrSurface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: context.clrBorder.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: context.clrBorder.withValues(alpha: 0.5), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: color.withValues(alpha: 0.1),
+            blurRadius: 30,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -184,29 +184,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(icon, size: 22, color: color),
+            child: Icon(icon, size: 28, color: color),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           Text(
             value,
             style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
               color: context.clrTextMain,
-              letterSpacing: -0.5,
+              letterSpacing: -0.8,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
-            title,
+            title.toUpperCase(),
             style: AppTextStyles.caption(
               context,
-            ).copyWith(fontWeight: FontWeight.w600, color: context.clrTextSec),
+            ).copyWith(
+              fontWeight: FontWeight.w800, 
+              color: context.clrTextSec,
+              letterSpacing: 0.5,
+              fontSize: 11,
+            ),
           ),
         ],
       ),
@@ -268,42 +273,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _statusChip(String label, String? status) {
     final color = _statusColor(status);
     return Container(
-      width: 150,
-      padding: const EdgeInsets.all(12),
+      width: 135,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(_statusIcon(status), size: 16, color: color),
-              const SizedBox(width: 6),
+              Icon(_statusIcon(status), size: 14, color: color),
+              const SizedBox(width: 5),
               Expanded(
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
                     color: context.clrTextMain,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             _prettyStatus(status),
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 11,
-              height: 1.2,
+              fontSize: 10,
               color: color,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -396,7 +400,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       MapEntry('Multimodal', summary['fused_component']?.toString()),
       MapEntry('Skin Type', summary['skin_type_component']?.toString()),
       MapEntry('Severity', summary['severity_component']?.toString()),
-      MapEntry('Image', summary['image_component']?.toString()),
     ];
 
     return Container(
@@ -431,7 +434,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Backend status for the four project components. Image remains the main blocker for dermatologist review.',
+                      'Backend status for the four main project components. Standalone image-only diagnosis is disabled and not treated as a primary product path.',
                       style: AppTextStyles.caption(
                         context,
                       ).copyWith(height: 1.3),
@@ -460,25 +463,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
+    bool isPrimary = false,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(28),
       child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: AppDecor.softCard(context, radius: 24),
+        padding: EdgeInsets.all(isPrimary ? 24 : 20),
+        decoration: AppDecor.softCard(
+          context, 
+          radius: 28,
+          color: isPrimary ? color : context.clrSurface,
+          showBorder: !isPrimary,
+        ),
         child: Row(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: isPrimary ? 64 : 52,
+              height: isPrimary ? 64 : 52,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(16),
+                color: isPrimary ? Colors.white.withValues(alpha: 0.2) : color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: Icon(icon, color: color, size: 26),
+              child: Icon(
+                icon, 
+                color: isPrimary ? Colors.white : color, 
+                size: isPrimary ? 34 : 28
+              ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 20),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -487,17 +500,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     title,
                     style: AppTextStyles.bodyStrong(
                       context,
-                    ).copyWith(fontSize: 16),
+                    ).copyWith(
+                      fontSize: isPrimary ? 20 : 17,
+                      color: isPrimary ? Colors.white : context.clrTextMain,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: AppTextStyles.caption(context)),
+                  Text(
+                    subtitle, 
+                    style: AppTextStyles.caption(context).copyWith(
+                      fontSize: isPrimary ? 13 : 12,
+                      color: isPrimary ? Colors.white.withValues(alpha: 0.8) : context.clrTextSec,
+                    )
+                  ),
                 ],
               ),
             ),
             Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: color.withValues(alpha: 0.5),
+              Icons.arrow_forward_ios_rounded,
+              size: 20,
+              color: isPrimary ? Colors.white.withValues(alpha: 0.8) : color.withValues(alpha: 0.4),
             ),
           ],
         ),
@@ -710,36 +733,93 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final score = item['score'];
         final scoreText = score is num ? '${score.toStringAsFixed(0)}%' : '-';
 
+        final scoreNum = score is num ? score.toDouble() : 0.0;
+        final scoreColor = scoreNum >= 70 ? AppColors.success : scoreNum >= 40 ? AppColors.warning : AppColors.error;
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           decoration: AppDecor.softCard(context, color: context.clrSurface),
           child: Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.event_note, color: AppColors.primary),
+                child: const Icon(Icons.event_note_rounded, color: AppColors.primary, size: 22),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(week, style: AppTextStyles.bodyStrong(context)),
+                    Text(week, style: AppTextStyles.bodyStrong(context).copyWith(fontSize: 15)),
+                    const SizedBox(height: 2),
                     Text(status, style: AppTextStyles.caption(context)),
                   ],
                 ),
               ),
-              Text(scoreText, style: AppTextStyles.bodyStrong(context)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: scoreColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  scoreText,
+                  style: TextStyle(fontWeight: FontWeight.w800, color: scoreColor, fontSize: 14),
+                ),
+              ),
             ],
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildLoadingSkeleton() {
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Column(
+        children: [
+          Container(
+            height: 260,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF0F4C5C), Color(0xFF5F0F40)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(40),
+                bottomRight: Radius.circular(40),
+              ),
+            ),
+            child: Center(
+              child: CircularProgressIndicator(
+                color: Colors.white.withValues(alpha: 0.7),
+                strokeWidth: 2.5,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: List.generate(4, (i) => Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                height: 72,
+                decoration: BoxDecoration(
+                  color: context.clrBorder.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              )),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -750,10 +830,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         subtitle: 'AI multi-modal scan & advice.',
         icon: Icons.auto_awesome_rounded,
         color: AppColors.primary,
+        isPrimary: true,
         onTap: () {
           _openTabOrRoute(1, const InstructionScreen());
         },
       ),
+      const SizedBox(height: 14),
       _quickAction(
         title: 'AI Chat',
         subtitle: 'Ask symptoms, treatments, and follow-up questions.',
@@ -870,8 +952,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: Container(
         decoration: BoxDecoration(gradient: AppGradients.page(context)),
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? _buildLoadingSkeleton()
             : RefreshIndicator(
+                color: AppColors.primary,
                 onRefresh: _loadData,
                 child: ListView(
                   padding: EdgeInsets.zero,
@@ -879,9 +962,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Stack(
                       children: [
                         Container(
-                          height: 220,
+                          height: 260,
                           decoration: const BoxDecoration(
-                            gradient: AppGradients.premium,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFF0F4C5C), Color(0xFF5F0F40)],
+                            ),
                             borderRadius: BorderRadius.only(
                               bottomLeft: Radius.circular(40),
                               bottomRight: Radius.circular(40),
@@ -891,7 +978,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         _framed(
                           context,
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                            padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -902,25 +989,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            'SKIN HEALTH HUB',
-                                            style: TextStyle(
-                                              color: Colors.white.withValues(
-                                                alpha: 0.7,
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withValues(alpha: 0.15),
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            child: Text(
+                                              '🩺  SKIN HEALTH HUB',
+                                              style: TextStyle(
+                                                color: Colors.white.withValues(alpha: 0.9),
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w800,
+                                                letterSpacing: 1.0,
                                               ),
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w800,
-                                              letterSpacing: 1.2,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Text(
+                                            'Hello, ${_userName().split(' ').first} 👋',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 30,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: -0.5,
                                             ),
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            'Welcome, ${_userName().split(' ').first}',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 32,
-                                              fontWeight: FontWeight.w900,
-                                              letterSpacing: -0.5,
+                                            'Your skin care journey continues.',
+                                            style: TextStyle(
+                                              color: Colors.white.withValues(alpha: 0.72),
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
                                             ),
                                           ),
                                         ],

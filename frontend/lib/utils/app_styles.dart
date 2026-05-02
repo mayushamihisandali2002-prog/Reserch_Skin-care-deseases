@@ -42,33 +42,33 @@ class AppColors {
 
 class AppTextStyles {
   static TextStyle heading(BuildContext context) => TextStyle(
-    fontSize: 26,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -0.3,
+    fontSize: 28,
+    fontWeight: FontWeight.w800,
+    letterSpacing: -0.5,
     color: context.clrTextMain,
   );
 
   static TextStyle subHeading(BuildContext context) => TextStyle(
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: FontWeight.w700,
-    letterSpacing: -0.1,
+    letterSpacing: -0.2,
     color: context.clrTextMain,
   );
 
   static TextStyle body(BuildContext context) => TextStyle(
-    fontSize: 14,
-    height: 1.5,
+    fontSize: 16,
+    height: 1.6,
     color: context.clrTextSec,
   );
 
   static TextStyle bodyStrong(BuildContext context) => TextStyle(
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: FontWeight.w600,
     color: context.clrTextMain,
   );
 
   static TextStyle caption(BuildContext context) => TextStyle(
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: FontWeight.w500,
     color: context.clrTextSec,
   );
@@ -125,10 +125,10 @@ class AppDecor {
       boxShadow: [
         BoxShadow(
           color: context.isDarkMode 
-              ? Colors.black.withValues(alpha: 0.3) 
-              : const Color(0xFF10252D).withValues(alpha: 0.06),
-          blurRadius: 24,
-          offset: const Offset(0, 12),
+              ? Colors.black.withValues(alpha: 0.5) 
+              : const Color(0xFF10252D).withValues(alpha: 0.12),
+          blurRadius: 32,
+          offset: const Offset(0, 16),
         ),
       ],
     );

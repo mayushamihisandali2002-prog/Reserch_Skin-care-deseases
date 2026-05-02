@@ -1,5 +1,7 @@
 import 'package:app/utils/app_styles.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:app/components/conversational_diagnosis_assistant/presentation/chat_screen.dart' as app;
 
 class ResultScreen extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -110,6 +112,14 @@ class _ResultScreenState extends State<ResultScreen> {
     final List<String> reviewReasons = _normalizeStringList(
       diag['review_reasons'] ?? data['review_reasons'],
     );
+
+    // EXPERT OPINION EXTRACTION
+    final Map<String, dynamic>? expertOpinion = data['expert_opinion'] != null 
+        ? Map<String, dynamic>.from(data['expert_opinion']) 
+        : null;
+    final String? reasoningExpert = diag['reasoning_expert']?.toString() ?? expertOpinion?['reasoning']?.toString();
+    final bool isUrgentExpert = _toBool(expertOpinion?['is_urgent']);
+    final String? expertWarning = expertOpinion?['warning']?.toString();
     final bool imageOnlyMode =
         modelUsed == 'image_only' ||
         decisionMode.toLowerCase() == 'image_only' ||
@@ -141,6 +151,16 @@ class _ResultScreenState extends State<ResultScreen> {
               const SizedBox(height: 20),
               if (data['summary'] != null) ...[
                 _buildSummarySection(data['summary']!),
+                const SizedBox(height: 14),
+              ],
+              
+              if (reasoningExpert != null) ...[
+                _buildExpertOpinionCard(
+                  reasoning: reasoningExpert,
+                  warning: expertWarning,
+                  isUrgent: isUrgentExpert,
+                  expertDiagnosis: expertOpinion?['disease']?.toString(),
+                ),
                 const SizedBox(height: 14),
               ],
 
@@ -198,10 +218,7 @@ class _ResultScreenState extends State<ResultScreen> {
               ],
               _buildSymptomsSection(
                 diseaseExplanation: diseaseExplanation,
-                extractedSymptoms: extractedSymptoms,
-                matchedSymptoms: matchedSymptoms,
-                expectedSymptoms: expectedSymptoms,
-                symptomMatchScore: symptomMatchScore,
+                diseaseName: prediction,
               ),
               const SizedBox(height: 14),
               if (treatments.isNotEmpty) ...[
@@ -217,20 +234,31 @@ class _ResultScreenState extends State<ResultScreen> {
                 const SizedBox(height: 14),
               ],
               if (warnings.isNotEmpty) _buildWarningSection(warnings),
-              _buildPredictionSection(top3),
-              const SizedBox(height: 14),
-              _buildModelDiagnostics(
-                imageDisease: imageDisease,
-                imageConfidence: imageConfidence,
-                textDisease: textDisease,
-                textConfidence: textConfidence,
-                imageWeight: imageWeight,
-                textWeight: textWeight,
-                agreementScore: agreementScore,
-                decisionMode: decisionMode,
-                modelUsed: modelUsed,
-                requiresDermatologistReview: requiresDermatologistReview,
-                reviewReasons: reviewReasons,
+              Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  title: const Text(
+                    'Developer / Advanced Diagnostic Data',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black54),
+                  ),
+                  children: [
+                    _buildPredictionSection(top3),
+                    const SizedBox(height: 14),
+                    _buildModelDiagnostics(
+                      imageDisease: imageDisease,
+                      imageConfidence: imageConfidence,
+                      textDisease: textDisease,
+                      textConfidence: textConfidence,
+                      imageWeight: imageWeight,
+                      textWeight: textWeight,
+                      agreementScore: agreementScore,
+                      decisionMode: decisionMode,
+                      modelUsed: modelUsed,
+                      requiresDermatologistReview: requiresDermatologistReview,
+                      reviewReasons: reviewReasons,
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
               _buildFinalDisclaimer(),
@@ -689,10 +717,7 @@ class _ResultScreenState extends State<ResultScreen> {
 
   Widget _buildSymptomsSection({
     required String? diseaseExplanation,
-    required List<String> extractedSymptoms,
-    required List<String> matchedSymptoms,
-    required List<String> expectedSymptoms,
-    required double symptomMatchScore,
+    required String diseaseName,
   }) {
     return _buildSectionCard(
       title: 'Disease Information',
@@ -704,60 +729,62 @@ class _ResultScreenState extends State<ResultScreen> {
           if (diseaseExplanation != null && diseaseExplanation.isNotEmpty) ...[
             Text(
               diseaseExplanation,
-              style: const TextStyle(fontSize: 15, color: Colors.black87),
+              style: const TextStyle(fontSize: 15, color: Colors.black87, height: 1.4),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
           ],
-          _buildKeyValueRow(
-            label: 'Symptom Match Quality',
-            value: '${(symptomMatchScore * 100).toStringAsFixed(0)}%',
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: symptomMatchScore.clamp(0.0, 1.0),
-              minHeight: 8,
-              backgroundColor: context.clrBorder.withValues(alpha: 0.6),
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Icon(Icons.smart_toy_rounded, color: AppColors.primary, size: 32),
+                const SizedBox(height: 8),
+                Text(
+                  'Have questions about $diseaseName?',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Chat with our AI Clinical Assistant to learn more about symptoms, causes, and treatments.',
+                  style: TextStyle(fontSize: 13, color: Colors.black54),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => app.ChatScreen(
+                            initialMessage: "Can you tell me more about $diseaseName? What are the common symptoms and treatments?",
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.chat_bubble_outline, size: 18, color: Colors.white),
+                    label: const Text('Ask AI Assistant', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          _buildLabel('Extracted Symptoms'),
-          const SizedBox(height: 6),
-          extractedSymptoms.isEmpty
-              ? _buildMutedText('Not available')
-              : Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: extractedSymptoms
-                      .map((s) => _buildSymptomChip(s, Colors.indigo))
-                      .toList(),
-                ),
-          const SizedBox(height: 10),
-          _buildLabel('Matched Symptoms'),
-          const SizedBox(height: 6),
-          matchedSymptoms.isEmpty
-              ? _buildMutedText('No direct symptom overlap detected')
-              : Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: matchedSymptoms
-                      .map((s) => _buildSymptomChip(s, Colors.green))
-                      .toList(),
-                ),
-          const SizedBox(height: 10),
-          _buildLabel('Expected Symptoms'),
-          const SizedBox(height: 6),
-          expectedSymptoms.isEmpty
-              ? _buildMutedText('Not available')
-              : Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: expectedSymptoms
-                      .map((s) => _buildSymptomChip(s, Colors.blueGrey))
-                      .toList(),
-                ),
         ],
       ),
     );
@@ -869,6 +896,137 @@ class _ResultScreenState extends State<ResultScreen> {
               ),
             )
             .toList(),
+      ),
+    );
+  }
+
+  Widget _buildExpertOpinionCard({
+    required String reasoning,
+    String? expertDiagnosis,
+    String? warning,
+    bool isUrgent = false,
+  }) {
+    final Color accentColor = isUrgent ? AppColors.error : AppColors.primary;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: accentColor.withValues(alpha: 0.15), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.auto_awesome_rounded, color: accentColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Expert AI Opinion',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: accentColor,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  Text(
+                    'High-fidelity Clinical Reasoning',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: context.clrTextSec,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              if (expertDiagnosis != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'VERIFIED',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.success,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (expertDiagnosis != null) ...[
+             Text(
+              'Expert Finding: $expertDiagnosis',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: context.clrTextMain,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          MarkdownBody(
+            data: reasoning,
+            styleSheet: MarkdownStyleSheet(
+              p: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: context.clrTextMain.withValues(alpha: 0.85),
+              ),
+            ),
+          ),
+          if (warning != null && warning.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_rounded, color: AppColors.error, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      warning,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.error,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

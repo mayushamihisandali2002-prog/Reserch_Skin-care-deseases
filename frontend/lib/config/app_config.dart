@@ -35,6 +35,7 @@ class AppConfig {
     }
 
     // Development URLs based on platform
+    // Using 127.0.0.1 for maximum stability across Web/Desktop browsers
     if (kIsWeb) {
       return 'http://localhost:5001';
     }
@@ -46,7 +47,7 @@ class AppConfig {
     }
 
     if (!kIsWeb && Platform.isIOS) {
-      return 'http://localhost:5001';
+      return 'http://127.0.0.1:5001';
     }
 
     // Windows, macOS, Linux desktop
@@ -54,13 +55,14 @@ class AppConfig {
   }
 
   /// API endpoints
-  static String get healthEndpoint => '\$apiBaseUrl/api/health';
-  static String get statusEndpoint => '\$apiBaseUrl/api/status';
-  static String get chatEndpoint => '\$apiBaseUrl/api/chat';
-  static String get analyzeEndpoint => '\$apiBaseUrl/api/analyze';
-  static String get analyzeFusedEndpoint => '\$apiBaseUrl/api/analyze-fused';
-  static String get historyEndpoint => '\$apiBaseUrl/api/history';
-  static String get statsEndpoint => '\$apiBaseUrl/api/stats';
+  static String get healthEndpoint => '$apiBaseUrl/api/health';
+  static String get statusEndpoint => '$apiBaseUrl/api/status';
+  static String get chatEndpoint => '$apiBaseUrl/api/chat';
+  // Deprecated compatibility endpoint. New diagnosis flows must use analyzeFusedEndpoint.
+  static String get analyzeEndpoint => '$apiBaseUrl/api/analyze';
+  static String get analyzeFusedEndpoint => '$apiBaseUrl/api/analyze-fused';
+  static String get historyEndpoint => '$apiBaseUrl/api/history';
+  static String get statsEndpoint => '$apiBaseUrl/api/stats';
 
   // ============================================================================
   // APP SETTINGS

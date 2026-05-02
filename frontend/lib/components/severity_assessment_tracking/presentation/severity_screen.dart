@@ -6,6 +6,8 @@ import 'package:app/utils/app_styles.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:app/services/api_service.dart';
 
 class SeverityScreen extends StatefulWidget {
   const SeverityScreen({super.key});
@@ -430,6 +432,18 @@ class _SeverityScreenState extends State<SeverityScreen> {
     final limitations = _toStringList(result['limitations']);
     final qualityNotes = _toStringList(result['quality_notes']);
     final trackingBlockedReason = result['tracking_blocked_reason']?.toString();
+    
+    // Smart Guard Fields
+    final clinicalRationale = (result['clinical_rationale'] ?? '').toString();
+    final healingInsight = (result['healing_insight'] ?? '').toString();
+    final identifiedBodyPart = (result['identified_body_part'] ?? '').toString();
+    final isConsistent = _toBool(result['is_consistent_with_journey'] ?? true);
+    final consistencyWarning = (result['consistency_warning'] ?? '').toString();
+    final visitNumber = result['visit_number'] ?? 1;
+    final currentImageUrl = result['current_image_url']?.toString();
+    final baselineImageUrl = result['baseline_image_url']?.toString();
+    
+    final baseUrl = ApiService.baseUrl;
 
     final levelColor = _levelColor(level);
 
@@ -481,6 +495,166 @@ class _SeverityScreenState extends State<SeverityScreen> {
           ),
         ),
         const SizedBox(height: 14),
+
+        // --- SMART GUARD: Consistency Warning ---
+        if (!isConsistent && consistencyWarning.isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.error.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: AppColors.error),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Body Part Mismatch',
+                        style: AppTextStyles.bodyStrong(context).copyWith(color: AppColors.error),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(consistencyWarning, style: AppTextStyles.body(context)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+
+        // --- SMART GUARD: Clinical Rationale & Healing Insight ---
+        if (clinicalRationale.isNotEmpty) ...[
+          _sectionCard(
+            title: 'Clinical Advisory',
+            subtitle: 'AI-driven rationale for visit #$visitNumber ($identifiedBodyPart)',
+            icon: Icons.medical_services_outlined,
+            accent: Colors.blueAccent,
+            child: MarkdownBody(
+              data: clinicalRationale,
+              styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                p: AppTextStyles.body(context).copyWith(fontSize: 15, height: 1.5),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+
+        // --- SMART GUARD: Visual Comparison Gallery ---
+        if (baselineImageUrl != null) ...[
+          _sectionCard(
+            title: 'Visual Progress',
+            subtitle: 'Day 1 Baseline vs. Current Scan',
+            icon: Icons.compare_outlined,
+            accent: Colors.orangeAccent,
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              '$baseUrl$baselineImageUrl',
+                              height: 150,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                height: 150,
+                                color: context.clrBackgroundAlt,
+                                child: const Icon(Icons.broken_image_outlined),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text('Baseline', style: AppTextStyles.caption(context)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: currentImageUrl != null
+                                ? Image.network(
+                                    '$baseUrl$currentImageUrl',
+                                    height: 150,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Container(
+                                    height: 150,
+                                    color: context.clrBackgroundAlt,
+                                    child: const Center(child: Text('Current')),
+                                  ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text('Current', style: AppTextStyles.caption(context)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (healingInsight.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orangeAccent.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.1)),
+                    ),
+                    child: Text(
+                      healingInsight,
+                      style: AppTextStyles.bodyStrong(context).copyWith(
+                        color: context.isDarkMode ? Colors.orange[200] : Colors.orange[800],
+                        fontStyle: FontStyle.italic,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+        ] else if (healingInsight.isNotEmpty) ...[
+          // Fallback if we have text but no image URL yet
+          _sectionCard(
+            title: 'Healing Journey',
+            subtitle: 'Comparison with your Day 1 baseline scan.',
+            icon: Icons.auto_awesome_outlined,
+            accent: Colors.purpleAccent,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.purpleAccent.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.purpleAccent.withValues(alpha: 0.1)),
+              ),
+              child: Text(
+                healingInsight,
+                style: AppTextStyles.bodyStrong(context).copyWith(
+                  color: context.isDarkMode ? Colors.purple[200] : Colors.purple[800],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+
         if (validationStatus.isNotEmpty || requiresReview || (trackingBlockedReason?.isNotEmpty ?? false)) ...[
           _buildReviewBanner(
             validationStatus: validationStatus,

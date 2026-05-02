@@ -21,10 +21,18 @@ This guide will help you set up authentication for the Skin Care Assistant app, 
    - **Project URL** (e.g., `https://xxxxx.supabase.co`)
    - **anon/public key** (starts with `eyJ...`)
 
-5. Update `lib/config/supabase_config.dart`:
-   ```dart
-   static const String supabaseUrl = 'YOUR_SUPABASE_URL';
-   static const String supabaseAnonKey = 'YOUR_ANON_KEY';
+5. Pass these values to Flutter at runtime instead of editing source files:
+   ```bash
+   flutter run \
+     --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co \
+     --dart-define=SUPABASE_ANON_KEY=YOUR_PUBLISHABLE_OR_ANON_KEY
+   ```
+
+   PowerShell example:
+   ```powershell
+   flutter run `
+     --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co `
+     --dart-define=SUPABASE_ANON_KEY=YOUR_PUBLISHABLE_OR_ANON_KEY
    ```
 
 ### 1.2 Create Database Tables (Optional)
@@ -98,7 +106,7 @@ Navigate to **APIs & Services** → **Credentials** → **Create Credentials** �
 2. Name: `Skin Care Assistant Web`
 3. Authorized JavaScript origins:
    - `http://localhost:3000` (for development)
-   - `http://localhost:5000` (for development)
+   - `http://localhost:5001` (for development)
    - Your production domain
 4. Authorized redirect URIs:
    - `https://YOUR_SUPABASE_URL/auth/v1/callback`
@@ -126,11 +134,12 @@ Navigate to **APIs & Services** → **Credentials** → **Create Credentials** �
 
 ### 2.3 Update Flutter Configuration
 
-Update `lib/config/supabase_config.dart`:
-```dart
-static const String googleWebClientId = 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
-static const String googleAndroidClientId = 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com';
-static const String googleIosClientId = 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com';
+Pass the Google OAuth client IDs with `--dart-define`:
+```bash
+flutter run \
+  --dart-define=GOOGLE_WEB_CLIENT_ID=YOUR_WEB_CLIENT_ID.apps.googleusercontent.com \
+  --dart-define=GOOGLE_ANDROID_CLIENT_ID=YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com \
+  --dart-define=GOOGLE_IOS_CLIENT_ID=YOUR_IOS_CLIENT_ID.apps.googleusercontent.com
 ```
 
 ### 2.4 Configure Supabase Google Provider
@@ -198,7 +207,7 @@ For web, ensure your `web/index.html` includes:
 ```bash
 cd frontend
 flutter pub get
-flutter run
+flutter run --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co --dart-define=SUPABASE_ANON_KEY=YOUR_PUBLISHABLE_OR_ANON_KEY
 ```
 
 ### Test scenarios:
@@ -253,8 +262,8 @@ void main() {
 
 ## Security Notes
 
-1. **Never commit secrets**: Add `supabase_config.dart` to `.gitignore` if it contains sensitive data
-2. **Use environment variables**: For production, use flutter_dotenv or similar
+1. **Do not hardcode project credentials**: inject them with `--dart-define`
+2. **Use build-time configuration**: keep Supabase keys outside committed source files
 3. **Enable RLS**: Always enable Row Level Security on Supabase tables
 4. **HTTPS only**: Use HTTPS for all production URLs
 

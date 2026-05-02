@@ -8,12 +8,16 @@ class SeverityTrackingApi {
     String fileName, {
     bool track = false,
     String userId = 'anonymous',
+    String? journeyId,
+    String? journeyTitle,
   }) {
     return ApiService.analyzeSeverity(
       imageBytes,
       fileName,
       track: track,
       userId: userId,
+      journeyId: journeyId,
+      journeyTitle: journeyTitle,
     );
   }
 
@@ -29,7 +33,11 @@ class SeverityTrackingApi {
     );
   }
 
-  static Future<List<dynamic>> getHistory() {
-    return ApiService.getHistory();
+  static Future<List<dynamic>> getHistory({String? journeyId}) {
+    return ApiService.getHistory(journeyId: journeyId);
+  }
+
+  static Future<Map<String, dynamic>> getStats({String? journeyId}) {
+    return ApiService.getStats(journeyId: journeyId);
   }
 }

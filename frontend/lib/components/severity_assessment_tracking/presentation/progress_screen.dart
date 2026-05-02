@@ -1,5 +1,6 @@
 import 'package:app/components/severity_assessment_tracking/presentation/healing_analysis_screen.dart';
 import 'package:app/components/severity_assessment_tracking/data/severity_tracking_api.dart';
+import 'package:app/services/supabase_service.dart';
 import 'package:app/utils/app_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -14,23 +15,49 @@ class ProgressScreen extends StatefulWidget {
 
 class _ProgressScreenState extends State<ProgressScreen> {
   List<dynamic> _history = [];
+  List<Map<String, dynamic>> _journeys = [];
   bool _isLoading = true;
   bool _isUploading = false;
+  String? _selectedJourneyId;
 
   @override
   void initState() {
     super.initState();
-    _loadHistory();
+    _loadData();
   }
 
-  Future<void> _loadHistory() async {
-    final history = await SeverityTrackingApi.getHistory();
-    if (mounted) {
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final journeys = await SupabaseService.getJourneys();
+      final history = await SeverityTrackingApi.getHistory(
+        journeyId: _selectedJourneyId,
+      );
+      if (!mounted) return;
       setState(() {
+        _journeys = journeys;
         _history = history;
         _isLoading = false;
       });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _journeys = [];
+        _history = [];
+        _isLoading = false;
+      });
     }
+  }
+
+  Future<void> _loadHistory() async {
+    final history = await SeverityTrackingApi.getHistory(
+      journeyId: _selectedJourneyId,
+    );
+    if (!mounted) return;
+    setState(() {
+      _history = history;
+      _isLoading = false;
+    });
   }
 
   Future<void> _addCheckIn() async {
@@ -46,6 +73,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
         final result = await SeverityTrackingApi.addProgress(
           await pickedFile.readAsBytes(),
           pickedFile.name,
+          journeyId: _selectedJourneyId,
         );
 
         if (!mounted) return;
@@ -115,6 +143,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
               // Changed to ListView to include chart
               padding: const EdgeInsets.all(16),
               children: [
+                if (_journeys.isNotEmpty) ...[
+                  _buildJourneySelector(),
+                  const SizedBox(height: 20),
+                ],
                 // Trend Chart
                 Text('Healing Trend', style: AppTextStyles.subHeading(context)),
                 const SizedBox(height: 16),
@@ -224,6 +256,51 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 }),
               ],
             ),
+    );
+  }
+
+  Widget _buildJourneySelector() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: AppDecor.softCard(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Journey Filter', style: AppTextStyles.bodyStrong(context)),
+          const SizedBox(height: 8),
+          Text(
+            'Attach weekly check-ins to a specific tracking journey or view all visits.',
+            style: AppTextStyles.body(context),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: _selectedJourneyId,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.track_changes_rounded),
+            ),
+            items: [
+              const DropdownMenuItem<String>(
+                value: '',
+                child: Text('All journeys'),
+              ),
+              ..._journeys.map(
+                (journey) => DropdownMenuItem<String>(
+                  value: journey['id']?.toString(),
+                  child: Text(journey['title']?.toString() ?? 'Untitled Journey'),
+                ),
+              ),
+            ],
+            onChanged: (value) async {
+              setState(() {
+                _selectedJourneyId = (value == null || value.isEmpty) ? null : value;
+                _isLoading = true;
+              });
+              await _loadHistory();
+            },
+          ),
+        ],
+      ),
     );
   }
 

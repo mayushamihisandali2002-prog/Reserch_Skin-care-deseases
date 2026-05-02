@@ -15,6 +15,9 @@ class SupabaseService {
   // ============================================================================
 
   static Future<void> initialize() async {
+    if (!SupabaseConfig.isSupabaseConfigured) {
+      throw StateError(SupabaseConfig.configurationError);
+    }
     await Supabase.initialize(
       url: SupabaseConfig.supabaseUrl,
       anonKey: SupabaseConfig.supabaseAnonKey,

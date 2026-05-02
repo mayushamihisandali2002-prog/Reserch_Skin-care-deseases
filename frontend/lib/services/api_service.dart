@@ -7,7 +7,7 @@ import 'supabase_service.dart';
 
 class ApiService {
   // Session ID for tracking conversations across the app lifetime
-  static final String sessionId = const Uuid().v4();
+  static String sessionId = const Uuid().v4();
 
   // Use centralized config for API URL
   static String get baseUrl => AppConfig.apiBaseUrl;
@@ -18,33 +18,9 @@ class ApiService {
     String fileName, {
     String? journeyId,
   }) async {
-    try {
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$baseUrl/api/analyze'),
-      );
-
-      request.files.add(
-        http.MultipartFile.fromBytes('image', imageBytes, filename: fileName),
-      );
-
-      if (journeyId != null) request.fields['journey_id'] = journeyId;
-      if (SupabaseService.userId != null) {
-        request.fields['user_id'] = SupabaseService.userId!;
-      }
-
-      var streamedResponse = await request.send();
-      var response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Failed to analyze skin: ${response.body}');
-      }
-    } catch (e) {
-      debugPrint("Error analyzing skin: $e");
-      rethrow;
-    }
+    throw UnsupportedError(
+      'Image-only diagnosis is disabled. Submit image plus symptom text or audio instead.',
+    );
   }
 
   /// Analyze skin with both image and text symptoms (fused multimodal diagnosis)
@@ -244,6 +220,8 @@ class ApiService {
     String fileName, {
     bool track = false,
     String userId = 'anonymous',
+    String? journeyId,
+    String? journeyTitle,
   }) async {
     try {
       var request = http.MultipartRequest(
@@ -254,8 +232,14 @@ class ApiService {
       request.files.add(
         http.MultipartFile.fromBytes('image', imageBytes, filename: fileName),
       );
+      final resolvedUserId =
+          (userId.trim().isNotEmpty && userId != 'anonymous')
+          ? userId
+          : (SupabaseService.userId ?? 'anonymous');
       request.fields['track'] = track ? 'true' : 'false';
-      request.fields['user_id'] = userId;
+      request.fields['user_id'] = resolvedUserId;
+      if (journeyId != null) request.fields['journey_id'] = journeyId;
+      if (journeyTitle != null) request.fields['journey_title'] = journeyTitle;
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
@@ -305,13 +289,18 @@ class ApiService {
     }
   }
 
-  static Future<List<dynamic>> getHistory({String? userId}) async {
+  static Future<List<dynamic>> getHistory({String? userId, String? journeyId}) async {
     try {
       final uid = userId ?? SupabaseService.userId;
       if (uid == null || uid.trim().isEmpty || uid == 'anonymous') {
         return [];
       }
-      final response = await http.get(Uri.parse('$baseUrl/api/history?user_id=$uid'));
+      final params = <String, String>{'user_id': uid};
+      if (journeyId != null && journeyId.trim().isNotEmpty) {
+        params['journey_id'] = journeyId.trim();
+      }
+      final uri = Uri.parse('$baseUrl/api/history').replace(queryParameters: params);
+      final response = await http.get(uri);
 
       if (response.statusCode == 200) {
         return json.decode(response.body);
@@ -324,7 +313,7 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> getStats({String? userId}) async {
+  static Future<Map<String, dynamic>> getStats({String? userId, String? journeyId}) async {
     try {
       final uid = userId ?? SupabaseService.userId;
       if (uid == null || uid.trim().isEmpty || uid == 'anonymous') {
@@ -334,7 +323,12 @@ class ApiService {
           'note': 'Login is required to view tracking statistics.',
         };
       }
-      final response = await http.get(Uri.parse('$baseUrl/api/stats?user_id=$uid'));
+      final params = <String, String>{'user_id': uid};
+      if (journeyId != null && journeyId.trim().isNotEmpty) {
+        params['journey_id'] = journeyId.trim();
+      }
+      final uri = Uri.parse('$baseUrl/api/stats').replace(queryParameters: params);
+      final response = await http.get(uri);
 
       if (response.statusCode == 200) {
         return json.decode(response.body);
@@ -366,15 +360,16 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> sendChatMessage(String message) async {
+  static Future<Map<String, dynamic>> sendChatMessage(String message, {String? customSessionId}) async {
     try {
+      final sid = customSessionId ?? sessionId;
       final response = await http.post(
         Uri.parse('$baseUrl/api/chat'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'message': message,
-          'session_id':
-              sessionId, // Include session ID for conversation tracking
+          'session_id': sid,
+          'user_id': SupabaseService.userId,
         }),
       );
 
@@ -397,6 +392,50 @@ class ApiService {
         "model_status": "offline",
         "error": e.toString(),
       };
+    }
+  }
+
+  static Future<List<dynamic>> getChatSessions() async {
+    try {
+      final uid = SupabaseService.userId;
+      if (uid == null || uid == 'anonymous') return [];
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/chat/sessions/$uid'),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['sessions'] as List<dynamic>;
+      }
+      return [];
+    } catch (e) {
+      debugPrint("Error loading chat sessions: $e");
+      return [];
+    }
+  }
+
+  static Future<List<dynamic>> getChatMessages(String sid) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/chat/history?session_id=$sid'),
+      );
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as List<dynamic>;
+      }
+      return [];
+    } catch (e) {
+      debugPrint("Error loading chat history: $e");
+      return [];
+    }
+  }
+
+  static Future<void> deleteChatSession(String sessionId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/chat/sessions/$sessionId'),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete chat session');
     }
   }
 }

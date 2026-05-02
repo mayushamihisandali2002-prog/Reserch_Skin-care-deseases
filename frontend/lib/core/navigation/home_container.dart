@@ -1,10 +1,10 @@
-import 'package:app/core/overview/presentation/dashboard_screen.dart';
+import 'package:flutter/material.dart';
 import 'package:app/components/conversational_diagnosis_assistant/presentation/chat_screen.dart';
 import 'package:app/components/multimodal_image_audio_diagnosis/presentation/instruction_screen.dart';
 import 'package:app/components/severity_assessment_tracking/presentation/severity_screen.dart';
 import 'package:app/components/skin_type_skincare_recommendation/presentation/skin_care_screen.dart';
+import 'package:app/core/overview/presentation/dashboard_screen.dart';
 import 'package:app/utils/app_styles.dart';
-import 'package:flutter/material.dart';
 
 class HomeContainer extends StatefulWidget {
   const HomeContainer({super.key});
@@ -21,101 +21,144 @@ class _HomeContainerState extends State<HomeContainer> {
     setState(() => _currentIndex = index);
   }
 
+  static const _navItems = [
+    _NavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'Home'),
+    _NavItem(icon: Icons.forum_outlined, activeIcon: Icons.forum_rounded, label: 'AI Chat'),
+    _NavItem(icon: Icons.auto_fix_high_outlined, activeIcon: Icons.auto_fix_high_rounded, label: 'Scan'),
+    _NavItem(icon: Icons.spa_outlined, activeIcon: Icons.spa_rounded, label: 'Skin Care'),
+    _NavItem(icon: Icons.speed_outlined, activeIcon: Icons.speed_rounded, label: 'Severity'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final screens = [
       DashboardScreen(onSelectTab: _selectTab),
-      const InstructionScreen(),
       const ChatScreen(),
+      const InstructionScreen(),
       const SkinCareScreen(),
       const SeverityScreen(),
     ];
 
+    final isMobileWidth = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: screens),
-      bottomNavigationBar: Container(
-        height: 92,
-        decoration: BoxDecoration(
-          color: context.clrSurface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 18,
-              offset: const Offset(0, -6),
-            ),
-          ],
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        switchInCurve: Curves.easeInOut,
+        child: IndexedStack(
+          key: ValueKey(_currentIndex),
+          index: _currentIndex,
+          children: screens,
         ),
-        child: SafeArea(
-          top: false,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1080),
-              child: NavigationBarTheme(
-                data: NavigationBarThemeData(
-                  indicatorColor: AppColors.primary.withValues(alpha: 0.12),
-                  labelTextStyle: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
-                      );
-                    }
-                    return TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: context.clrTextSec,
-                    );
-                  }),
-                  iconTheme: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return const IconThemeData(
-                        color: AppColors.primary,
-                        size: 26,
-                      );
-                    }
-                    return IconThemeData(color: context.clrTextSec, size: 24);
-                  }),
-                ),
-                child: NavigationBar(
-                  elevation: 0,
-                  backgroundColor: Colors.transparent,
-                  height: 74,
-                  selectedIndex: _currentIndex,
-                  onDestinationSelected: _selectTab,
-                  destinations: const [
-                    NavigationDestination(
-                      icon: Icon(Icons.home_rounded),
-                      selectedIcon: Icon(Icons.home_rounded),
-                      label: 'Home',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.auto_fix_high_rounded),
-                      selectedIcon: Icon(Icons.auto_fix_high_rounded),
-                      label: 'Smart Scan',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.forum_rounded),
-                      selectedIcon: Icon(Icons.forum_rounded),
-                      label: 'AI Chat',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.spa_rounded),
-                      selectedIcon: Icon(Icons.spa_rounded),
-                      label: 'Skin Care',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.speed_rounded),
-                      selectedIcon: Icon(Icons.speed_rounded),
-                      label: 'Severity',
-                    ),
-                  ],
-                ),
-              ),
-            ),
+      ),
+      bottomNavigationBar: _buildBottomNav(context, isMobileWidth),
+    );
+  }
+
+  Widget _buildBottomNav(BuildContext context, bool isMobile) {
+    return Container(
+      decoration: BoxDecoration(
+        color: context.clrSurface,
+        border: Border(top: BorderSide(color: context.clrBorder.withValues(alpha: 0.35), width: 1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 4 : 24, vertical: 6),
+          child: Row(
+            children: List.generate(_navItems.length, (index) {
+              final item = _navItems[index];
+              final isActive = index == _currentIndex;
+              return Expanded(
+                child: _buildNavItem(context, item, index, isActive, isPrimary: index == 2),
+              );
+            }),
           ),
         ),
       ),
     );
   }
+
+  Widget _buildNavItem(BuildContext context, _NavItem item, int index, bool isActive, {bool isPrimary = false}) {
+    if (isPrimary) {
+      // Special floating action style for the Scan button
+      return GestureDetector(
+        onTap: () => _selectTab(index),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [AppColors.primary, AppColors.primaryDark]),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(color: AppColors.primary.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(isActive ? item.activeIcon : item.icon, color: Colors.white, size: 22),
+                  const SizedBox(width: 6),
+                  Text(item.label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 2),
+          ],
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: () => _selectTab(index),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: isActive ? AppColors.primary.withValues(alpha: 0.12) : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                isActive ? item.activeIcon : item.icon,
+                color: isActive ? AppColors.primary : context.clrTextSec,
+                size: 22,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              item.label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
+                color: isActive ? AppColors.primary : context.clrTextSec,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  const _NavItem({required this.icon, required this.activeIcon, required this.label});
 }
