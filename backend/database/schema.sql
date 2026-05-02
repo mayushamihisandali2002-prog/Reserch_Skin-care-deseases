@@ -120,6 +120,49 @@ CREATE TABLE IF NOT EXISTS public.treatment_tracking (
 );
 
 -- ============================================================================
+-- TRACKING & PERSONALIZATION EXTENSION
+-- ============================================================================
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS allergies TEXT[],
+ADD COLUMN IF NOT EXISTS medical_history TEXT,
+ADD COLUMN IF NOT EXISTS current_medications TEXT,
+ADD COLUMN IF NOT EXISTS tracking_preference TEXT DEFAULT 'weekly'
+    CHECK (tracking_preference IN ('daily', 'weekly', 'none'));
+
+CREATE TABLE IF NOT EXISTS public.tracking_journeys (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    body_part TEXT NOT NULL,
+    specific_location TEXT,
+    frequency TEXT DEFAULT 'weekly',
+    initial_diagnosis TEXT,
+    target_clearance_date DATE,
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'archived')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.severity_visits (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    journey_id UUID REFERENCES public.tracking_journeys(id) ON DELETE SET NULL,
+    severity_level TEXT NOT NULL
+        CHECK (severity_level IN ('mild', 'moderate', 'severe', 'Mild', 'Moderate', 'Severe')),
+    severity_score DECIMAL(6, 2) NOT NULL,
+    confidence DECIMAL(5, 4),
+    metrics_json JSONB DEFAULT '{}'::jsonb,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    captured_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.skin_analyses
+ADD COLUMN IF NOT EXISTS journey_id UUID REFERENCES public.tracking_journeys(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS body_part_detected TEXT,
+ADD COLUMN IF NOT EXISTS image_metadata JSONB;
+
+-- ============================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ============================================================================
 
@@ -130,35 +173,53 @@ ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.skin_analyses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.diagnosis_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.treatment_tracking ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tracking_journeys ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.severity_visits ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: Users can only access their own profile
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile" ON public.profiles
     FOR SELECT USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" ON public.profiles
     FOR UPDATE USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 CREATE POLICY "Users can insert own profile" ON public.profiles
     FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Chat sessions: Users can only access their own sessions
+DROP POLICY IF EXISTS "Users can manage own chat sessions" ON public.chat_sessions;
 CREATE POLICY "Users can manage own chat sessions" ON public.chat_sessions
     FOR ALL USING (auth.uid() = user_id);
 
 -- Chat messages: Users can only access their own messages
+DROP POLICY IF EXISTS "Users can manage own chat messages" ON public.chat_messages;
 CREATE POLICY "Users can manage own chat messages" ON public.chat_messages
     FOR ALL USING (auth.uid() = user_id);
 
 -- Skin analyses: Users can only access their own analyses
+DROP POLICY IF EXISTS "Users can manage own skin analyses" ON public.skin_analyses;
 CREATE POLICY "Users can manage own skin analyses" ON public.skin_analyses
     FOR ALL USING (auth.uid() = user_id);
 
 -- Diagnosis history: Users can only access their own history
+DROP POLICY IF EXISTS "Users can manage own diagnosis history" ON public.diagnosis_history;
 CREATE POLICY "Users can manage own diagnosis history" ON public.diagnosis_history
     FOR ALL USING (auth.uid() = user_id);
 
 -- Treatment tracking: Users can only access their own treatments
+DROP POLICY IF EXISTS "Users can manage own treatments" ON public.treatment_tracking;
 CREATE POLICY "Users can manage own treatments" ON public.treatment_tracking
+    FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage own tracking journeys" ON public.tracking_journeys;
+CREATE POLICY "Users can manage own tracking journeys" ON public.tracking_journeys
+    FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage own severity visits" ON public.severity_visits;
+CREATE POLICY "Users can manage own severity visits" ON public.severity_visits
     FOR ALL USING (auth.uid() = user_id);
 
 -- ============================================================================
@@ -175,16 +236,24 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply trigger to tables with updated_at
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
 CREATE TRIGGER update_profiles_updated_at
     BEFORE UPDATE ON public.profiles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_chat_sessions_updated_at ON public.chat_sessions;
 CREATE TRIGGER update_chat_sessions_updated_at
     BEFORE UPDATE ON public.chat_sessions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_treatment_tracking_updated_at ON public.treatment_tracking;
 CREATE TRIGGER update_treatment_tracking_updated_at
     BEFORE UPDATE ON public.treatment_tracking
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_tracking_journeys_updated_at ON public.tracking_journeys;
+CREATE TRIGGER update_tracking_journeys_updated_at
+    BEFORE UPDATE ON public.tracking_journeys
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Auto-create profile on user signup
@@ -198,6 +267,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Trigger to create profile on signup
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE OR REPLACE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
@@ -211,8 +281,13 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON public.chat_messages(use
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON public.chat_messages(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skin_analyses_user_id ON public.skin_analyses(user_id);
 CREATE INDEX IF NOT EXISTS idx_skin_analyses_created_at ON public.skin_analyses(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_skin_analyses_journey_id ON public.skin_analyses(journey_id);
 CREATE INDEX IF NOT EXISTS idx_diagnosis_history_user_id ON public.diagnosis_history(user_id);
 CREATE INDEX IF NOT EXISTS idx_treatment_tracking_user_id ON public.treatment_tracking(user_id);
+CREATE INDEX IF NOT EXISTS idx_tracking_journeys_user_id ON public.tracking_journeys(user_id);
+CREATE INDEX IF NOT EXISTS idx_severity_visits_user_id ON public.severity_visits(user_id);
+CREATE INDEX IF NOT EXISTS idx_severity_visits_journey_id ON public.severity_visits(journey_id);
+CREATE INDEX IF NOT EXISTS idx_severity_visits_captured_at ON public.severity_visits(captured_at DESC);
 
 -- ============================================================================
 -- STORAGE BUCKET FOR SKIN IMAGES

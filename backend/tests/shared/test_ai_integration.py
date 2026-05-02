@@ -9,7 +9,7 @@ from typing import Dict, Any
 
 
 class AIIntegrationTester:
-    def __init__(self, base_url: str = "http://localhost:5000"):
+    def __init__(self, base_url: str = "http://localhost:5001"):
         self.base_url = base_url
         self.test_cases = [
             ("I have red itchy skin", "Possible eczema or dermatitis"),

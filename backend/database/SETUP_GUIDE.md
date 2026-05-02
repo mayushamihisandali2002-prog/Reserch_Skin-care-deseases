@@ -1,255 +1,127 @@
-# 🗄️ Database Setup Guide - Supabase
+# Supabase Setup Guide
 
-This guide walks you through setting up Supabase for the Skin Care Assistant app.
+This guide matches the current project structure and configuration flow.
 
-## 📋 Table of Contents
+## What this project expects
 
-1. [Create Supabase Account](#1-create-supabase-account)
-2. [Create Database Schema](#2-create-database-schema)
-3. [Configure Flutter App](#3-configure-flutter-app)
-4. [Configure Python Backend](#4-configure-python-backend)
-5. [Create Storage Bucket](#5-create-storage-bucket)
-6. [Test the Connection](#6-test-the-connection)
+- Frontend credentials are injected at run time with `--dart-define`
+- Backend credentials are loaded from `backend/.env`
+- The database schema lives in:
+  - `backend/database/schema.sql`
+  - `backend/database/tracking_schema.sql`
 
----
+## 1. Create the Supabase project
 
-## 1. Create Supabase Account
+1. Create a project in the Supabase dashboard.
+2. Open `Settings -> API`.
+3. Copy:
+   - Project URL
+   - anon/public key
+   - service role key
 
-1. Go to **https://supabase.com** and click "Start your project"
-2. Sign up with GitHub, Google, or email
-3. Click **"New Project"**
-4. Fill in:
-   - **Name**: `skin-care-assistant`
-   - **Database Password**: Generate a strong password (save it!)
-   - **Region**: Choose closest to your users
-5. Click **"Create new project"** and wait ~2 minutes
+## 2. Apply the SQL schema
 
-### Get Your API Keys
+Run these files in the Supabase SQL editor in this order:
 
-1. Go to **Settings → API** in your Supabase dashboard
-2. Copy these values:
-   - **Project URL**: `https://xxxxx.supabase.co`
-   - **anon/public key**: For Flutter app (safe to expose)
-   - **service_role key**: For Python backend (keep SECRET!)
+1. `backend/database/schema.sql`
+2. `backend/database/tracking_schema.sql`
 
----
+The second file is safe to run after the first one and adds tracking-specific tables and policies.
 
-## 2. Create Database Schema
+## 3. Configure the backend
 
-1. In Supabase Dashboard, go to **SQL Editor**
-2. Click **"New Query"**
-3. Copy the entire contents of `database/schema.sql`
-4. Paste into the SQL editor
-5. Click **"Run"** (or Ctrl+Enter)
-
-You should see "Success. No rows returned" - this means the tables were created!
-
-### Verify Tables Created
-
-Go to **Table Editor** in the sidebar. You should see:
-- ✅ profiles
-- ✅ chat_sessions
-- ✅ chat_messages
-- ✅ skin_analyses
-- ✅ diagnosis_history
-- ✅ treatment_tracking
-
----
-
-## 3. Configure Flutter App
-
-### Step 1: Install Dependencies
-
-```bash
-cd frontend
-flutter pub get
-```
-
-### Step 2: Add Your Credentials
-
-Edit `frontend/lib/config/supabase_config.dart`:
-
-```dart
-class SupabaseConfig {
-  // Replace with YOUR values from Supabase Dashboard → Settings → API
-  static const String supabaseUrl = 'https://YOUR-PROJECT-ID.supabase.co';
-  static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
-  
-  // ... rest stays the same
-}
-```
-
-### Step 3: Run the App
-
-```bash
-flutter run -d chrome
-```
-
----
-
-## 4. Configure Python Backend
-
-### Step 1: Install Supabase Python Client
-
-```bash
-cd backend
-pip install supabase
-```
-
-Or install all requirements:
-```bash
-pip install -r requirements.txt
-```
-
-### Step 2: Add Your Credentials
-
-**Option A: Environment Variables (Recommended)**
-
-Create a `.env` file in the `backend/` folder:
+1. Copy `backend/.env.example` to `backend/.env`.
+2. Fill in these values:
 
 ```env
-SUPABASE_URL=https://YOUR-PROJECT-ID.supabase.co
-SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+SUPABASE_SECRET_KEY=YOUR_SERVICE_ROLE_KEY
+SUPABASE_ANON_KEY=YOUR_ANON_OR_PUBLISHABLE_KEY
 ```
 
-**Option B: Direct in Code**
+Notes:
+- The backend accepts either `SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_KEY`.
+- Do not commit `backend/.env`.
 
-Edit `backend/services/supabase_service.py`:
+## 4. Configure the frontend
 
-```python
-SUPABASE_URL = 'https://YOUR-PROJECT-ID.supabase.co'
-SUPABASE_KEY = 'YOUR_SERVICE_ROLE_KEY'  # ⚠️ Use SERVICE key, not anon key
+Do not edit source files to insert keys.
+
+Use one of these approaches instead:
+
+### Option A: direct `flutter run`
+
+```powershell
+cd frontend
+flutter pub get
+flutter run -d chrome `
+  --dart-define=SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co `
+  --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_OR_PUBLISHABLE_KEY
 ```
 
-### Step 3: Test Connection
+### Option B: helper script
 
-```bash
+If `backend/.env` is already filled, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File frontend/scripts/run_flutter_with_env.ps1 -Device chrome
+```
+
+This reads `backend/.env` and forwards the values as `--dart-define`.
+
+## 5. Optional Google Sign-In
+
+If you are using Google authentication, also pass:
+
+- `GOOGLE_WEB_CLIENT_ID`
+- `GOOGLE_ANDROID_CLIENT_ID`
+- `GOOGLE_IOS_CLIENT_ID`
+
+See [AUTH_SETUP.md](/d:/Research/zip%20skin/Reserch_Skin-care-deseases/frontend/docs/AUTH_SETUP.md) for the current auth flow.
+
+## 6. Verify the setup
+
+Backend:
+
+```powershell
 cd backend
-python -c "from services import SupabaseService; print('Connected!')"
+python app.py
 ```
 
----
+Health check:
 
-## 5. Create Storage Bucket
-
-For storing skin images:
-
-1. Go to **Storage** in Supabase Dashboard
-2. Click **"New Bucket"**
-3. Configure:
-   - **Name**: `skin-images`
-   - **Public**: ❌ OFF (private - requires authentication)
-4. Click **"Create bucket"**
-
-### Set Storage Policy
-
-In the `skin-images` bucket:
-
-1. Click **"Policies"** tab
-2. Click **"New Policy"** → **"For full customization"**
-3. Add policy for authenticated users:
-
-```sql
--- Allow users to upload their own images
-CREATE POLICY "Users can upload own images"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'skin-images' AND (storage.foldername(name))[1] = auth.uid()::text);
-
--- Allow users to view their own images
-CREATE POLICY "Users can view own images"
-ON storage.objects FOR SELECT
-TO authenticated
-USING (bucket_id = 'skin-images' AND (storage.foldername(name))[1] = auth.uid()::text);
+```powershell
+python -c "import sys; sys.path.insert(0, 'backend'); from app import app; c = app.test_client(); print(c.get('/api/health').json)"
 ```
 
----
+Frontend:
 
-## 6. Test the Connection
-
-### Test Flutter Connection
-
-In your app, after login, the Supabase service should work automatically.
-
-### Test Python Connection
-
-```python
-from services import SupabaseService
-
-# Initialize
-SupabaseService.initialize(
-    url='https://YOUR-PROJECT-ID.supabase.co',
-    key='YOUR_SERVICE_ROLE_KEY'
-)
-
-# Test: Get all profiles (should return empty list initially)
-client = SupabaseService.get_client()
-result = client.table('profiles').select('*').execute()
-print(f"Found {len(result.data)} profiles")
+```powershell
+cd frontend
+flutter analyze
 ```
 
----
+## 7. Benchmark validation status
 
-## 🔒 Security Notes
+The project is engineering-ready without benchmark data, but two validation datasets are still manual:
 
-| Key Type | Where to Use | Exposure |
-|----------|--------------|----------|
-| `anon` key | Flutter app | Safe to include in app |
-| `service_role` key | Python backend only | ⚠️ NEVER expose publicly |
+- `backend/assets/data/skin_type_skincare_recommendation/skin_types`
+- `backend/assets/data/severity_assessment_tracking/severity_benchmark`
 
-- The `anon` key respects Row Level Security (RLS) policies
-- The `service_role` key bypasses RLS - use only on server
+Check benchmark readiness with:
 
----
-
-## 📊 Database Schema Overview
-
-```
-┌─────────────┐       ┌─────────────────┐
-│  profiles   │───────│  chat_sessions  │
-│  (users)    │       │                 │
-└─────────────┘       └────────┬────────┘
-       │                       │
-       │              ┌────────▼────────┐
-       │              │  chat_messages  │
-       │              └─────────────────┘
-       │
-       ├──────────────┬─────────────────┐
-       │              │                 │
-┌──────▼──────┐ ┌─────▼─────────┐ ┌─────▼──────────────┐
-│skin_analyses│ │diagnosis_     │ │treatment_tracking  │
-│             │ │history        │ │                    │
-└─────────────┘ └───────────────┘ └────────────────────┘
+```powershell
+python backend/tools/validation/benchmark_readiness.py
 ```
 
----
+Run the full validation report with:
 
-## 🆘 Troubleshooting
+```powershell
+python backend/tools/validation/evaluate_models.py --image-max-per-class 3 --fused-max-per-class 1 --output backend/reports/validation_report_quick.json
+```
 
-### "Invalid API key"
-- Double-check you copied the full key (they're long!)
-- Make sure you're using the right key type (anon vs service_role)
+## Security rules
 
-### "Row Level Security policy violation"
-- User might not be authenticated
-- Check that the user ID matches in the RLS policy
-
-### "relation does not exist"
-- Run the `schema.sql` file in SQL Editor
-- Make sure all tables were created
-
----
-
-## ✅ Next Steps
-
-After setup is complete:
-
-1. Update the login screen to use Supabase Auth
-2. Update the chat screen to persist messages
-3. Update the analyze screen to save results
-4. Add a history screen to view past diagnoses
-
-Need help? Check:
-- [Supabase Docs](https://supabase.com/docs)
-- [Flutter Supabase Guide](https://supabase.com/docs/guides/getting-started/quickstarts/flutter)
-- [Python Supabase Guide](https://supabase.com/docs/reference/python/introduction)
+- Frontend: only anon/public credentials
+- Backend: service role key only
+- Never hardcode real project secrets in committed Dart or Python source

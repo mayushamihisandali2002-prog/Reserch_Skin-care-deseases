@@ -16,6 +16,7 @@ class SessionState:
     last_confidence: float = 0.0
     pending_followup: bool = False
     followup_answers: Dict[str, str] = field(default_factory=dict)
+    structured_data: Dict[str, str] = field(default_factory=dict)
     conversation_history: List[Dict] = field(default_factory=list)
     last_accessed_at: str = field(default_factory=lambda: datetime.now().isoformat())
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())

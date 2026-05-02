@@ -49,10 +49,29 @@ class SkinTypeModel:
         self._load()
 
     def _load(self) -> None:
+        # 1. Try loading Random Forest first (it's much lighter and we just trained it)
+        rf_path = self.model_path.parent / "skin_type_rf.joblib"
+        if rf_path.exists():
+            try:
+                import joblib
+                from components.severity_assessment_tracking.severity_model import SeverityModel
+                self.rf_model = joblib.load(rf_path)
+                # Use SeverityModel's logic for extraction
+                sev_meta = self.model_path.parents[2] / "severity_assessment_tracking" / "severity" / "metadata.json"
+                sev_model_dummy = self.model_path.parents[2] / "severity_assessment_tracking" / "severity" / "severity_model.joblib"
+                self.rf_extractor = SeverityModel(sev_model_dummy, sev_meta)
+                self.model_name = "random_forest_feature_based"
+                self.loaded = True
+                print(f"[SkinTypeModel] Loaded RF model from {rf_path}")
+                return
+            except Exception as exc:
+                print(f"[SkinTypeModel] RF Load failed: {exc}")
+
+        # 2. Fallback to ConvNext (Original Logic)
         try:
             import torch
             import torchvision.transforms as T
-        except Exception as exc:  # pragma: no cover - import guard
+        except Exception as exc:
             self.load_error = f"torch/torchvision not available: {exc}"
             return
 
@@ -73,11 +92,7 @@ class SkinTypeModel:
                 label_map_raw = json.load(f)
             self.label_map = self._normalize_label_map(label_map_raw)
             self.id_to_label = {idx: label for label, idx in self.label_map.items()}
-        except Exception as exc:
-            self.load_error = f"Failed to parse label map JSON: {exc}"
-            return
-
-        try:
+            
             checkpoint = torch.load(
                 str(self.model_path),
                 map_location=torch.device("cpu"),
@@ -240,6 +255,46 @@ class SkinTypeModel:
         return probs
 
     def predict_from_pil(self, pil_image) -> dict[str, Any]:
+        if hasattr(self, "rf_model") and self.rf_model:
+            import numpy as np
+            # RF prediction
+            if pil_image.mode != "RGB":
+                pil_image = pil_image.convert("RGB")
+            
+            # Extract features using the cached extractor
+            resized = self.rf_extractor._resize_keep_aspect(pil_image, 256)
+            cropped = self.rf_extractor._center_crop(resized, 224)
+            rgb_na = np.array(cropped, dtype=np.uint8)
+            rgb_na, _ = self.rf_extractor._apply_clahe_or_fallback(rgb_na)
+            
+            raw_features = self.rf_extractor._extract_features(rgb_na)
+            norm_features = self.rf_extractor._normalize_features(raw_features)
+            
+            vector = np.array(
+                [[norm_features[col] for col in self.rf_extractor.feature_cols]],
+                dtype=np.float32,
+            )
+            
+            pred_label = self.rf_model.predict(vector)[0]
+            probs_array = self.rf_model.predict_proba(vector)[0]
+            classes = self.rf_model.classes_
+            probabilities = {
+                self._display_label(str(cls)): float(probs_array[i])
+                for i, cls in enumerate(classes)
+            }
+            
+            conf = float(np.max(probs_array))
+            
+            return {
+                "skin_type_raw": pred_label,
+                "skin_type": self._display_label(pred_label),
+                "class_id": 0, # Not strictly mapped for RF
+                "confidence": conf,
+                "probabilities": probabilities,
+                "model_name": "random_forest_feature_based",
+            }
+
+        # Fallback to deep model
         probs = self._predict_proba(pil_image)
         pred_id = int(np.argmax(probs))
         pred_label = self.id_to_label.get(pred_id, f"class_{pred_id}")

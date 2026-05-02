@@ -1,0 +1,35 @@
+{
+  "ready": true,
+  "skin_type_benchmark": {
+    "ready": true,
+    "dataset_dir": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types",
+    "expected_class_dirs": [
+      "Dry",
+      "Oily",
+      "Combination"
+    ],
+    "class_image_counts": {
+      "Dry": 340,
+      "Oily": 340,
+      "Combination": 340
+    },
+    "issues": [],
+    "next_steps": [
+      "Place real labeled images into Dry, Oily, and Combination.",
+      "Re-run backend/tools/validation/evaluate_models.py after the folders are populated."
+    ]
+  },
+  "severity_benchmark": {
+    "ready": true,
+    "benchmark_dir": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark",
+    "labels_manifest": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\labels.csv",
+    "valid_rows": 30,
+    "invalid_rows": [],
+    "issues": [],
+    "next_steps": [
+      "Store the benchmark images under severity_benchmark/images.",
+      "Label each image as mild, moderate, or severe in labels.csv.",
+      "Re-run backend/tools/validation/evaluate_models.py after the manifest is valid."
+    ]
+  }
+}

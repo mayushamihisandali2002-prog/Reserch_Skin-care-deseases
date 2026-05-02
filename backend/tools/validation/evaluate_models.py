@@ -11,6 +11,7 @@ Goals:
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import statistics
 import sys
@@ -59,6 +60,26 @@ from components.skin_type_skincare_recommendation.skin_type_model import (  # no
 
 
 TARGET_INDEX = {label: index for index, label in DISEASE_LABELS.items()}
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+SEVERITY_BENCHMARK_DIR = (
+    BACKEND_DIR
+    / "assets"
+    / "data"
+    / "severity_assessment_tracking"
+    / "severity_benchmark"
+)
+SEVERITY_BENCHMARK_LABELS = SEVERITY_BENCHMARK_DIR / "labels.csv"
+
+
+def find_severity_tracking_history_file(tracking_dir: Path) -> Path | None:
+    candidates = [
+        tracking_dir / "visits.runtime.csv",
+        tracking_dir / "visits.csv",
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    return None
 
 
 def confidence_summary(values: list[float]) -> dict[str, float | None]:
@@ -120,7 +141,7 @@ def iter_class_images(dataset_dir: Path, max_per_class: int) -> Iterable[tuple[s
             file_path
             for file_path in class_dir.iterdir()
             if file_path.is_file()
-            and file_path.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"}
+            and file_path.suffix.lower() in IMAGE_EXTENSIONS
         )
         if max_per_class > 0:
             files = files[:max_per_class]
@@ -135,14 +156,166 @@ def collect_unlabeled_images(dataset_dir: Path, max_images: int) -> list[Path]:
 
     for class_dir in sorted(path for path in dataset_dir.iterdir() if path.is_dir()):
         for file_path in sorted(class_dir.iterdir()):
-            if (
-                file_path.is_file()
-                and file_path.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"}
-            ):
+            if file_path.is_file() and file_path.suffix.lower() in IMAGE_EXTENSIONS:
                 images.append(file_path)
                 if len(images) >= max_images:
                     return images
     return images
+
+
+def build_skin_type_benchmark_guidance(dataset_dir: Path, label_map: dict[str, int]) -> dict[str, Any]:
+    expected_dirs = sorted({str(label).strip().replace("_", " ").title() for label in label_map.keys()})
+    return {
+        "dataset_dir": str(dataset_dir),
+        "reference_dataset_dir": str(dataset_dir.parent / "skin_types_hf"),
+        "expected_class_dirs": expected_dirs,
+        "accepted_extensions": sorted(IMAGE_EXTENSIONS),
+        "notes": [
+            "Place each labeled image inside the matching class directory.",
+            "Use front-facing photos in even light without heavy makeup or filters.",
+            "Avoid duplicate images across classes.",
+            "Do not treat skin_types_hf as a benchmark unless you manually curate labels to match the expected class folders.",
+        ],
+    }
+
+
+def build_severity_benchmark_guidance(benchmark_dir: Path, expected_levels: list[str]) -> dict[str, Any]:
+    return {
+        "benchmark_dir": str(benchmark_dir),
+        "labels_manifest": str(benchmark_dir / "labels.csv"),
+        "expected_levels": expected_levels,
+        "accepted_extensions": sorted(IMAGE_EXTENSIONS),
+        "required_columns": ["image_path", "severity_level"],
+        "notes": [
+            "Store benchmark images relative to the benchmark directory.",
+            "Set severity_level to mild, moderate, or severe.",
+            "Use one row per labeled image in labels.csv.",
+        ],
+    }
+
+
+def count_images_by_class(dataset_dir: Path, class_names: list[str]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for class_name in class_names:
+        class_dir = dataset_dir / class_name
+        if not class_dir.exists():
+            counts[class_name] = 0
+            continue
+        counts[class_name] = sum(
+            1
+            for file_path in class_dir.iterdir()
+            if file_path.is_file() and file_path.suffix.lower() in IMAGE_EXTENSIONS
+        )
+    return counts
+
+
+def iter_severity_benchmark_rows(benchmark_dir: Path) -> list[tuple[str, Path]]:
+    manifest_path = benchmark_dir / "labels.csv"
+    if not manifest_path.exists():
+        return []
+
+    rows: list[tuple[str, Path]] = []
+    with open(manifest_path, "r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            expected = str(
+                row.get("severity_level")
+                or row.get("label")
+                or row.get("severity")
+                or ""
+            ).strip().lower()
+            rel_path = str(
+                row.get("image_path")
+                or row.get("filename")
+                or row.get("file")
+                or ""
+            ).strip()
+            if not expected or not rel_path:
+                continue
+
+            direct_path = benchmark_dir / rel_path
+            images_path = benchmark_dir / "images" / rel_path
+            image_path = direct_path if direct_path.exists() else images_path
+            if image_path.is_file() and image_path.suffix.lower() in IMAGE_EXTENSIONS:
+                rows.append((expected, image_path))
+    return rows
+
+
+def build_pending_requirements(
+    *,
+    skin_type_component: dict[str, Any],
+    severity_component: dict[str, Any],
+    image_component: dict[str, Any],
+) -> list[dict[str, Any]]:
+    requirements: list[dict[str, Any]] = []
+
+    if skin_type_component.get("status") in {"validation_missing", "operational_only_unlabeled"}:
+        requirements.append(
+            {
+                "component": "skin_type_skincare_recommendation",
+                "type": "benchmark_data",
+                "priority": "medium",
+                "message": (
+                    "Add labeled Dry, Oily, and Combination images to the skin-type benchmark folder "
+                    "and rerun validation."
+                ),
+                "details": skin_type_component.get("benchmark_requirements", {}),
+            }
+        )
+
+    if severity_component.get("status") in {"validation_missing", "operational_only_unlabeled"}:
+        requirements.append(
+            {
+                "component": "severity_assessment_tracking",
+                "type": "benchmark_data",
+                "priority": "medium",
+                "message": (
+                    "Add labeled mild, moderate, and severe images plus labels.csv to the severity benchmark "
+                    "folder and rerun validation."
+                ),
+                "details": severity_component.get("benchmark_requirements", {}),
+            }
+        )
+
+    return requirements
+
+
+def derive_overall_status(
+    *,
+    text_component: dict[str, Any],
+    image_component: dict[str, Any],
+    fused_component: dict[str, Any],
+    skin_type_component: dict[str, Any],
+    severity_component: dict[str, Any],
+) -> str:
+    statuses = {
+        text_component.get("status"),
+        fused_component.get("status"),
+        skin_type_component.get("status"),
+        severity_component.get("status"),
+    }
+
+    if "not_ready" in statuses:
+        return "partial_readiness_with_blockers"
+    if "validation_missing" in statuses or "operational_only_unlabeled" in statuses:
+        return "engineering_ready_but_validation_incomplete"
+    return "ready_for_internal_testing"
+
+
+def build_nonblocking_notes(*, image_component: dict[str, Any]) -> list[dict[str, Any]]:
+    notes: list[dict[str, Any]] = []
+    if image_component.get("status") == "not_ready":
+        notes.append(
+            {
+                "component": "multimodal_image_audio_diagnosis",
+                "scope": "standalone_image_submodel",
+                "message": (
+                    "The standalone image model remains below the readiness bar, "
+                    "but the supported product flow is multimodal fused diagnosis."
+                ),
+            }
+        )
+    return notes
 
 
 def dataset_has_images(dataset_dir: Path) -> bool:
@@ -502,6 +675,11 @@ def evaluate_skin_type_component(
                     "sample images were available for operational checks."
                 ),
                 "label_map": label_map,
+                "benchmark_requirements": build_skin_type_benchmark_guidance(dataset_dir, label_map),
+                "next_steps": [
+                    "Populate the skin_types directory with labeled Dry, Oily, and Combination folders.",
+                    "Re-run evaluate_models.py after adding the labeled skin-type images.",
+                ],
             }
 
         valid_output = 0
@@ -556,6 +734,11 @@ def evaluate_skin_type_component(
             },
             "confidence": confidence_summary(confidences),
             "label_map": label_map,
+            "benchmark_requirements": build_skin_type_benchmark_guidance(dataset_dir, label_map),
+            "next_steps": [
+                "Populate the skin_types directory with labeled Dry, Oily, and Combination folders.",
+                "Re-run evaluate_models.py after adding the labeled skin-type images.",
+            ],
             "sample_failures": failures,
         }
 
@@ -588,6 +771,23 @@ def evaluate_skin_type_component(
                     }
                 )
 
+    if total == 0:
+        return {
+            "status": "validation_missing",
+            "loaded": bool(model.loaded),
+            "validation_available": False,
+            "note": (
+                "Skin-type class folders exist, but they do not contain labeled images yet."
+            ),
+            "label_map": label_map,
+            "benchmark_requirements": build_skin_type_benchmark_guidance(dataset_dir, label_map),
+            "next_steps": [
+                "Add labeled images to the Dry, Oily, and Combination folders.",
+                "Re-run evaluate_models.py after adding the labeled skin-type images.",
+            ],
+            "sample_failures": [],
+        }
+
     top1 = round(exact_hits / total, 4) if total else None
     return {
         "status": readiness_status(
@@ -608,10 +808,11 @@ def evaluate_skin_type_component(
 def evaluate_severity_component(
     model: Any,
     tracking_dir: Path,
+    benchmark_dir: Path,
 ) -> dict[str, Any]:
-    visits_path = tracking_dir / "visits.csv"
+    visits_path = find_severity_tracking_history_file(tracking_dir)
     rows = 0
-    if visits_path.exists():
+    if visits_path and visits_path.exists():
         try:
             rows = max(0, len(visits_path.read_text(encoding="utf-8").splitlines()) - 1)
         except Exception:
@@ -625,7 +826,63 @@ def evaluate_severity_component(
         "severity_levels": expected_levels,
         "feature_columns": list(getattr(model, "feature_cols", [])),
         "tracking_history_rows": rows,
+        "tracking_history_source": str(visits_path) if visits_path else None,
     }
+
+    benchmark_rows = iter_severity_benchmark_rows(benchmark_dir)
+    if benchmark_rows:
+        total = 0
+        exact_hits = 0
+        confidences: list[float] = []
+        failures: list[dict[str, Any]] = []
+        agreement_count = 0
+        face_visible_count = 0
+
+        for expected, file_path in benchmark_rows:
+            with Image.open(file_path) as image:
+                result = model.predict_from_pil(image)
+
+            predicted = str(result.get("severity_level", "")).strip().lower()
+            score_level = str(result.get("score_based_level", "")).strip().lower()
+            confidence = float(result.get("confidence", 0.0))
+            face_visible = result.get("preprocessing", {}).get("face_visible", None)
+
+            total += 1
+            confidences.append(confidence)
+            if predicted == expected:
+                exact_hits += 1
+            elif len(failures) < 20:
+                failures.append(
+                    {
+                        "expected": expected,
+                        "predicted": predicted,
+                        "confidence": round(confidence, 4),
+                        "file": str(file_path),
+                    }
+                )
+            if predicted == score_level:
+                agreement_count += 1
+            if face_visible is True:
+                face_visible_count += 1
+
+        top1 = round(exact_hits / total, 4) if total else None
+        return {
+            "status": readiness_status(
+                loaded=bool(model.loaded),
+                validation_available=total > 0,
+                top1_accuracy=top1,
+            ),
+            "loaded": bool(model.loaded),
+            "validation_available": True,
+            "samples_evaluated": total,
+            "top1_accuracy": top1,
+            "confidence": confidence_summary(confidences),
+            "artifact_checks": artifact_checks,
+            "benchmark_manifest": str(SEVERITY_BENCHMARK_LABELS),
+            "face_visible_rate": round(face_visible_count / total, 4) if total else None,
+            "model_score_agreement_rate": round(agreement_count / total, 4) if total else None,
+            "sample_failures": failures,
+        }
 
     sampled_images = collect_unlabeled_images(RESEARCH_DATASET_DIR, max_images=60)
     if not sampled_images:
@@ -638,6 +895,12 @@ def evaluate_severity_component(
                 "fallback sample images were available for operational checks."
             ),
             "artifact_checks": artifact_checks,
+            "benchmark_requirements": build_severity_benchmark_guidance(benchmark_dir, expected_levels),
+            "next_steps": [
+                "Create a labeled severity benchmark under severity_benchmark.",
+                "Add labels.csv with image_path and severity_level columns.",
+                "Re-run evaluate_models.py after adding the benchmark images.",
+            ],
         }
 
     valid_schema = 0
@@ -707,6 +970,7 @@ def evaluate_severity_component(
             "are operational reliability checks only."
         ),
         "artifact_checks": artifact_checks,
+        "benchmark_requirements": build_severity_benchmark_guidance(benchmark_dir, expected_levels),
         "operational_check": {
             "samples_tested": sample_count,
             "schema_valid_rate": round(schema_rate, 4),
@@ -716,6 +980,11 @@ def evaluate_severity_component(
             "severity_distribution": dict(sorted(severity_levels.items())),
         },
         "confidence": confidence_summary(confidences),
+        "next_steps": [
+            "Create a labeled severity benchmark under severity_benchmark.",
+            "Add labels.csv with image_path and severity_level columns.",
+            "Re-run evaluate_models.py after adding the benchmark images.",
+        ],
         "sample_failures": failures,
     }
 
@@ -748,14 +1017,33 @@ def build_report(
     severity_component = evaluate_severity_component(
         severity_model,
         SEVERITY_TRACK_DIR,
+        SEVERITY_BENCHMARK_DIR,
+    )
+    skin_type_class_names = sorted(
+        {str(label).strip().replace("_", " ").title() for label in getattr(skin_type_model, "label_map", {}).keys()}
+    )
+    skin_type_class_counts = count_images_by_class(SKIN_TYPE_DATASET_DIR, skin_type_class_names)
+    severity_benchmark_rows = iter_severity_benchmark_rows(SEVERITY_BENCHMARK_DIR)
+    overall_status = derive_overall_status(
+        text_component=text_component,
+        image_component=image_component,
+        fused_component=fused_component,
+        skin_type_component=skin_type_component,
+        severity_component=severity_component,
     )
 
     return {
         "generated_at_utc": datetime.now(UTC).isoformat(),
+        "overall_status": overall_status,
         "dataset_availability": {
             "research_dataset_exists": dataset_has_images(RESEARCH_DATASET_DIR),
             "skin_type_dataset_exists": dataset_has_images(SKIN_TYPE_DATASET_DIR),
             "severity_tracking_exists": SEVERITY_TRACK_DIR.exists(),
+            "severity_benchmark_exists": bool(severity_benchmark_rows),
+        },
+        "benchmark_inventory": {
+            "skin_type_class_image_counts": skin_type_class_counts,
+            "severity_benchmark_rows": len(severity_benchmark_rows),
         },
         "limits": {
             "image_max_per_class": image_limit,
@@ -773,6 +1061,15 @@ def build_report(
         "fused_component": fused_component,
         "skin_type_component": skin_type_component,
         "severity_component": severity_component,
+        "major_component_readiness": {
+            "conversational_diagnosis_assistant": text_component["status"],
+            "multimodal_image_audio_diagnosis": fused_component["status"],
+            "skin_type_skincare_recommendation": skin_type_component["status"],
+            "severity_assessment_tracking": severity_component["status"],
+        },
+        "nonblocking_subsystems": {
+            "standalone_image_model": image_component["status"],
+        },
         "deployment_readiness": {
             "text_component": text_component["status"],
             "image_component": image_component["status"],
@@ -780,6 +1077,24 @@ def build_report(
             "skin_type_component": skin_type_component["status"],
             "severity_component": severity_component["status"],
         },
+        "benchmark_templates": {
+            "skin_type": build_skin_type_benchmark_guidance(
+                SKIN_TYPE_DATASET_DIR,
+                getattr(skin_type_model, "label_map", {}),
+            ),
+            "severity": build_severity_benchmark_guidance(
+                SEVERITY_BENCHMARK_DIR,
+                [str(level).strip().lower() for level in getattr(severity_model, "severity_levels", [])],
+            ),
+        },
+        "pending_requirements": build_pending_requirements(
+            skin_type_component=skin_type_component,
+            severity_component=severity_component,
+            image_component=image_component,
+        ),
+        "nonblocking_notes": build_nonblocking_notes(
+            image_component=image_component,
+        ),
     }
 
 
@@ -791,6 +1106,7 @@ def print_summary(report: dict[str, Any]) -> None:
     severity = report["severity_component"]
 
     print("\n=== MODEL VALIDATION SUMMARY ===")
+    print(f"Overall: status={report.get('overall_status')}")
     print(
         f"Text: status={text['status']} top1={text.get('top1_accuracy')} "
         f"top3={text.get('top3_accuracy')} ece={text.get('ece')}"
@@ -805,6 +1121,7 @@ def print_summary(report: dict[str, Any]) -> None:
     )
     print(f"Skin type: status={skin_type['status']} note={skin_type.get('note')}")
     print(f"Severity: status={severity['status']} note={severity.get('note')}")
+    print(f"Image-only submodel: status={image['status']} (non-blocking, disabled in product flow)")
 
 
 def parse_args() -> argparse.Namespace:

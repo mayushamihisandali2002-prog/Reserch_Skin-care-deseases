@@ -40,7 +40,7 @@ disease, confidence, probs = distilbert_model.predict(text)
 | **Output** | 5-class probability vector + confidence score |
 | **Classes** | Eczema, Dermatitis, Psoriasis, Acne, Urticaria |
 | **Role** | Visual pattern recognition |
-| **Used by** | `/api/analyze` and `/api/analyze-fused` endpoints |
+| **Used by** | `/api/analyze-fused` endpoint (`/api/analyze` now returns a safety block) |
 
 **How it works:**
 ```python
@@ -203,7 +203,7 @@ User asks general question about a disease
 | Endpoint | Method | Purpose | Model Used |
 |----------|--------|---------|------------|
 | `/api/chat` | POST | Conversational diagnosis | DistilBERT |
-| `/api/analyze` | POST | Image-only diagnosis | ResNet-18 |
+| `/api/analyze` | POST | Safety-blocked compatibility endpoint | None |
 | `/api/analyze-fused` | POST | Image + text fusion | Both models |
 | `/api/status` | GET | Check model availability | None |
 | `/api/health` | GET | Server health check | None |
@@ -232,7 +232,7 @@ The follow-up chips are **correctly implemented**:
 cd backend
 python app.py
 ```
-Backend runs at: `http://127.0.0.1:5000`
+Backend runs at: `http://127.0.0.1:5001`
 
 ### Run Flutter App
 ```bash

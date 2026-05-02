@@ -1,49 +1,46 @@
-"""Test image model prediction"""
-import torch
-import torch.nn.functional as F
-import torchvision.models as models
-import torchvision.transforms as T
-from PIL import Image
-import numpy as np
+from __future__ import annotations
+
+import io
+import sys
 from pathlib import Path
 
-# Load
-model = models.resnet18(weights=None)
-model.fc = torch.nn.Linear(model.fc.in_features, 5)
-model_path = (
-    Path(__file__).resolve().parents[3]
-    / "assets"
-    / "models"
-    / "multimodal_image_audio_diagnosis"
-    / "image_best_finetuned.pt"
+import numpy as np
+from PIL import Image
+
+
+BACKEND_DIR = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(BACKEND_DIR))
+
+from components.multimodal_image_audio_diagnosis.image_model import (  # noqa: E402
+    DISEASE_LABELS,
+    get_image_model,
 )
-state_dict = torch.load(str(model_path), map_location='cpu', weights_only=False)
-model.load_state_dict(state_dict)
-model.eval()
+from inference.config import IMAGE_MODEL_PATH  # noqa: E402
 
-transform = T.Compose([
-    T.Resize((224, 224)),
-    T.ToTensor(),
-    T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-])
 
-# Test
-img = Image.new('RGB', (224, 224), color=(200, 100, 100))
-tensor = transform(img).unsqueeze(0)
+def _build_test_image_bytes() -> bytes:
+    image = Image.new("RGB", (224, 224), color=(200, 100, 100))
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG")
+    return buffer.getvalue()
 
-DISEASE_LABELS = {0: "Eczema", 1: "Dermatitis", 2: "Psoriasis", 3: "Acne", 4: "Urticaria"}
 
-with torch.no_grad():
-    raw_output = model(tensor)
+def test_image_model_loads_using_deployed_wrapper() -> None:
+    model = get_image_model(IMAGE_MODEL_PATH)
 
-logits = raw_output
-print(f"Logits shape: {logits.shape}")
+    assert model is not None
+    assert model.loaded is True
+    assert model.output_classes == len(model.source_label_map)
+    assert len(model.target_label_map) == len(DISEASE_LABELS)
 
-probs = F.softmax(logits, dim=-1)[0].numpy()
-print(f"Probs shape: {probs.shape}")
-print(f"Probs: {probs}")
 
-pred_class = int(np.argmax(probs))
-conf = float(probs[pred_class])
-disease = DISEASE_LABELS[pred_class]
-print(f"Prediction: {disease} ({conf:.1%})")
+def test_image_model_predicts_valid_probability_vector() -> None:
+    model = get_image_model(IMAGE_MODEL_PATH)
+    disease, confidence, probs = model.predict_from_bytes(_build_test_image_bytes())
+
+    assert model.loaded is True
+    assert disease in set(DISEASE_LABELS.values()) | {"Unknown"}
+    assert 0.0 <= float(confidence) <= 1.0
+    assert probs.shape[0] == len(DISEASE_LABELS)
+    assert np.isfinite(probs).all()
+    assert np.isclose(float(np.sum(probs)), 1.0, atol=1e-3)

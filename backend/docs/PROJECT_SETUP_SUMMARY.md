@@ -2,7 +2,7 @@
 
 ## Current Structure
 
-The project is organized around four main product components:
+The product is organized around four main components:
 
 1. Conversational diagnosis assistant
 2. Multimodal image/audio diagnosis
@@ -16,77 +16,50 @@ Reserch_Skin-care-deseases/
   frontend/
     lib/
       components/
-        conversational_diagnosis_assistant/
-        multimodal_image_audio_diagnosis/
-        skin_type_skincare_recommendation/
-        severity_assessment_tracking/
       config/
       core/
-        auth/
-        navigation/
-        overview/
       services/
       utils/
       main.dart
-    logs/
+    docs/
     scripts/
     tools/
   backend/
+    app.py
     components/
-      conversational_diagnosis_assistant/
-      multimodal_image_audio_diagnosis/
-      skin_type_skincare_recommendation/
-      severity_assessment_tracking/
     assets/
       data/
       models/
     database/
+    docs/
     inference/
-      config.py
-      label_space.py
-    logs/
     reports/
     scripts/
     services/
     tests/
-      shared/
     tools/
-      admin/
-      debug/
-      legacy/
-      pilot/
-      validation/
-    docs/
-    app.py
 ```
 
-## Frontend Ownership
+## Ownership Summary
 
 - `frontend/lib/components/` contains the four feature-specific UI areas.
-- `frontend/lib/core/auth/` contains login, register, and onboarding flow.
-- `frontend/lib/core/navigation/` contains the main shell and tab container.
-- `frontend/lib/core/overview/` contains the dashboard and cross-feature summary UI.
-- `frontend/lib/main.dart` is the light-mode app bootstrap.
-
-## Backend Ownership
-
-- `backend/components/` contains the four feature-specific model and service modules.
-- `backend/inference/` is now shared support only for config and label-space utilities.
-- `backend/tools/`, `backend/tests/`, `backend/logs/`, and `backend/reports/` now hold shared support files that do not belong to a single component.
-- `backend/app.py` is the Flask bootstrap and active API entry point.
-- `backend/database/tracking_schema.sql` remains the tracking schema source for the severity journey flow.
+- `frontend/lib/core/` contains auth, app shell, navigation, and overview.
+- `backend/components/` contains the four feature-specific inference and route modules.
+- `backend/inference/` is shared support only for config and label-space utilities.
+- `backend/app.py` is the Flask bootstrap and API registration entry point.
+- `backend/database/schema.sql` is the base database schema.
+- `backend/database/tracking_schema.sql` is the tracking extension schema.
 
 ## Setup Status
 
-- Top-level runtime split: `frontend/` + `backend/`
-- Shared project documentation is stored in `backend/docs/`
-- Pilot verification tooling is stored in `backend/tools/pilot/`
+- Top-level runtime split: `frontend/` plus `backend/`
+- Shared project documentation: `backend/docs/`
+- Pilot verification tooling: `backend/tools/pilot/`
 - Flutter app structure: aligned to the 4-category layout
 - Backend module structure: aligned to the 4-category layout
-- Legacy single-folder screen layer: removed
-- Legacy `backend/inference/*.py` feature-module imports: removed from active backend boot path
 - Supabase-backed auth/profile flow: active
 - Light mode: forced
+- Severity tracking persistence: Supabase-first with CSV fallback
 
 ## Current Readiness Snapshot
 
@@ -94,7 +67,7 @@ Reserch_Skin-care-deseases/
 - Multimodal fused diagnosis: ready for internal testing
 - Skin-type recommendation: operational, but still needs labeled validation for stronger claims
 - Severity assessment and tracking: operational, but still needs labeled validation for stronger claims
-- Image-only diagnosis: improved and calibrated, but not yet ready by the current benchmark threshold
+- Image-only diagnosis: disabled for safety; use the fused multimodal path
 
 ## Run Commands
 
@@ -126,4 +99,4 @@ python tools/validation/evaluate_models.py --image-max-per-class 3 --fused-max-p
 
 ## Important Note
 
-This project is structured for dermatologist-assisted evaluation, not autonomous medical diagnosis. Final clinical use still requires stronger model validation, especially for the standalone image-only classifier.
+This project is structured for dermatologist-assisted evaluation, not autonomous medical diagnosis. Final clinical use still requires stronger model validation, especially for the disabled standalone image path and the unlabeled skin-type and severity components.

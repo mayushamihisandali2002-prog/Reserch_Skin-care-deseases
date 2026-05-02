@@ -81,7 +81,7 @@ Should not live here:
 ## 2. Multimodal Image/Audio Diagnosis
 
 Purpose:
-- Image-only disease diagnosis
+- Multimodal disease diagnosis with a safety-blocked image-only route
 - Image + typed symptom fusion
 - Image + audio symptom fusion
 - Diagnosis result presentation
@@ -96,7 +96,7 @@ Backend ownership:
 - `backend/components/multimodal_image_audio_diagnosis/__init__.py`
 
 Backend route ownership:
-- `backend/app.py` route: `/api/analyze`
+- `backend/app.py` route: `/api/analyze` (safety-blocked compatibility endpoint)
 - `backend/app.py` route: `/api/analyze-fused`
 - `backend/app.py` audio transcription helpers used by fused analysis
 

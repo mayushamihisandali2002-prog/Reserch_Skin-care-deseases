@@ -44,6 +44,7 @@ COMBINED_IMAGES_DIR = MULTIMODAL_DATA_DIR / "combined_images"
 SKIN_TYPE_DATASET_DIR = SKIN_TYPE_DATA_DIR / "skin_types"
 SKIN_TYPE_HF_DATA_DIR = SKIN_TYPE_DATA_DIR / "skin_types_hf"
 SEVERITY_TRACK_DIR = SEVERITY_DATA_DIR / "severity_tracking"
+SEVERITY_UPLOADS_DIR = SEVERITY_TRACK_DIR / "uploads"
 KG_TFIDF_CACHE_PATH = CACHE_DIR / "kg_tfidf_cache.joblib"
 
 # Disease Labels (30 classes)

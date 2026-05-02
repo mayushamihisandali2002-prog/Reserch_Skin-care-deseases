@@ -2,35 +2,67 @@ import datetime
 import json
 import logging
 import csv
+import os
+import shutil
 from pathlib import Path
 
-from flask import jsonify, request
+from flask import jsonify, request, send_from_directory
 
 from inference.config import (
     SEVERITY_METADATA_PATH,
     SEVERITY_MODEL_PATH,
     SEVERITY_TRACK_DIR,
+    SEVERITY_UPLOADS_DIR,
 )
 
 from services.supabase_service import SupabaseService
 
 from . import get_severity_model
+from services.gemini_service import GeminiService
 
 
 logger = logging.getLogger(__name__)
 
 
-SEVERITY_VISITS_CSV = Path(SEVERITY_TRACK_DIR) / "visits.csv"
-SEVERITY_WEEKS_JSON = Path(SEVERITY_TRACK_DIR) / "_weeks.json"
+SEVERITY_TRACK_PATH = Path(SEVERITY_TRACK_DIR)
+LEGACY_SEVERITY_VISITS_CSV = SEVERITY_TRACK_PATH / "visits.csv"
+LEGACY_SEVERITY_WEEKS_JSON = SEVERITY_TRACK_PATH / "_weeks.json"
+SEVERITY_VISITS_CSV = SEVERITY_TRACK_PATH / os.getenv(
+    "SEVERITY_VISITS_FILENAME",
+    "visits.runtime.csv",
+)
+SEVERITY_WEEKS_JSON = SEVERITY_TRACK_PATH / os.getenv(
+    "SEVERITY_WEEKS_FILENAME",
+    "_weeks.runtime.json",
+)
 SEVERITY_VISIT_FIELDS = [
     "timestamp",
     "user_id",
+    "journey_id",
     "severity_level",
     "severity_score",
     "confidence",
     "metrics_json",
+    "image_path",
 ]
 
+
+def _bootstrap_runtime_tracking_files() -> None:
+    SEVERITY_TRACK_PATH.mkdir(parents=True, exist_ok=True)
+
+    if (
+        SEVERITY_VISITS_CSV != LEGACY_SEVERITY_VISITS_CSV
+        and not SEVERITY_VISITS_CSV.exists()
+        and LEGACY_SEVERITY_VISITS_CSV.exists()
+    ):
+        shutil.copyfile(LEGACY_SEVERITY_VISITS_CSV, SEVERITY_VISITS_CSV)
+
+    if (
+        SEVERITY_WEEKS_JSON != LEGACY_SEVERITY_WEEKS_JSON
+        and not SEVERITY_WEEKS_JSON.exists()
+        and LEGACY_SEVERITY_WEEKS_JSON.exists()
+    ):
+        shutil.copyfile(LEGACY_SEVERITY_WEEKS_JSON, SEVERITY_WEEKS_JSON)
 
 
 def _normalize_confidence_level(confidence: float) -> str:
@@ -118,6 +150,15 @@ def _safe_float(value: object, default: float = 0.0) -> float:
         return float(default)
 
 
+def _normalize_severity_level(value: object) -> str:
+    normalized = str(value or "").strip().lower()
+    if normalized == "medium":
+        return "moderate"
+    if normalized in {"mild", "moderate", "severe"}:
+        return normalized
+    return "moderate"
+
+
 def _parse_track_flag(raw_value: str | None) -> bool:
     if raw_value is None:
         return False
@@ -125,7 +166,48 @@ def _parse_track_flag(raw_value: str | None) -> bool:
     return value in {"1", "true", "yes", "y", "on"}
 
 
+def _severity_metrics_from_features(features: dict[str, float] | None = None) -> dict[str, float]:
+    feature_map = features or {}
+    return {
+        "redness": round(_safe_float(feature_map.get("redness_index"), 0.0) * 100, 1),
+        "inflammation": round(_safe_float(feature_map.get("saturation_mean"), 0.0) * 100, 1),
+        "scaling": round(_safe_float(feature_map.get("edge_density"), 0.0) * 100, 1),
+        "texture": round(_safe_float(feature_map.get("texture_entropy"), 0.0) * 10, 1),
+    }
+
+
+def _parse_metrics_json(value: object) -> dict[str, float]:
+    if isinstance(value, dict):
+        raw = value
+    else:
+        try:
+            raw = json.loads(str(value or "{}"))
+        except Exception:
+            raw = {}
+
+    return {
+        "redness": round(_safe_float(raw.get("redness"), 0.0), 1),
+        "inflammation": round(_safe_float(raw.get("inflammation"), 0.0), 1),
+        "scaling": round(_safe_float(raw.get("scaling"), 0.0), 1),
+        "texture": round(_safe_float(raw.get("texture"), 0.0), 1),
+    }
+
+
+def _normalize_user_and_journey_ids(
+    user_id: object,
+    journey_id: object = None,
+) -> tuple[str, str | None]:
+    normalized_user_id = str(user_id or "anonymous").strip() or "anonymous"
+    normalized_journey_id = str(journey_id or "").strip() or None
+    return normalized_user_id, normalized_journey_id
+
+
+def _row_timestamp(row: dict) -> str:
+    return str(row.get("captured_at") or row.get("timestamp") or "")
+
+
 def _ensure_visits_csv_schema() -> None:
+    _bootstrap_runtime_tracking_files()
     if not SEVERITY_VISITS_CSV.exists():
         return
 
@@ -135,18 +217,75 @@ def _ensure_visits_csv_schema() -> None:
     if not rows:
         return
 
-    header = rows[0]
-    if header == SEVERITY_VISIT_FIELDS:
-        return
-
     normalized_rows: list[dict[str, str]] = []
     for row in rows[1:]:
         if not row:
             continue
+
+        if len(row) == 6:
+            normalized_rows.append(
+                {
+                    "timestamp": row[0],
+                    "user_id": row[1],
+                    "journey_id": "",
+                    "severity_level": row[2],
+                    "severity_score": row[3],
+                    "confidence": row[4],
+                    "metrics_json": row[5],
+                    "image_path": "",
+                }
+            )
+            continue
+
+        if len(row) == 7:
+            normalized_rows.append(
+                {
+                    "timestamp": row[0],
+                    "user_id": row[1],
+                    "journey_id": row[2],
+                    "severity_level": row[3],
+                    "severity_score": row[4],
+                    "confidence": row[5],
+                    "metrics_json": row[6],
+                    "image_path": "",
+                }
+            )
+            continue
+
         padded = list(row[: len(SEVERITY_VISIT_FIELDS)])
         if len(padded) < len(SEVERITY_VISIT_FIELDS):
             padded.extend([""] * (len(SEVERITY_VISIT_FIELDS) - len(padded)))
-        normalized_rows.append(dict(zip(SEVERITY_VISIT_FIELDS, padded)))
+
+        journey_id = padded[2]
+        severity_level = padded[3]
+        severity_score = padded[4]
+        confidence = padded[5]
+        metrics_json = padded[6]
+
+        looks_shifted = (
+            str(journey_id).strip().lower() in {"mild", "moderate", "severe"}
+            and str(severity_level).strip() != ""
+            and str(confidence).strip() == ""
+        )
+        if looks_shifted:
+            journey_id = ""
+            severity_level = padded[2]
+            severity_score = padded[3]
+            confidence = padded[4]
+            metrics_json = padded[5] or padded[6]
+
+        normalized_rows.append(
+            {
+                "timestamp": padded[0],
+                "user_id": padded[1],
+                "journey_id": journey_id,
+                "severity_level": severity_level,
+                "severity_score": severity_score,
+                "confidence": confidence,
+                "metrics_json": metrics_json,
+                "image_path": padded[7] if len(padded) > 7 else "",
+            }
+        )
 
     with open(SEVERITY_VISITS_CSV, "w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=SEVERITY_VISIT_FIELDS)
@@ -159,21 +298,38 @@ def _append_severity_visit(
     severity_level: str,
     severity_score: float,
     confidence: float,
+    journey_id: str | None = None,
     features: dict[str, float] = None,
-) -> None:
-    Path(SEVERITY_TRACK_DIR).mkdir(parents=True, exist_ok=True)
+    metrics: dict[str, float] | None = None,
+    metadata: dict | None = None,
+    image_path: str = "",
+) -> dict[str, str]:
+    user_id, journey_id = _normalize_user_and_journey_ids(user_id, journey_id)
+    normalized_level = _normalize_severity_level(severity_level)
+    timestamp = datetime.datetime.now().isoformat()
+    persisted_metrics = _parse_metrics_json(metrics) if metrics is not None else _severity_metrics_from_features(features)
+    persisted_metadata = metadata or {}
+
+    if user_id and user_id != "anonymous":
+        try:
+            SupabaseService.save_severity_visit(
+                user_id=user_id,
+                journey_id=journey_id,
+                severity_level=normalized_level,
+                severity_score=severity_score,
+                confidence=confidence,
+                metrics=persisted_metrics,
+                metadata={**persisted_metadata, "image_path": image_path},
+                captured_at=timestamp,
+            )
+            return {"storage_backend": "supabase", "timestamp": timestamp}
+        except Exception as exc:
+            logger.warning("Supabase severity visit save failed, falling back to CSV: %s", exc)
+
+    SEVERITY_TRACK_PATH.mkdir(parents=True, exist_ok=True)
     _ensure_visits_csv_schema()
 
     file_exists = SEVERITY_VISITS_CSV.exists()
-    timestamp = datetime.datetime.now().isoformat()
-    
-    # Map raw features to display metrics
-    metrics = {
-        "redness": round(features.get("redness_index", 0.0) * 100, 1) if features else 0,
-        "inflammation": round(features.get("saturation_mean", 0.0) * 100, 1) if features else 0,
-        "scaling": round(features.get("edge_density", 0.0) * 100, 1) if features else 0,
-        "texture": round(features.get("texture_entropy", 0.0) * 10, 1) if features else 0,
-    }
 
     with open(SEVERITY_VISITS_CSV, "a", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(
@@ -186,57 +342,74 @@ def _append_severity_visit(
             {
                 "timestamp": timestamp,
                 "user_id": user_id,
-                "severity_level": severity_level,
+                "journey_id": journey_id or "",
+                "severity_level": normalized_level,
                 "severity_score": f"{severity_score:.4f}",
                 "confidence": f"{confidence:.6f}",
-                "metrics_json": json.dumps(metrics),
+                "metrics_json": json.dumps(persisted_metrics),
+                "image_path": image_path,
             }
         )
+    return {"storage_backend": "csv", "timestamp": timestamp}
 
 
-def _build_severity_tracking_summary(user_id: str) -> dict:
+def _load_csv_severity_rows(user_id: str, journey_id: str | None = None) -> list[dict]:
     if not SEVERITY_VISITS_CSV.exists():
-        return {
-            "visits_count": 0,
-            "improvement_percent": 0.0,
-            "weekly_trend": [],
-            "latest_visit": None,
-            "files": {
-                "visits_csv": str(SEVERITY_VISITS_CSV),
-                "weeks_json": str(SEVERITY_WEEKS_JSON),
-            },
-        }
+        return []
 
     _ensure_visits_csv_schema()
     rows: list[dict] = []
     with open(SEVERITY_VISITS_CSV, "r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            if (row.get("user_id") or "anonymous") == user_id:
-                rows.append(row)
+            if (row.get("user_id") or "anonymous") != user_id:
+                continue
+            if journey_id and (row.get("journey_id") or "").strip() != journey_id:
+                continue
+            rows.append(row)
+    return rows
 
+
+def _load_severity_rows(user_id: str, journey_id: str | None = None) -> tuple[list[dict], str]:
+    if user_id and user_id != "anonymous":
+        try:
+            supabase_rows = SupabaseService.get_severity_visits(
+                user_id=user_id,
+                journey_id=journey_id,
+            )
+            if supabase_rows:
+                return supabase_rows, "supabase"
+        except Exception as exc:
+            logger.warning("Supabase severity history unavailable, falling back to CSV: %s", exc)
+
+    return _load_csv_severity_rows(user_id, journey_id=journey_id), "csv"
+
+
+def _build_severity_tracking_summary(user_id: str, journey_id: str | None = None) -> dict:
+    rows, storage_backend = _load_severity_rows(user_id, journey_id=journey_id)
     if not rows:
         return {
             "visits_count": 0,
             "improvement_percent": 0.0,
             "weekly_trend": [],
             "latest_visit": None,
+            "storage_backend": storage_backend,
+            "storage_fallback_used": storage_backend != "supabase",
             "files": {
                 "visits_csv": str(SEVERITY_VISITS_CSV),
                 "weeks_json": str(SEVERITY_WEEKS_JSON),
-            },
+            } if storage_backend == "csv" else {},
         }
 
-    rows.sort(key=lambda item: item.get("timestamp", ""))
+    rows.sort(key=_row_timestamp)
 
     first_score = _safe_float(rows[0].get("severity_score"), 0.0)
     latest_score = _safe_float(rows[-1].get("severity_score"), 0.0)
-
     improvement_percent = ((first_score - latest_score) / first_score) * 100.0 if first_score > 0 else 0.0
 
     week_scores: dict[str, list[float]] = {}
     for row in rows:
-        ts = row.get("timestamp", "")
+        ts = _row_timestamp(row)
         score = _safe_float(row.get("severity_score"), 0.0)
         try:
             dt = datetime.datetime.fromisoformat(ts)
@@ -252,14 +425,15 @@ def _build_severity_tracking_summary(user_id: str) -> dict:
         avg_score = float(sum(scores) / max(1, len(scores)))
         weekly_trend.append({"week": week_key, "avg_severity_score": round(avg_score, 2)})
 
-    payload = {
-        "updated_at": datetime.datetime.now().isoformat(),
-        "user_id": user_id,
-        "weekly_trend": weekly_trend,
-    }
-    Path(SEVERITY_TRACK_DIR).mkdir(parents=True, exist_ok=True)
-    with open(SEVERITY_WEEKS_JSON, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2)
+    if storage_backend == "csv":
+        payload = {
+            "updated_at": datetime.datetime.now().isoformat(),
+            "user_id": user_id,
+            "weekly_trend": weekly_trend,
+        }
+        SEVERITY_TRACK_PATH.mkdir(parents=True, exist_ok=True)
+        with open(SEVERITY_WEEKS_JSON, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2)
 
     latest = rows[-1]
     return {
@@ -267,52 +441,50 @@ def _build_severity_tracking_summary(user_id: str) -> dict:
         "improvement_percent": round(float(improvement_percent), 2),
         "weekly_trend": weekly_trend,
         "latest_visit": {
-            "timestamp": latest.get("timestamp"),
+            "timestamp": _row_timestamp(latest),
             "severity_level": latest.get("severity_level"),
             "severity_score": round(_safe_float(latest.get("severity_score"), 0.0), 2),
             "confidence": round(_safe_float(latest.get("confidence"), 0.0), 4),
         },
+        "storage_backend": storage_backend,
+        "storage_fallback_used": storage_backend != "supabase",
         "files": {
             "visits_csv": str(SEVERITY_VISITS_CSV),
             "weeks_json": str(SEVERITY_WEEKS_JSON),
-        },
+        } if storage_backend == "csv" else {},
     }
 
 
-def _load_real_history(user_id: str) -> list[dict]:
-    """Read severity visits from local CSV and format for frontend history."""
-    if not SEVERITY_VISITS_CSV.exists():
-        return []
+def _load_real_history(user_id: str, journey_id: str | None = None) -> tuple[list[dict], str]:
+    """Read severity visits from persistent storage and format for frontend history."""
+    rows, storage_backend = _load_severity_rows(user_id, journey_id=journey_id)
+    if not rows:
+        return [], storage_backend
 
-    _ensure_visits_csv_schema()
-    history = []
+    history: list[dict] = []
     try:
-        with open(SEVERITY_VISITS_CSV, "r", encoding="utf-8", newline="") as f:
-            reader = csv.DictReader(f)
-            rows = [r for r in reader if (r.get("user_id") or "anonymous") == user_id]
+        rows.sort(key=_row_timestamp)
+        recent_rows = rows[-10:]
+        start_index = len(rows) - len(recent_rows)
+        for i, row in enumerate(recent_rows):
+            ts = _row_timestamp(row)
+            metrics = _parse_metrics_json(row.get("metrics_json"))
+            saved_path = row.get("image_path")
+            image_url = f"/api/severity/uploads/{os.path.basename(saved_path)}" if saved_path else "assets/images/severity_log.png"
             
-            # Take last 10 visits for history
-            for i, row in enumerate(rows[-10:]):
-                ts = row.get("timestamp", "")
-                metrics = {}
-                try:
-                    if row.get("metrics_json"):
-                        metrics = json.loads(row.get("metrics_json"))
-                except Exception:
-                    pass
-
-                history.append({
-                    "week": f"Visit {len(rows) - len(rows[-10:]) + i + 1}",
-                    "date": ts.split("T")[0] if "T" in ts else ts,
-                    "image_url": "assets/images/severity_log.png", # placeholder for local pathing
-                    "status": row.get("severity_level", "Unknown"),
-                    "score": int(_safe_float(row.get("severity_score"))),
-                    "metrics": metrics or {"redness": 0, "inflammation": 0, "scaling": 0, "texture": 0}
-                })
+            history.append({
+                "week": f"Visit {start_index + i + 1}",
+                "date": ts.split("T")[0] if "T" in ts else ts,
+                "image_url": image_url,
+                "status": row.get("severity_level", "Unknown"),
+                "score": int(round(_safe_float(row.get("severity_score")))),
+                "metrics": metrics,
+            })
     except Exception as exc:
         logger.error("Failed to load real severity history: %s", exc)
-    
-    return history
+        return [], storage_backend
+
+    return history, storage_backend
 
 
 def register_routes(app) -> None:
@@ -363,13 +535,31 @@ def register_routes(app) -> None:
             ), 400
 
         try:
-            prediction = model.predict_from_bytes(image_file.read())
+            image_data = image_file.read()
+            prediction = model.predict_from_bytes(image_data)
         except Exception as exc:
             msg = str(exc)
             if "cannot identify image file" in msg.lower():
                 return jsonify({"error": "Invalid image file format", "detail": msg}), 400
             logger.exception("Severity prediction failed")
             return jsonify({"error": f"Severity prediction failed: {exc}"}), 500
+
+        # Save image for tracking if enabled
+        saved_image_path = ""
+        tracking_requested = _parse_track_flag(request.form.get("track") or request.args.get("track"))
+        if tracking_requested:
+            try:
+                SEVERITY_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+                ts_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                safe_user = "".join([c for c in (request.form.get("user_id") or "anon") if c.isalnum()])
+                unique_name = f"{ts_str}_{safe_user}{suffix or '.jpg'}"
+                dest_path = SEVERITY_UPLOADS_DIR / unique_name
+                with open(dest_path, "wb") as f:
+                    f.write(image_data)
+                saved_image_path = f"uploads/severity/{unique_name}"
+                logger.info("Saved severity tracking image to %s", saved_image_path)
+            except Exception as e:
+                logger.warning("Failed to save tracking image: %s", e)
 
         severity_level = str(prediction.get("severity_level", "Moderate"))
         severity_score = _safe_float(prediction.get("severity_score"), 0.0)
@@ -394,7 +584,10 @@ def register_routes(app) -> None:
         ]
 
         tracking_requested = _parse_track_flag(request.form.get("track") or request.args.get("track"))
-        user_id = (request.form.get("user_id") or request.args.get("user_id") or "anonymous").strip() or "anonymous"
+        user_id, journey_id = _normalize_user_and_journey_ids(
+            request.form.get("user_id") or request.args.get("user_id") or "anonymous",
+            request.form.get("journey_id") or request.args.get("journey_id"),
+        )
         tracking_enabled = tracking_requested and face_visible is not False
         tracking_blocked_reason = None
         if tracking_requested and not tracking_enabled:
@@ -403,25 +596,120 @@ def register_routes(app) -> None:
             )
 
         tracking = None
+        tracking_backend = None
         if tracking_enabled:
             try:
-                _append_severity_visit(
+                persistence = _append_severity_visit(
                     user_id=user_id,
+                    journey_id=journey_id,
                     severity_level=severity_level,
                     severity_score=severity_score,
                     confidence=confidence,
                     features=prediction.get("normalized_features"),
+                    metadata={"source": "severity_model"},
+                    image_path=saved_image_path,
                 )
-                tracking = _build_severity_tracking_summary(user_id)
+                tracking = _build_severity_tracking_summary(user_id, journey_id=journey_id)
+                tracking_backend = tracking.get("storage_backend") or persistence.get("storage_backend")
             except Exception as exc:
                 logger.exception("Severity tracking update failed")
                 tracking = {
                     "error": f"Failed to update tracking data: {exc}",
+                    "storage_backend": "csv",
                     "files": {
                         "visits_csv": str(SEVERITY_VISITS_CSV),
                         "weeks_json": str(SEVERITY_WEEKS_JSON),
                     },
                 }
+                tracking_backend = tracking.get("storage_backend")
+
+        # --- SMART GUARD: Fetch baseline visit & run multimodal analysis ---
+        severity_metrics = _severity_metrics_from_features(prediction.get("normalized_features"))
+
+        # Fetch existing visits for this journey to determine baseline
+        journey_rows: list[dict] = []
+        if journey_id:
+            journey_rows, _ = _load_severity_rows(user_id, journey_id=journey_id)
+            journey_rows.sort(key=_row_timestamp)
+
+        visit_number = len(journey_rows) + 1  # current visit will be #N+1
+
+        # Load baseline image bytes if this is NOT the first visit
+        baseline_image_bytes = None
+        baseline_level = ""
+        baseline_score = 0.0
+        if journey_rows:
+            baseline_row = journey_rows[0]
+            baseline_level = baseline_row.get("severity_level", "")
+            baseline_score = _safe_float(baseline_row.get("severity_score"), 0.0)
+            baseline_img_path = baseline_row.get("image_path", "")
+            if baseline_img_path:
+                try:
+                    full_path = SEVERITY_UPLOADS_DIR / os.path.basename(baseline_img_path)
+                    if full_path.exists():
+                        baseline_image_bytes = full_path.read_bytes()
+                except Exception as _bimg_err:
+                    logger.warning("Could not load baseline image: %s", _bimg_err)
+
+        # Fetch journey metadata for body part lock
+        journey_title = request.form.get("journey_title") or request.args.get("journey_title") or ""
+        target_body_part = request.form.get("body_part") or request.args.get("body_part") or ""
+
+        # Run the Master Multimodal Smart Guard
+        smart_guard = {}
+        try:
+            smart_guard = GeminiService.analyze_tracking_context(
+                current_image_bytes=image_data,
+                current_level=severity_level,
+                current_metrics=severity_metrics,
+                journey_title=journey_title,
+                target_body_part=target_body_part,
+                baseline_image_bytes=baseline_image_bytes,
+                baseline_level=baseline_level,
+                baseline_score=baseline_score,
+                current_score=severity_score,
+                visit_number=visit_number,
+            )
+        except Exception as _sg_err:
+            logger.warning("Smart Guard call failed: %s", _sg_err)
+
+        # Block tracking if body part is inconsistent (wrong spot warning)
+        is_consistent = smart_guard.get("is_consistent_with_journey", True)
+        needs_clarification = smart_guard.get("needs_clarification", False)
+        if tracking_enabled and not is_consistent:
+            tracking_enabled = False
+            tracking_blocked_reason = (
+                smart_guard.get("consistency_warning")
+                or "Tracking blocked: the uploaded image does not match the journey's target body part."
+            )
+
+        tracking = None
+        tracking_backend = None
+        if tracking_enabled:
+            try:
+                persistence = _append_severity_visit(
+                    user_id=user_id,
+                    journey_id=journey_id,
+                    severity_level=severity_level,
+                    severity_score=severity_score,
+                    confidence=confidence,
+                    features=prediction.get("normalized_features"),
+                    metadata={"source": "severity_model", "body_part": smart_guard.get("identified_body_part", "")},
+                    image_path=saved_image_path,
+                )
+                tracking = _build_severity_tracking_summary(user_id, journey_id=journey_id)
+                tracking_backend = tracking.get("storage_backend") or persistence.get("storage_backend")
+            except Exception as exc:
+                logger.exception("Severity tracking update failed")
+                tracking = {
+                    "error": f"Failed to update tracking data: {exc}",
+                    "storage_backend": "csv",
+                    "files": {
+                        "visits_csv": str(SEVERITY_VISITS_CSV),
+                        "weeks_json": str(SEVERITY_WEEKS_JSON),
+                    },
+                }
+                tracking_backend = tracking.get("storage_backend")
 
         return jsonify(
             {
@@ -429,6 +717,17 @@ def register_routes(app) -> None:
                 "severity_score": round(severity_score, 2),
                 "confidence": confidence,
                 "confidence_level": confidence_level,
+                # --- Smart Guard outputs ---
+                "identified_body_part": smart_guard.get("identified_body_part", "Unknown"),
+                "is_consistent_with_journey": is_consistent,
+                "needs_clarification": needs_clarification,
+                "clarification_question": smart_guard.get("clarification_question"),
+                "clinical_rationale": smart_guard.get("clinical_rationale", ""),
+                "healing_insight": smart_guard.get("healing_insight"),
+                "baseline_image_url": f"/api/severity/uploads/{Path(baseline_img_path).name}" if baseline_img_path else None,
+                "severity_delta": smart_guard.get("severity_delta"),
+                "biomarkers": severity_metrics,
+                # --- Standard outputs ---
                 "probabilities": probabilities,
                 "top_predictions": top_predictions,
                 "top_probability_gap": round(float(top_gap), 4),
@@ -443,21 +742,26 @@ def register_routes(app) -> None:
                 "review_reasons": review_reasons,
                 "next_steps": next_steps,
                 "limitations": limitations,
-                "consistency_warning": consistency_warning,
+                "consistency_warning": smart_guard.get("consistency_warning") or consistency_warning,
                 "quality_notes": prediction.get("quality_notes", []),
                 "severity_class": severity_level,
                 "score": round(severity_score, 2),
                 "tracking_requested": tracking_requested,
                 "tracking_enabled": tracking_enabled,
                 "tracking_blocked_reason": tracking_blocked_reason,
+                "journey_id": journey_id,
+                "visit_number": visit_number,
+                "current_image_url": f"/api/severity/{saved_image_path}" if saved_image_path else None,
                 "tracking": tracking,
+                "tracking_backend": tracking_backend,
                 "tracking_files": {
                     "visits_csv": str(SEVERITY_VISITS_CSV),
                     "weeks_json": str(SEVERITY_WEEKS_JSON),
-                },
+                } if tracking_backend == "csv" else {},
                 "timestamp": datetime.datetime.now().isoformat(),
             }
         )
+
 
     @app.route("/api/profile", methods=["POST"])
     def update_profile():
@@ -514,27 +818,35 @@ def register_routes(app) -> None:
     @app.route("/api/history", methods=["GET"])
     def history():
         user_id = request.args.get("user_id")
+        journey_id = request.args.get("journey_id")
         if not user_id or user_id == "anonymous":
             return jsonify({"error": "user_id parameter is required for history retrieval"}), 400
         
-        real_data = _load_real_history(user_id)
+        real_data, _ = _load_real_history(user_id, journey_id=journey_id)
         if not real_data:
             return jsonify([]) # Honestly return empty if no real visits
         return jsonify(real_data)
 
+    @app.route("/api/severity/uploads/<filename>", methods=["GET"])
+    def serve_severity_image(filename):
+        """Serve uploaded severity tracking images."""
+        return send_from_directory(SEVERITY_UPLOADS_DIR, filename)
+
     @app.route("/api/stats", methods=["GET"])
     def stats():
         user_id = request.args.get("user_id")
+        journey_id = request.args.get("journey_id")
         if not user_id or user_id == "anonymous":
             return jsonify({"error": "user_id parameter is required for statistics retrieval"}), 400
         
-        real_history = _load_real_history(user_id)
+        real_history, storage_backend = _load_real_history(user_id, journey_id=journey_id)
         
         if not real_history:
             return jsonify({
                 "labels": ["Redness", "Inflammation", "Scaling", "Texture"],
                 "values": [0, 0, 0, 0],
-                "note": "No tracking data available yet."
+                "note": "No tracking data available yet.",
+                "storage_backend": storage_backend,
             })
 
         # Average the metrics across all visits
@@ -552,7 +864,8 @@ def register_routes(app) -> None:
                 round(avg_metrics["inflammation"] / count, 1),
                 round(avg_metrics["scaling"] / count, 1),
                 round(avg_metrics["texture"] / count, 1),
-            ]
+            ],
+            "storage_backend": storage_backend,
         })
 
     @app.route("/api/progress", methods=["POST"])
@@ -568,7 +881,10 @@ def register_routes(app) -> None:
         # 1. Handle Multipart Image (Real Analysis Check-in)
         if 'image' in request.files or 'file' in request.files:
             image_file = request.files.get("image") or request.files.get("file")
-            user_id = request.form.get("user_id", "anonymous").strip() or "anonymous"
+            user_id, journey_id = _normalize_user_and_journey_ids(
+                request.form.get("user_id", "anonymous"),
+                request.form.get("journey_id"),
+            )
             
             try:
                 model = get_severity_model(
@@ -591,12 +907,14 @@ def register_routes(app) -> None:
                 confidence = float(prediction.get("confidence", 0.0))
                 
                 # Persistence
-                _append_severity_visit(
+                persistence = _append_severity_visit(
                     user_id=user_id,
+                    journey_id=journey_id,
                     severity_level=severity_level,
                     severity_score=severity_score,
                     confidence=confidence,
                     features=prediction.get("normalized_features"),
+                    metadata={"source": "progress_image_checkin"},
                 )
                 
                 return jsonify({
@@ -604,7 +922,9 @@ def register_routes(app) -> None:
                     "message": "Weekly check-in analyzed and logged successfully.",
                     "severity_level": severity_level,
                     "severity_score": round(severity_score, 2),
-                    "analysis": f"Severity {severity_level} ({(severity_score):.1f}%) recorded."
+                    "analysis": f"Severity {severity_level} ({(severity_score):.1f}%) recorded.",
+                    "journey_id": journey_id,
+                    "tracking_backend": persistence.get("storage_backend"),
                 })
             except Exception as exc:
                 logger.exception("In-flow progress analysis failed")
@@ -612,17 +932,37 @@ def register_routes(app) -> None:
 
         # 2. Handle JSON Summary (Confirmation loop)
         data = request.json or {}
-        user_id = data.get("user_id", "anonymous")
+        user_id, journey_id = _normalize_user_and_journey_ids(
+            data.get("user_id", "anonymous"),
+            data.get("journey_id"),
+        )
         score = data.get("score")
         level = data.get("level")
         
         if score is not None and level is not None:
-             # This is a manual confirmation of a previously run analysis
-             return jsonify({
-                 "status": "success",
-                 "message": "Visit confirmed and logged to journey.",
-                 "details": f"Severity {level} ({score}%) recorded."
-             })
+             try:
+                 severity_score = _safe_float(score)
+                 confidence = _safe_float(data.get("confidence"), 0.0)
+                 metrics = _parse_metrics_json(data.get("metrics") or data.get("metrics_json") or {})
+                 persistence = _append_severity_visit(
+                     user_id=user_id,
+                     journey_id=journey_id,
+                     severity_level=str(level),
+                     severity_score=severity_score,
+                     confidence=confidence,
+                     metrics=metrics,
+                     metadata={"source": "progress_confirmation"},
+                 )
+                 return jsonify({
+                     "status": "success",
+                     "message": "Visit confirmed and logged to journey.",
+                     "details": f"Severity {_normalize_severity_level(level)} ({severity_score:.1f}%) recorded.",
+                     "journey_id": journey_id,
+                     "tracking_backend": persistence.get("storage_backend"),
+                 })
+             except Exception as exc:
+                 logger.exception("Manual progress confirmation save failed")
+                 return jsonify({"status": "error", "message": str(exc)}), 500
              
         return jsonify({
             "status": "info",

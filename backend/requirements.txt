@@ -1,6 +1,7 @@
 # ── Core web framework ────────────────────────────────────────────────────────
 flask
 flask-cors
+gunicorn
 
 # ── Environment configuration ─────────────────────────────────────────────────
 python-dotenv
@@ -35,5 +36,11 @@ imageio-ffmpeg
 
 # ── Database (Supabase) ────────────────────────────────────────────────────────
 supabase
+
+# ── External AI APIs ────────────────────────────────────────────────────────────
+# Groq - free ultra-fast inference (recommended!)
+groq
+# Google Gemini - for image analysis
+google-generativeai
 
 opencv-python-headless

@@ -1,12 +1,20 @@
+from __future__ import annotations
+
 import requests
 
-try:
-    resp = requests.post(
-        "http://localhost:5001/api/chat",
-        headers={"Content-Type": "application/json"},
-        json={"message": "Hi", "session_id": "test"}
-    )
-    print("Status:", resp.status_code)
-    print("Response:", resp.text)
-except Exception as e:
-    print("Error:", e)
+
+def main() -> None:
+    try:
+        response = requests.post(
+            "http://localhost:5001/api/chat",
+            headers={"Content-Type": "application/json"},
+            json={"message": "Hi", "session_id": "test"},
+        )
+        print("Status:", response.status_code)
+        print("Response:", response.text)
+    except Exception as exc:
+        print("Error:", exc)
+
+
+if __name__ == "__main__":
+    main()

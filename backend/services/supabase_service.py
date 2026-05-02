@@ -81,6 +81,31 @@ class SupabaseService:
         result = client.table('chat_sessions').insert(data).execute()
         return result.data[0] if result.data else None
 
+    @classmethod
+    def update_chat_session_title(cls, session_id: str, title: str):
+        """Update the title of a chat session."""
+        client = cls.get_client()
+        client.table('chat_sessions').update({'title': title}).eq('id', session_id).execute()
+
+    @classmethod
+    def get_user_sessions(cls, user_id: str) -> List[Dict]:
+        """List all chat sessions for a user."""
+        client = cls.get_client()
+        result = client.table('chat_sessions') \
+            .select('*') \
+            .eq('user_id', user_id) \
+            .order('created_at', desc=True) \
+            .execute()
+        return result.data or []
+
+    @classmethod
+    def delete_chat_session(cls, session_id: str):
+        """Delete a chat session and its messages."""
+        client = cls.get_client()
+        # Messages will be deleted by cascade if DB is set up, or manually:
+        client.table('chat_messages').delete().eq('session_id', session_id).execute()
+        client.table('chat_sessions').delete().eq('id', session_id).execute()
+
     # =========================================================================
     # CHAT MESSAGE OPERATIONS
     # =========================================================================
@@ -326,6 +351,60 @@ class SupabaseService:
             .execute()
         
         return result.data['body_part'] if result.data else None
+
+    # =========================================================================
+    # SEVERITY TRACKING OPERATIONS
+    # =========================================================================
+
+    @classmethod
+    def save_severity_visit(
+        cls,
+        user_id: str,
+        severity_level: str,
+        severity_score: float,
+        confidence: float,
+        metrics: Optional[Dict[str, Any]] = None,
+        journey_id: str = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        captured_at: str = None,
+    ) -> Dict[str, Any]:
+        """Persist a severity tracking visit for a user."""
+        client = cls.get_client()
+
+        data = {
+            'user_id': user_id,
+            'journey_id': journey_id,
+            'severity_level': severity_level,
+            'severity_score': severity_score,
+            'confidence': confidence,
+            'metrics_json': metrics or {},
+            'metadata': metadata or {},
+            'captured_at': captured_at or datetime.utcnow().isoformat(),
+        }
+
+        result = client.table('severity_visits').insert(data).execute()
+        return result.data[0] if result.data else None
+
+    @classmethod
+    def get_severity_visits(
+        cls,
+        user_id: str,
+        limit: int = 100,
+        journey_id: str = None,
+    ) -> List[Dict]:
+        """Return persisted severity visits for a user."""
+        client = cls.get_client()
+
+        query = (
+            client.table('severity_visits')
+            .select('*')
+            .eq('user_id', user_id)
+        )
+        if journey_id:
+            query = query.eq('journey_id', journey_id)
+
+        result = query.order('captured_at', desc=False).limit(limit).execute()
+        return result.data or []
     
     # =========================================================================
     # TREATMENT TRACKING OPERATIONS

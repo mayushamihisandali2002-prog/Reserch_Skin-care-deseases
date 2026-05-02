@@ -46,9 +46,9 @@ def train_skin_type(data_dir, output_path, epochs=10, batch_size=16, lr=1e-4):
     label_map = {name: i for i, name in enumerate(dataset.classes)}
     print(f"[Training] Classes: {dataset.classes}")
 
-    # Using convnext_tiny as expected by the inference code
-    print("[Model] Initializing convnext_tiny...")
-    model = timm.create_model("convnext_tiny", pretrained=True, num_classes=num_classes)
+    # ResNet18 is much lighter for CPU training
+    print("[Model] Initializing resnet18 (from scratch)...")
+    model = timm.create_model("resnet18", pretrained=False, num_classes=num_classes)
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[Model] Using device: {device}")

@@ -1,0 +1,22 @@
+# Ignore heavy datasets for fast deployment
+assets/data/multimodal_image_audio_diagnosis/research_dataset/
+assets/data/multimodal_image_audio_diagnosis/combined_images/
+assets/data/skin_type_skincare_recommendation/skin_types/
+assets/data/skin_type_skincare_recommendation/skin_types_hf/
+
+# Ignore local environment and cache
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+pytest_tmp/
+backend.log
+
+# Ignore local binaries
+ffmpeg/
+
+# Ignore scratch and test files to keep production clean
+scratch/
+tests/
+tools/training/

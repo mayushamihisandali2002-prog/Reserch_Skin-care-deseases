@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-04-16T05:15:13.675968+00:00",
+  "generated_at_utc": "2026-04-16T11:12:12.790288+00:00",
   "overall_status": "partial_readiness_with_blockers",
   "dataset_availability": {
     "research_dataset_exists": true,
@@ -701,17 +701,17 @@
     "conversational_diagnosis_assistant": "ready_for_internal_testing",
     "multimodal_image_audio_diagnosis": "ready_for_internal_testing",
     "skin_type_skincare_recommendation": "ready_for_internal_testing",
-    "severity_assessment_tracking": "ready_for_internal_testing"
+    "severity_assessment_tracking": "not_ready"
   },
   "nonblocking_subsystems": {
     "standalone_image_model": "not_ready"
   },
   "deployment_readiness": {
     "text_component": "ready_for_internal_testing",
-    "image_component": "ready_for_internal_testing",
+    "image_component": "not_ready",
     "fused_component": "ready_for_internal_testing",
     "skin_type_component": "ready_for_internal_testing",
-    "severity_component": "ready_for_internal_testing"
+    "severity_component": "not_ready"
   },
   "benchmark_templates": {
     "skin_type": {

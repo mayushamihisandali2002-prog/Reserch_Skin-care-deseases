@@ -9,6 +9,7 @@ from inference.config import (
 )
 
 from . import get_skin_type_model
+from services.gemini_service import GeminiService
 
 
 logger = logging.getLogger(__name__)
@@ -210,6 +211,18 @@ def _build_structured_skin_care_output(
             "Lightweight moisturizer",
             "Sunscreen SPF 30+",
         ],
+        "normal": [
+            "Gentle cleanser",
+            "Niacinamide",
+            "Lightweight moisturizer",
+            "Sunscreen SPF 30+",
+        ],
+        "sensitive": [
+            "Ceramides",
+            "Panthenol",
+            "Colloidal Oatmeal",
+            "Mineral sunscreen SPF 30+",
+        ],
     }
 
     goal_safe_additions = {
@@ -264,6 +277,10 @@ def _build_structured_skin_care_output(
         avoid_ingredients.append("Heavy Oils")
     if key == "dry" and "Harsh Foaming Cleansers" not in avoid_ingredients:
         avoid_ingredients.append("Harsh Foaming Cleansers")
+    if key == "sensitive":
+        for ingredient in ["Fragrance", "Strong Exfoliating Acids", "Alcohol-heavy toners"]:
+            if ingredient not in avoid_ingredients:
+                avoid_ingredients.append(ingredient)
 
     filtered_safe: list[str] = []
     for ingredient in safe_ingredients:
@@ -283,6 +300,13 @@ def _build_structured_skin_care_output(
     if key == "dry":
         am_steps[1] = "Ceramide moisturizer"
         pm_steps[2] = "Barrier-repair moisturizer"
+    if key == "normal":
+        am_steps[1] = "Balanced daily moisturizer"
+    if key == "sensitive":
+        am_steps[0] = "Fragrance-free gentle cleanser"
+        am_steps[1] = "Barrier-support moisturizer"
+        pm_steps[1] = "Calming treatment"
+        pm_steps[2] = "Barrier-repair moisturizer"
 
     if routine_level == "full":
         am_steps.insert(1, "Targeted serum")
@@ -290,33 +314,22 @@ def _build_structured_skin_care_output(
 
     if "acne_pimples" in goals_input:
         pm_steps[2 if routine_level == "full" else 1] = "Acne treatment (if tolerated)"
-    if "dark_spots" in goals_input:
-        am_steps[1 if routine_level == "simple" else 2] = "Brightening serum"
-    if "redness_irritation" in goals_input and "Calming serum" not in pm_steps:
-        pm_steps.append("Calming serum")
-
-    note = "Cosmetic guidance only; not a medical diagnosis."
-    if budget == "low":
-        note += " Choose budget-friendly fragrance-free basics."
-    elif budget == "flexible":
-        note += " You can consider premium formulations if tolerated."
-
-    visible_concerns = _to_display_terms(goals_input, GOAL_LABELS)
-    recommendations = [
-        f"Safe ingredients to prioritize: {', '.join(safe_ingredients)}.",
-        f"Avoid ingredients: {', '.join(avoid_ingredients) if avoid_ingredients else 'none specific'}.",
-    ]
 
     return {
-        "safe_ingredients": safe_ingredients,
-        "avoid_ingredients": avoid_ingredients,
-        "routine": {"AM": am_steps, "PM": pm_steps},
-        "visible_concerns": visible_concerns,
-        "recommendations": recommendations,
-        "disclaimer": note,
-        "note": note,
+        "skin_type": key,
+        "routine": {
+            "am": am_steps,
+            "pm": pm_steps,
+        },
+        "ingredients": {
+            "safe": safe_ingredients,
+            "avoid": avoid_ingredients,
+        },
+        "metadata": {
+            "routine_level": routine_level,
+            "budget": budget,
+        }
     }
-
 
 ALLERGY_LABELS = {
     "fragrance": "fragrance",
@@ -342,7 +355,7 @@ GOAL_LABELS = {
 
 ROUTINE_LEVELS = {"simple", "full"}
 BUDGET_LEVELS = {"low", "medium", "flexible"}
-SKIN_TYPES = {"oily", "dry", "combination"}
+SKIN_TYPES = {"oily", "dry", "combination", "normal", "sensitive"}
 
 
 def register_routes(app) -> None:

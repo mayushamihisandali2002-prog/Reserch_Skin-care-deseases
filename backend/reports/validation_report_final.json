@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-04-16T05:15:13.675968+00:00",
+  "generated_at_utc": "2026-04-15T13:44:16.939372+00:00",
   "overall_status": "partial_readiness_with_blockers",
   "dataset_availability": {
     "research_dataset_exists": true,
@@ -8,12 +8,16 @@
     "severity_benchmark_exists": true
   },
   "benchmark_inventory": {
-    "skin_type_class_image_counts": {},
+    "skin_type_class_image_counts": {
+      "Combination": 40,
+      "Dry": 40,
+      "Oily": 40
+    },
     "severity_benchmark_rows": 30
   },
   "limits": {
-    "image_max_per_class": 40,
-    "fused_max_per_class": 8
+    "image_max_per_class": 3,
+    "fused_max_per_class": 1
   },
   "artifact_integrity": {
     "text_label_integrity": {
@@ -49,7 +53,11 @@
       "unexpected_labels": [],
       "is_exact_match": true
     },
-    "skin_type_label_map": {},
+    "skin_type_label_map": {
+      "oily": 0,
+      "dry": 1,
+      "combination": 2
+    },
     "severity_artifact_checks": {
       "threshold_order_valid": true,
       "severity_levels": [
@@ -152,17 +160,17 @@
     "status": "not_ready",
     "loaded": true,
     "dataset_dir": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\multimodal_image_audio_diagnosis\\research_dataset",
-    "images_evaluated": 1200,
-    "max_images_per_class": 40,
-    "top1_accuracy": 0.4958,
-    "top3_accuracy": 0.9683,
-    "ece": 0.0388,
-    "mean_brier_score": 0.018,
+    "images_evaluated": 90,
+    "max_images_per_class": 3,
+    "top1_accuracy": 0.4889,
+    "top3_accuracy": 0.9667,
+    "ece": 0.0444,
+    "mean_brier_score": 0.0178,
     "confidence": {
-      "mean": 0.4909,
-      "median": 0.4633,
-      "min": 0.1487,
-      "max": 0.9529
+      "mean": 0.4908,
+      "median": 0.4607,
+      "min": 0.2363,
+      "max": 0.9088
     },
     "artifact_label_integrity": {
       "source_label_count": 30,
@@ -183,129 +191,128 @@
     "per_class_accuracy": {
       "Acne": 0.0,
       "Actinic Keratosis": 0.0,
-      "Alopecia Areata": 0.95,
+      "Alopecia Areata": 1.0,
       "Basal Cell Carcinoma": 1.0,
-      "Cellulitis": 0.25,
-      "Cherry Angioma": 0.95,
-      "Dermatitis": 0.975,
-      "Dermatofibroma": 0.75,
-      "Eczema": 0.075,
-      "Folliculitis": 0.075,
+      "Cellulitis": 0.3333,
+      "Cherry Angioma": 1.0,
+      "Dermatitis": 1.0,
+      "Dermatofibroma": 0.6667,
+      "Eczema": 0.0,
+      "Folliculitis": 0.0,
       "Herpes Simplex": 0.0,
-      "Hidradenitis Suppurativa": 0.05,
-      "Impetigo": 0.8,
-      "Lichen Planus": 0.925,
+      "Hidradenitis Suppurativa": 0.0,
+      "Impetigo": 1.0,
+      "Lichen Planus": 1.0,
       "Melanocytic Nevi": 0.0,
       "Melanoma": 1.0,
       "Melasma": 1.0,
-      "Molluscum Contagiosum": 0.025,
+      "Molluscum Contagiosum": 0.0,
       "Pigmentation / Dark Spots": 0.0,
       "Pityriasis Versicolor": 1.0,
-      "Psoriasis": 0.1,
+      "Psoriasis": 0.0,
       "Ringworm": 0.0,
       "Rosacea": 1.0,
-      "Scabies": 0.975,
-      "Seborrheic Dermatitis": 0.9,
-      "Seborrheic Keratosis": 0.2,
-      "Shingles": 0.875,
-      "Urticaria": 0.975,
+      "Scabies": 1.0,
+      "Seborrheic Dermatitis": 1.0,
+      "Seborrheic Keratosis": 0.0,
+      "Shingles": 0.6667,
+      "Urticaria": 1.0,
       "Vitiligo": 0.0,
-      "Warts": 0.025
+      "Warts": 0.0
     },
     "top_confusions": [
       {
-        "true": "Actinic Keratosis",
-        "predicted": "Basal Cell Carcinoma",
-        "count": 40
-      },
-      {
-        "true": "Melanocytic Nevi",
-        "predicted": "Melanoma",
-        "count": 40
-      },
-      {
-        "true": "Pigmentation / Dark Spots",
-        "predicted": "Melasma",
-        "count": 40
-      },
-      {
-        "true": "Ringworm",
-        "predicted": "Pityriasis Versicolor",
-        "count": 40
-      },
-      {
-        "true": "Vitiligo",
-        "predicted": "Melasma",
-        "count": 40
-      },
-      {
-        "true": "Warts",
-        "predicted": "Shingles",
-        "count": 39
-      },
-      {
-        "true": "Herpes Simplex",
-        "predicted": "Shingles",
-        "count": 38
-      },
-      {
-        "true": "Hidradenitis Suppurativa",
-        "predicted": "Rosacea",
-        "count": 38
-      },
-      {
         "true": "Acne",
         "predicted": "Rosacea",
-        "count": 37
+        "count": 3
+      },
+      {
+        "true": "Actinic Keratosis",
+        "predicted": "Basal Cell Carcinoma",
+        "count": 3
       },
       {
         "true": "Eczema",
         "predicted": "Seborrheic Dermatitis",
-        "count": 37
+        "count": 3
+      },
+      {
+        "true": "Hidradenitis Suppurativa",
+        "predicted": "Rosacea",
+        "count": 3
+      },
+      {
+        "true": "Melanocytic Nevi",
+        "predicted": "Melanoma",
+        "count": 3
       },
       {
         "true": "Molluscum Contagiosum",
         "predicted": "Shingles",
-        "count": 36
+        "count": 3
+      },
+      {
+        "true": "Pigmentation / Dark Spots",
+        "predicted": "Melasma",
+        "count": 3
       },
       {
         "true": "Psoriasis",
         "predicted": "Lichen Planus",
-        "count": 36
+        "count": 3
+      },
+      {
+        "true": "Ringworm",
+        "predicted": "Pityriasis Versicolor",
+        "count": 3
       },
       {
         "true": "Seborrheic Keratosis",
         "predicted": "Dermatofibroma",
-        "count": 32
+        "count": 3
+      },
+      {
+        "true": "Vitiligo",
+        "predicted": "Melasma",
+        "count": 3
+      },
+      {
+        "true": "Warts",
+        "predicted": "Shingles",
+        "count": 3
       },
       {
         "true": "Cellulitis",
         "predicted": "Impetigo",
-        "count": 28
+        "count": 2
       },
       {
         "true": "Folliculitis",
         "predicted": "Impetigo",
-        "count": 28
+        "count": 2
+      },
+      {
+        "true": "Herpes Simplex",
+        "predicted": "Shingles",
+        "count": 2
       }
     ]
   },
   "fused_component": {
     "status": "ready_for_internal_testing",
     "available": true,
-    "samples_evaluated": 240,
-    "max_images_per_class": 8,
-    "top1_accuracy": 0.95,
+    "samples_evaluated": 30,
+    "max_images_per_class": 1,
+    "top1_accuracy": 0.9333,
     "top3_accuracy": 1.0,
     "confidence": {
-      "mean": 0.5746,
-      "median": 0.5799,
-      "min": 0.3726,
-      "max": 0.8671
+      "mean": 0.5908,
+      "median": 0.5943,
+      "min": 0.3977,
+      "max": 0.8295
     },
     "decision_modes": {
-      "BALANCED_FUSION": 9,
-      "CONFIDENCE_WEIGHTED_FUSION": 231
+      "CONFIDENCE_WEIGHTED_FUSION": 30
     },
     "sample_failures": [
       {
@@ -318,33 +325,6 @@
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\multimodal_image_audio_diagnosis\\research_dataset\\Actinic_Keratosis\\Actinic_Keratosis_0.jpg"
       },
       {
-        "expected": "Actinic Keratosis",
-        "predicted": "Basal Cell Carcinoma",
-        "confidence": 0.4435,
-        "decision_mode": "BALANCED_FUSION",
-        "image_prediction": "Basal Cell Carcinoma",
-        "text_prediction": "Actinic Keratosis",
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\multimodal_image_audio_diagnosis\\research_dataset\\Actinic_Keratosis\\Actinic_Keratosis_01ecb80a.jpg"
-      },
-      {
-        "expected": "Actinic Keratosis",
-        "predicted": "Basal Cell Carcinoma",
-        "confidence": 0.4515,
-        "decision_mode": "BALANCED_FUSION",
-        "image_prediction": "Basal Cell Carcinoma",
-        "text_prediction": "Actinic Keratosis",
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\multimodal_image_audio_diagnosis\\research_dataset\\Actinic_Keratosis\\Actinic_Keratosis_0bd2cd9b.jpg"
-      },
-      {
-        "expected": "Actinic Keratosis",
-        "predicted": "Basal Cell Carcinoma",
-        "confidence": 0.4538,
-        "decision_mode": "BALANCED_FUSION",
-        "image_prediction": "Basal Cell Carcinoma",
-        "text_prediction": "Actinic Keratosis",
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\multimodal_image_audio_diagnosis\\research_dataset\\Actinic_Keratosis\\Actinic_Keratosis_0c89c514.jpg"
-      },
-      {
         "expected": "Melanocytic Nevi",
         "predicted": "Melanoma",
         "confidence": 0.5261,
@@ -352,205 +332,146 @@
         "image_prediction": "Melanoma",
         "text_prediction": "Melanocytic Nevi",
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\multimodal_image_audio_diagnosis\\research_dataset\\Melanocytic_Nevi\\Melanocytic_Nevi_0.jpg"
-      },
-      {
-        "expected": "Melanocytic Nevi",
-        "predicted": "Melanoma",
-        "confidence": 0.551,
-        "decision_mode": "CONFIDENCE_WEIGHTED_FUSION",
-        "image_prediction": "Melanoma",
-        "text_prediction": "Melanocytic Nevi",
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\multimodal_image_audio_diagnosis\\research_dataset\\Melanocytic_Nevi\\Melanocytic_Nevi_004350c7.jpg"
-      },
-      {
-        "expected": "Melanocytic Nevi",
-        "predicted": "Melanoma",
-        "confidence": 0.5261,
-        "decision_mode": "CONFIDENCE_WEIGHTED_FUSION",
-        "image_prediction": "Melanoma",
-        "text_prediction": "Melanocytic Nevi",
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\multimodal_image_audio_diagnosis\\research_dataset\\Melanocytic_Nevi\\Melanocytic_Nevi_0097fb0c.jpg"
-      },
-      {
-        "expected": "Melanocytic Nevi",
-        "predicted": "Melanoma",
-        "confidence": 0.5461,
-        "decision_mode": "CONFIDENCE_WEIGHTED_FUSION",
-        "image_prediction": "Melanoma",
-        "text_prediction": "Melanocytic Nevi",
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\multimodal_image_audio_diagnosis\\research_dataset\\Melanocytic_Nevi\\Melanocytic_Nevi_02ea3e4c.jpg"
-      },
-      {
-        "expected": "Melanocytic Nevi",
-        "predicted": "Melanoma",
-        "confidence": 0.55,
-        "decision_mode": "CONFIDENCE_WEIGHTED_FUSION",
-        "image_prediction": "Melanoma",
-        "text_prediction": "Melanocytic Nevi",
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\multimodal_image_audio_diagnosis\\research_dataset\\Melanocytic_Nevi\\Melanocytic_Nevi_0385d839.jpg"
-      },
-      {
-        "expected": "Melanocytic Nevi",
-        "predicted": "Melanoma",
-        "confidence": 0.5675,
-        "decision_mode": "CONFIDENCE_WEIGHTED_FUSION",
-        "image_prediction": "Melanoma",
-        "text_prediction": "Melanocytic Nevi",
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\multimodal_image_audio_diagnosis\\research_dataset\\Melanocytic_Nevi\\Melanocytic_Nevi_050f7cc7.jpg"
-      },
-      {
-        "expected": "Melanocytic Nevi",
-        "predicted": "Melanoma",
-        "confidence": 0.436,
-        "decision_mode": "CONFIDENCE_WEIGHTED_FUSION",
-        "image_prediction": "Melanoma",
-        "text_prediction": "Melanocytic Nevi",
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\multimodal_image_audio_diagnosis\\research_dataset\\Melanocytic_Nevi\\Melanocytic_Nevi_05ce7e05.jpg"
-      },
-      {
-        "expected": "Melanocytic Nevi",
-        "predicted": "Melanoma",
-        "confidence": 0.5414,
-        "decision_mode": "CONFIDENCE_WEIGHTED_FUSION",
-        "image_prediction": "Melanoma",
-        "text_prediction": "Melanocytic Nevi",
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\multimodal_image_audio_diagnosis\\research_dataset\\Melanocytic_Nevi\\Melanocytic_Nevi_06e0dc7b.jpg"
       }
     ]
   },
   "skin_type_component": {
-    "status": "ready_for_internal_testing",
+    "status": "not_ready",
     "loaded": true,
     "validation_available": true,
-    "samples_evaluated": 1020,
-    "top1_accuracy": 0.9422,
+    "samples_evaluated": 120,
+    "top1_accuracy": 0.5167,
     "confidence": {
-      "mean": 0.696,
-      "median": 0.6926,
-      "min": 0.3419,
-      "max": 0.9988
+      "mean": 0.8623,
+      "median": 0.9116,
+      "min": 0.4999,
+      "max": 0.9998
     },
-    "label_map": {},
+    "label_map": {
+      "oily": 0,
+      "dry": 1,
+      "combination": 2
+    },
     "sample_failures": [
       {
         "expected": "Combination",
-        "predicted": "Oily",
-        "confidence": 0.4347,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\22a99bd94fe3e7b0ed38ba09cfe5b43c.jpg"
+        "predicted": "Dry",
+        "confidence": 0.9071,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\04a4a53756b121b9503ead2c8673f6b6.jpg"
+      },
+      {
+        "expected": "Combination",
+        "predicted": "Dry",
+        "confidence": 0.9071,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\04a4a53756b121b9503ead2c8673f6b6_1.jpg"
       },
       {
         "expected": "Combination",
         "predicted": "Oily",
-        "confidence": 0.4315,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\40c3d4c45c2dc85c53fb9eb40d7f159a.jpg"
+        "confidence": 0.9075,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\05a940c68a744924f8f8d78abb4f90f0.jpg"
       },
       {
         "expected": "Combination",
         "predicted": "Oily",
-        "confidence": 0.4094,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\b39d604b453c2b814698a60ca4f937ea.jpg"
+        "confidence": 0.9075,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\05a940c68a744924f8f8d78abb4f90f0_1.jpg"
       },
       {
-        "expected": "Dry",
-        "predicted": "Combination",
-        "confidence": 0.4256,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\042e8cd2cdb0c064f5cb7bb5f48ff4f5.jpg"
-      },
-      {
-        "expected": "Dry",
-        "predicted": "Combination",
-        "confidence": 0.4434,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\1a35d592c68f1647fd55f8e9e3328267.jpg"
-      },
-      {
-        "expected": "Dry",
-        "predicted": "Combination",
-        "confidence": 0.5135,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\2dee3b26e219d17f9d2c766e872717f6.jpg"
-      },
-      {
-        "expected": "Dry",
-        "predicted": "Combination",
-        "confidence": 0.4291,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\390c8ae101e05f5813b29890c9f98f91.jpg"
-      },
-      {
-        "expected": "Dry",
-        "predicted": "Combination",
-        "confidence": 0.3582,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\41b6b95f33ddc97b7d79ce17265121dd.jpg"
-      },
-      {
-        "expected": "Dry",
-        "predicted": "Combination",
-        "confidence": 0.44,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\439e9eae2525e9fa98d1c67ec2498292.jpg"
-      },
-      {
-        "expected": "Dry",
-        "predicted": "Combination",
-        "confidence": 0.5648,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\44216366225348f6665b01831218bfc3.jpg"
-      },
-      {
-        "expected": "Dry",
-        "predicted": "Combination",
-        "confidence": 0.4356,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\47c0080c688beede1a5cc2c4b79127ef.jpg"
-      },
-      {
-        "expected": "Dry",
-        "predicted": "Combination",
-        "confidence": 0.4131,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\601e2447b291b5abd3c7eb06d05516d5.jpg"
-      },
-      {
-        "expected": "Dry",
-        "predicted": "Combination",
-        "confidence": 0.4231,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\697a90652d7895e0ad6b92b2d452b0e7.jpg"
-      },
-      {
-        "expected": "Dry",
-        "predicted": "Combination",
-        "confidence": 0.4748,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\7062c19b5e23c293a360496ffd3f1f5a.jpg"
-      },
-      {
-        "expected": "Dry",
+        "expected": "Combination",
         "predicted": "Oily",
-        "confidence": 0.4548,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\7f8f796f666012e3b2b429158f87caa0.jpg"
+        "confidence": 0.9309,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\07b4077157f99ceed1d761560f0bf9ef.jpg"
       },
       {
-        "expected": "Dry",
+        "expected": "Combination",
         "predicted": "Oily",
-        "confidence": 0.496,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\80aa7b02862bdd45959bc6dd4cb4245f.jpg"
+        "confidence": 0.9309,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\07b4077157f99ceed1d761560f0bf9ef_1.jpg"
       },
       {
-        "expected": "Dry",
-        "predicted": "Combination",
-        "confidence": 0.4207,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\81a1b2485a1858ee935958c01ce9c0ee.jpg"
+        "expected": "Combination",
+        "predicted": "Oily",
+        "confidence": 0.5846,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\07b7f9833a85b3bda4006650e981f259.jpg"
       },
       {
-        "expected": "Dry",
-        "predicted": "Combination",
-        "confidence": 0.4408,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\86f312bcd71a269477c8d9c673efc365.jpg"
+        "expected": "Combination",
+        "predicted": "Oily",
+        "confidence": 0.5846,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\07b7f9833a85b3bda4006650e981f259_1.jpg"
       },
       {
-        "expected": "Dry",
-        "predicted": "Combination",
-        "confidence": 0.4258,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\87f1325ff46f1226eac70c813a242dc4.jpg"
+        "expected": "Combination",
+        "predicted": "Oily",
+        "confidence": 0.9337,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\0bbb1bdaa4497862457cac765af577b0.jpg"
       },
       {
-        "expected": "Dry",
-        "predicted": "Combination",
-        "confidence": 0.4679,
-        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Dry\\9035c2ebcc1caa951d7c3a0df050dd60.jpg"
+        "expected": "Combination",
+        "predicted": "Oily",
+        "confidence": 0.9337,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\0bbb1bdaa4497862457cac765af577b0_1.jpg"
+      },
+      {
+        "expected": "Combination",
+        "predicted": "Oily",
+        "confidence": 0.9815,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\0bfc06d6c112aa82d2a4d57ee0bb85e1.jpg"
+      },
+      {
+        "expected": "Combination",
+        "predicted": "Oily",
+        "confidence": 0.9815,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\0bfc06d6c112aa82d2a4d57ee0bb85e1_1.jpg"
+      },
+      {
+        "expected": "Combination",
+        "predicted": "Oily",
+        "confidence": 0.9919,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\0ecc425981b9ebde26d9b76f17a0e81f.jpg"
+      },
+      {
+        "expected": "Combination",
+        "predicted": "Oily",
+        "confidence": 0.9919,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\0ecc425981b9ebde26d9b76f17a0e81f_1.jpg"
+      },
+      {
+        "expected": "Combination",
+        "predicted": "Oily",
+        "confidence": 0.9607,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\0f486eee108c2a43ce7f59b6703527e1.jpg"
+      },
+      {
+        "expected": "Combination",
+        "predicted": "Oily",
+        "confidence": 0.9607,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\0f486eee108c2a43ce7f59b6703527e1_1.jpg"
+      },
+      {
+        "expected": "Combination",
+        "predicted": "Dry",
+        "confidence": 0.9051,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\0f6a0bf45a855eb39fc4754e1b6d527d.jpg"
+      },
+      {
+        "expected": "Combination",
+        "predicted": "Dry",
+        "confidence": 0.9051,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\0f6a0bf45a855eb39fc4754e1b6d527d_1.jpg"
+      },
+      {
+        "expected": "Combination",
+        "predicted": "Oily",
+        "confidence": 0.8992,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\0fb9ffcc16d6bb4a6ab4599455207342.jpg"
+      },
+      {
+        "expected": "Combination",
+        "predicted": "Oily",
+        "confidence": 0.8992,
+        "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types\\Combination\\0fb9ffcc16d6bb4a6ab4599455207342_1.jpg"
       }
     ]
   },
@@ -561,10 +482,10 @@
     "samples_evaluated": 30,
     "top1_accuracy": 0.4,
     "confidence": {
-      "mean": 0.5873,
-      "median": 0.5748,
-      "min": 0.2833,
-      "max": 0.8595
+      "mean": 0.3784,
+      "median": 0.3657,
+      "min": 0.2415,
+      "max": 0.6575
     },
     "artifact_checks": {
       "threshold_order_valid": true,
@@ -590,109 +511,109 @@
       {
         "expected": "mild",
         "predicted": "moderate",
-        "confidence": 0.4236,
+        "confidence": 0.3727,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_000.jpg"
       },
       {
         "expected": "moderate",
         "predicted": "mild",
-        "confidence": 0.5173,
+        "confidence": 0.52,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_001.jpg"
       },
       {
         "expected": "severe",
         "predicted": "mild",
-        "confidence": 0.4566,
+        "confidence": 0.3097,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_002.jpg"
       },
       {
         "expected": "mild",
         "predicted": "moderate",
-        "confidence": 0.4079,
+        "confidence": 0.3657,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_003.jpg"
       },
       {
         "expected": "severe",
         "predicted": "moderate",
-        "confidence": 0.4129,
+        "confidence": 0.371,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_005.jpg"
       },
       {
         "expected": "mild",
         "predicted": "moderate",
-        "confidence": 0.4085,
+        "confidence": 0.2415,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_006.jpg"
       },
       {
         "expected": "moderate",
         "predicted": "mild",
-        "confidence": 0.6322,
+        "confidence": 0.505,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_007.jpg"
       },
       {
         "expected": "mild",
         "predicted": "moderate",
-        "confidence": 0.3668,
+        "confidence": 0.3622,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_009.jpg"
       },
       {
         "expected": "moderate",
         "predicted": "severe",
-        "confidence": 0.5867,
+        "confidence": 0.364,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_010.jpg"
       },
       {
         "expected": "severe",
         "predicted": "moderate",
-        "confidence": 0.456,
+        "confidence": 0.2782,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_011.jpg"
       },
       {
         "expected": "mild",
         "predicted": "moderate",
-        "confidence": 0.444,
+        "confidence": 0.3657,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_015.jpg"
       },
       {
         "expected": "severe",
         "predicted": "moderate",
-        "confidence": 0.52,
+        "confidence": 0.3937,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_017.jpg"
       },
       {
         "expected": "mild",
         "predicted": "severe",
-        "confidence": 0.442,
+        "confidence": 0.329,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_018.jpg"
       },
       {
         "expected": "moderate",
         "predicted": "severe",
-        "confidence": 0.5628,
+        "confidence": 0.2957,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_019.jpg"
       },
       {
         "expected": "moderate",
         "predicted": "severe",
-        "confidence": 0.6148,
+        "confidence": 0.3727,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_020.jpg"
       },
       {
         "expected": "moderate",
         "predicted": "mild",
-        "confidence": 0.5198,
+        "confidence": 0.4925,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_023.jpg"
       },
       {
         "expected": "moderate",
         "predicted": "mild",
-        "confidence": 0.2833,
+        "confidence": 0.27,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_024.jpg"
       },
       {
         "expected": "moderate",
         "predicted": "severe",
-        "confidence": 0.5111,
+        "confidence": 0.3622,
         "file": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\severity_assessment_tracking\\severity_benchmark\\images\\sample_029.jpg"
       }
     ]
@@ -700,24 +621,28 @@
   "major_component_readiness": {
     "conversational_diagnosis_assistant": "ready_for_internal_testing",
     "multimodal_image_audio_diagnosis": "ready_for_internal_testing",
-    "skin_type_skincare_recommendation": "ready_for_internal_testing",
-    "severity_assessment_tracking": "ready_for_internal_testing"
+    "skin_type_skincare_recommendation": "not_ready",
+    "severity_assessment_tracking": "not_ready"
   },
   "nonblocking_subsystems": {
     "standalone_image_model": "not_ready"
   },
   "deployment_readiness": {
     "text_component": "ready_for_internal_testing",
-    "image_component": "ready_for_internal_testing",
+    "image_component": "not_ready",
     "fused_component": "ready_for_internal_testing",
-    "skin_type_component": "ready_for_internal_testing",
-    "severity_component": "ready_for_internal_testing"
+    "skin_type_component": "not_ready",
+    "severity_component": "not_ready"
   },
   "benchmark_templates": {
     "skin_type": {
       "dataset_dir": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types",
       "reference_dataset_dir": "D:\\Research\\zip skin\\Reserch_Skin-care-deseases\\backend\\assets\\data\\skin_type_skincare_recommendation\\skin_types_hf",
-      "expected_class_dirs": [],
+      "expected_class_dirs": [
+        "Combination",
+        "Dry",
+        "Oily"
+      ],
       "accepted_extensions": [
         ".jpeg",
         ".jpg",
