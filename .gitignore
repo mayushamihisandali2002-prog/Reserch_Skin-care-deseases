@@ -35,6 +35,14 @@ Thumbs.db
 *.safetensors
 *.joblib
 
+# Allow production models for deployment
+!backend/assets/models/multimodal_image_audio_diagnosis/image_best_finetuned.pt
+!backend/assets/models/conversational_diagnosis_assistant/distilbert/**/*
+!backend/assets/models/severity_assessment_tracking/severity/severity_model.joblib
+!backend/assets/models/severity_assessment_tracking/severity/metadata.json
+!backend/assets/models/skin_type_skincare_recommendation/skin_type/skin_type_convnext_cleaned_best.pt
+!backend/assets/models/skin_type_skincare_recommendation/skin_type/label_map_skin_type.json
+
 # Cache / temp / logs
 *.log
 *.cache
