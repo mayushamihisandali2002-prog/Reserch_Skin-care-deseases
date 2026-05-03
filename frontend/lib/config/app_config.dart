@@ -31,7 +31,7 @@ class AppConfig {
 
     // Production URL (when deployed)
     if (environment == Environment.production) {
-      return 'https://agile-friendship-production.up.railway.app';
+      return 'https://reserchskin-care-deseases-production.up.railway.app';
     }
 
     // Development URLs based on platform
