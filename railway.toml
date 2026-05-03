@@ -1,9 +1,8 @@
 [build]
-builder = "dockerfile"
-dockerfilePath = "backend/Dockerfile"
+builder = "nixpacks"
 
 [deploy]
-startCommand = ""
+startCommand = "cd backend && python3 -m gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
