@@ -3,6 +3,8 @@ nixPkgs = ["python311", "ffmpeg", "git-lfs"]
 
 [phases.install]
 cmds = [
+    "git lfs install",
+    "git lfs pull",
     "python3 -m pip install --upgrade pip",
     "python3 -m pip install torch==2.2.2+cpu torchvision==0.17.2+cpu --extra-index-url https://download.pytorch.org/whl/cpu",
     "python3 -m pip install -r backend/requirements.txt"
