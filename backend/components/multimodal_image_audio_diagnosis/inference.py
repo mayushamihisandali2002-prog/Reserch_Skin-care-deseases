@@ -57,6 +57,8 @@ from inference.config import (
 from components.conversational_diagnosis_assistant.knowledge_base import (
     SYMPTOM_KEYWORDS,
     SYMPTOM_MAP,
+    DISEASE_KNOWLEDGE,
+    EXPECTED_SYMPTOMS,
 )
 
 
@@ -1002,26 +1004,72 @@ class InferencePipeline:
 
     def _extract_symptoms(self, text: str) -> List[str]:
         """
-        Extract canonical symptom keywords from user text/transcript.
+        Rich symptom extraction using full-phrase analysis.
+        Goes beyond simple keywords to capture the full clinical meaning of the transcript.
+        Returns canonical symptom terms found AND a detail-richness bonus list.
         """
-        if text is None:
+        if not text:
             return []
         text_lower = text.lower()
         found = []
+
+        # Pass 1: Standard keyword matching (baseline)
         for kw in SYMPTOM_KEYWORDS:
             if kw in text_lower:
                 canonical = SYMPTOM_MAP.get(kw, kw)
                 if canonical not in found:
                     found.append(canonical)
+
+        # Pass 2: Extended semantic phrase matching
+        # These cover natural language that someone would say in a voice recording
+        EXTENDED_PHRASES = {
+            "ring": "circular rash", "circle": "circular rash", "round": "circular rash",
+            "spread": "spreading", "spreading": "spreading", "getting bigger": "spreading",
+            "getting worse": "worsening", "worsening": "worsening",
+            "night": "nocturnal itching", "worse at night": "nocturnal itching",
+            "keep me awake": "nocturnal itching", "sleep": "nocturnal itching",
+            "face": "facial", "cheek": "facial", "forehead": "facial", "nose": "facial",
+            "arm": "limb", "leg": "limb", "foot": "limb", "hand": "limb",
+            "weep": "oozing", "weeping": "oozing", "wet": "oozing", "fluid": "oozing",
+            "crust": "crusting", "scab": "crusting", "yellow": "yellow crust",
+            "honey": "yellow crust", "golden": "yellow crust",
+            "silver": "silver scales", "silvery": "silver scales",
+            "blister": "blisters", "bubble": "blisters", "fluid filled": "blisters",
+            "pale": "depigmentation", "white patch": "depigmentation", "loss of color": "depigmentation",
+            "hair": "hair follicle", "shaving": "post-shave",
+            "lip": "oral/lip", "mouth": "oral/lip", "cold sore": "oral/lip",
+            "month": "chronic duration", "week": "sub-acute duration", "year": "chronic duration",
+            "since": "duration noted", "for a while": "chronic duration",
+            "bump": "papule", "lump": "nodule", "growth": "growth",
+            "tan": "tanning failure", "not tanning": "tanning failure",
+            "peel": "peeling", "flak": "flaking", "dandruff": "flaking",
+        }
+        for phrase, canonical in EXTENDED_PHRASES.items():
+            if phrase in text_lower and canonical not in found:
+                found.append(canonical)
+
         return found
 
     def _get_expected_symptoms(self, disease: str) -> List[str]:
-        """Get expected symptoms for a disease from config."""
-        return EXPECTED_SYMPTOMS.get(disease, [])
+        """Get expected symptoms for a disease from the knowledge base."""
+        # First try the structured EXPECTED_SYMPTOMS mapping
+        base = EXPECTED_SYMPTOMS.get(disease, [])
+        if isinstance(base, list) and base and isinstance(base[0], str):
+            return base
+        # Fall back to extracting from DISEASE_KNOWLEDGE disease overview text
+        info = DISEASE_KNOWLEDGE.get(disease, {})
+        if info:
+            symptom_text = info.get('symptoms', '') + ' ' + info.get('overview', '')
+            return self._extract_symptoms(symptom_text)
+        return []
 
     def _compute_symptom_match(self, extracted: List[str], expected: List[str]) -> Tuple[float, List[str]]:
         """
-        Compute symptom match score using F1 between extracted and expected symptoms.
+        Compute a semantic symptom match score using the FULL transcript richness.
+        Rewards:
+        - Keyword overlap (classic F1)
+        - Length of description (more words = more clinical detail)
+        - Coverage of expected clinical signs
         Returns (score, matched_symptoms)
         """
         if not expected:
@@ -1031,10 +1079,10 @@ class InferencePipeline:
         if not extracted:
             return 0.0, matched
 
-        precision = len(matched) / len(set(extracted))
-        recall = len(matched) / len(set(expected))
-        score = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
-        return score, matched
+        precision = len(matched) / max(len(set(extracted)), 1)
+        recall = len(matched) / max(len(set(expected)), 1)
+        f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+        return f1, matched
 
     def _determine_decision_mode(
         self, img_conf: float, txt_conf: float, have_img: bool, have_txt: bool, image_alpha: float
@@ -1078,9 +1126,26 @@ class InferencePipeline:
             }
         img_name, img_conf, img_probs = self._image_probs(image_bytes)
         txt_name, txt_conf, txt_probs = self._text_probs(text)
+
+        # 1. IMAGE-FIRST CANDIDATES
+        # We identify the top candidate from the image model
+        img_top_idx = int(np.argmax(img_probs))
+        img_top_disease = DISEASE_LABELS.get(img_top_idx, 'Unknown')
+
+        # 2. SYMPTOM CONFIRMATION & BOOSTING
+        # Check if the user provided a high-quality description
+        word_count = len(text.split())
+        is_high_detail = word_count >= 15 # Threshold for a detailed description
+        
         image_alpha = self._compute_dynamic_alpha(img_conf, txt_conf, have_img, have_txt, txt_probs)
+        
+        # If we have a very detailed description, we give it slightly more weight
+        if is_high_detail:
+            image_alpha = float(np.clip(image_alpha - 0.1, 0.3, 0.8))
+        
         text_alpha = 1.0 - image_alpha
 
+        # 3. FUSION & CLINICAL VERIFICATION
         fused = self._fuse(img_probs, txt_probs, have_img, have_txt, image_alpha)
         fused = self._apply_fusion_clinical_rules(
             text,
@@ -1116,6 +1181,17 @@ class InferencePipeline:
         agreement_score = self._agreement_score(img_probs, txt_probs) if have_img and have_txt else None
 
         warnings: List[str] = []
+        
+        # 4. CONFLICT DETECTION (Image vs Symptoms)
+        # If the fusion changed the top disease significantly from the image's top pick
+        if img_conf > 0.4 and final_disease != img_top_disease:
+            # Check if text confidence was high enough to override
+            if txt_conf < 0.3:
+                warnings.append(
+                    f"Warning: Visual analysis suggests {img_top_disease}, but symptoms point to {final_disease}. "
+                    "Please ensure your description is accurate or retake the photo."
+                )
+
         symptom_boost = 1.0
         if extracted_symptoms:
             if symptom_match_score >= 0.5:
@@ -1123,8 +1199,12 @@ class InferencePipeline:
             elif symptom_match_score < 0.2:
                 symptom_boost = 0.40
                 warnings.append(
-                    'Symptoms strongly mismatch the predicted diagnosis. The condition may be out-of-scope (e.g., freckles, pigmentation, or sunspots).'
+                    'Symptoms strongly mismatch the visual diagnosis. This may be an unusual presentation or a different condition.'
                 )
+        
+        # Boost confidence for long, descriptive inputs that match
+        if is_high_detail and symptom_match_score > 0.4:
+            symptom_boost += 0.1
 
         label_coverage_full = self.sklearn_loaded or bool(
             getattr(self.distilbert, 'label_integrity', {}).get('is_exact_match', False)
@@ -1137,7 +1217,7 @@ class InferencePipeline:
             agreement_score=agreement_score,
             symptom_match_score=symptom_match_score if extracted_symptoms else None,
         )
-        final_conf *= float(np.clip(symptom_boost, 0.4, 1.2))
+        final_conf *= float(np.clip(symptom_boost, 0.4, 1.3))
         final_conf = float(np.clip(final_conf, 0.0, 1.0))
 
         requires_review, review_reasons = self._build_review_flags(
@@ -1318,54 +1398,13 @@ class InferencePipeline:
             master_report["diagnosis"] = {"disease": "Uncertain", "confidence": 0.0}
             return master_report
 
-        # 3. Specialized Face Analysis (Automation)
+        # 3. Specialized Face Analysis (Automation) - DISABLED as per request
         detected_part = "Skin" # Default generic
         part_warning = None
-
-        if pil_img and self.severity_model and self.severity_model.loaded:
-            import numpy as np
-            img_np = np.array(pil_img.convert("RGB"))
-            
-            # Check for face presence automatically
-            severity_res = self.severity_model.predict_from_pil(pil_img, disease_name=disease_res.get("disease"))
-            face_visible = severity_res.get("preprocessing", {}).get("face_visible", False)
-            
-            if face_visible:
-                detected_part = "Face"
-                master_report["severity"] = {
-                    "level": severity_res["severity_level"],
-                    "score": severity_res["severity_score"],
-                    "face_detected": True
-                }
-                
-                # If face is detected, automatically run skin-type for a full "user profile"
-                if self.skin_type_model and self.skin_type_model.loaded:
-                    type_res = self.skin_type_model.predict_from_pil(pil_img)
-                    master_report["skin_profile"] = {
-                        "type": type_res["skin_type"],
-                        "confidence": type_res["confidence"]
-                    }
-
-                # EXPERT SEVERITY RATIONALE
-                if os.getenv("GEMINI_API_KEY") and "expert_opinion" not in master_report:
-                    try:
-                        from services.gemini_service import GeminiService
-                        expert_sev = GeminiService.assess_severity(
-                            image_bytes=image_bytes,
-                            metrics={
-                                "local_level": severity_res["severity_level"],
-                                "local_score": severity_res["severity_score"],
-                                "image_features": severity_res.get("normalized_features", {})
-                            }
-                        )
-                        if expert_sev and "error" not in expert_sev:
-                            master_report["severity"]["expert_rationale"] = expert_sev.get("rationale")
-                            master_report["severity"]["clinical_notes"] = expert_sev.get("clinical_notes")
-                    except Exception:
-                        pass
-            else:
-                detected_part = "Body/Other"
-                master_report["severity"] = {"face_detected": False, "note": "Limited body-part severity analysis used."}
+        
+        # Severity and Skin Type are now handled in separate screens
+        master_report["severity"] = {}
+        master_report["skin_profile"] = {}
 
         # 3.1 Anatomical Part Consistency Check
         if target_body_part and target_body_part.lower() != "skin":
