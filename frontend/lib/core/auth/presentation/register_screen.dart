@@ -371,7 +371,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     // Password Field
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: context.clrSurface,
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
@@ -415,7 +415,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     // Confirm Password Field
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: context.clrSurface,
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(

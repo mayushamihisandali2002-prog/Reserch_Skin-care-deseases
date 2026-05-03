@@ -556,56 +556,99 @@ class _SeverityScreenState extends State<SeverityScreen> {
             accent: Colors.orangeAccent,
             child: Column(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.network(
-                              '$baseUrl$baselineImageUrl',
-                              height: 150,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Container(
-                                height: 150,
+                if (MediaQuery.of(context).size.width < 380) ...[
+                  Column(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          '$baseUrl$baselineImageUrl',
+                          height: 180,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            height: 180,
+                            width: double.infinity,
+                            color: context.clrBackgroundAlt,
+                            child: const Icon(Icons.broken_image_outlined),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text('Baseline (Day 1)', style: AppTextStyles.caption(context)),
+                      const SizedBox(height: 16),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: currentImageUrl != null
+                            ? Image.network(
+                                '$baseUrl$currentImageUrl',
+                                height: 180,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              )
+                            : Container(
+                                height: 180,
+                                width: double.infinity,
                                 color: context.clrBackgroundAlt,
-                                child: const Icon(Icons.broken_image_outlined),
+                                child: const Center(child: Text('Current Scan')),
+                              ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text('Current Scan', style: AppTextStyles.caption(context)),
+                    ],
+                  ),
+                ] else ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.network(
+                                '$baseUrl$baselineImageUrl',
+                                height: 150,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => Container(
+                                  height: 150,
+                                  color: context.clrBackgroundAlt,
+                                  child: const Icon(Icons.broken_image_outlined),
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text('Baseline', style: AppTextStyles.caption(context)),
-                        ],
+                            const SizedBox(height: 6),
+                            Text('Baseline', style: AppTextStyles.caption(context)),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: currentImageUrl != null
-                                ? Image.network(
-                                    '$baseUrl$currentImageUrl',
-                                    height: 150,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Container(
-                                    height: 150,
-                                    color: context.clrBackgroundAlt,
-                                    child: const Center(child: Text('Current')),
-                                  ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text('Current', style: AppTextStyles.caption(context)),
-                        ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: currentImageUrl != null
+                                  ? Image.network(
+                                      '$baseUrl$currentImageUrl',
+                                      height: 150,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Container(
+                                      height: 150,
+                                      color: context.clrBackgroundAlt,
+                                      child: const Center(child: Text('Current')),
+                                    ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text('Current', style: AppTextStyles.caption(context)),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
                 if (healingInsight.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Container(

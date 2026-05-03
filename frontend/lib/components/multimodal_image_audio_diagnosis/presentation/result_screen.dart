@@ -178,10 +178,6 @@ class _ResultScreenState extends State<ResultScreen> {
                 ),
                 const SizedBox(height: 14),
               ],
-              if (severity.isNotEmpty && severity['face_detected'] == true) ...[
-                _buildSeverityCard(severity),
-                const SizedBox(height: 14),
-              ],
 
               if (hasTranscript) ...[
                 _buildSectionCard(
@@ -223,10 +219,6 @@ class _ResultScreenState extends State<ResultScreen> {
               const SizedBox(height: 14),
               if (treatments.isNotEmpty) ...[
                 _buildTreatmentSection(treatments),
-                const SizedBox(height: 14),
-              ],
-              if (routine.isNotEmpty) ...[
-                _buildRoutineSection(routine),
                 const SizedBox(height: 14),
               ],
               if (nextSteps.isNotEmpty) ...[

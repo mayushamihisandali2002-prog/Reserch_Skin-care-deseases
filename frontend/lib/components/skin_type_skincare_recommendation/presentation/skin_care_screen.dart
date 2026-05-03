@@ -350,7 +350,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
       runSpacing: 12,
       children: [
         SizedBox(
-          width: 180,
+          width: (MediaQuery.of(context).size.width < 400 ? double.infinity : 180),
           child: FilledButton.icon(
             onPressed: () => _pickImage(ImageSource.camera),
             icon: const Icon(Icons.camera_alt_outlined),
@@ -366,7 +366,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
           ),
         ),
         SizedBox(
-          width: 180,
+          width: (MediaQuery.of(context).size.width < 400 ? double.infinity : 180),
           child: OutlinedButton.icon(
             onPressed: () => _pickImage(ImageSource.gallery),
             icon: const Icon(Icons.photo_library_outlined),

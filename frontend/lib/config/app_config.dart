@@ -16,7 +16,7 @@ class AppConfig {
   AppConfig._internal();
 
   // Current environment
-  static Environment environment = Environment.development;
+  static Environment environment = Environment.production;
 
   // ============================================================================
   // API CONFIGURATION
@@ -31,7 +31,7 @@ class AppConfig {
 
     // Production URL (when deployed)
     if (environment == Environment.production) {
-      return 'https://your-production-api.com';
+      return 'https://agile-friendship-production.up.railway.app';
     }
 
     // Development URLs based on platform

@@ -117,6 +117,10 @@ class _InstructionScreenState extends State<InstructionScreen> {
           setState(() {
             _transcribedText = result.recognizedWords;
             _hasTranscription = _transcribedText.isNotEmpty;
+            // UPDATE TEXTBOX IN REAL-TIME
+            if (_transcribedText.isNotEmpty) {
+              _symptomController.text = _transcribedText;
+            }
           });
         },
         localeId: 'en_US',
@@ -131,6 +135,7 @@ class _InstructionScreenState extends State<InstructionScreen> {
       _uploadedAudioBytes = null;
       _uploadedAudioName = null;
       _hasUploadedAudio = false;
+      _symptomController.clear();
     });
   }
 
@@ -157,11 +162,9 @@ class _InstructionScreenState extends State<InstructionScreen> {
     _hasUploadedAudio;
 
   String _effectiveSymptomText() {
-    String text = _symptomController.text.trim();
-    if (_transcribedText.isNotEmpty) {
-      text = text.isEmpty ? _transcribedText : '$text\n\nVoice Transcript: $_transcribedText';
-    }
-    return text;
+    // Priority: typed text first, then live recording, then uploaded audio
+    // The text box always reflects the current transcript, so we just return it
+    return _symptomController.text.trim();
   }
 
   Future<void> _analyze() async {
@@ -176,6 +179,28 @@ class _InstructionScreenState extends State<InstructionScreen> {
         audioFileName: _uploadedAudioName,
         journeyId: _selectedJourneyId,
       );
+
+      // After upload analysis: if backend transcribed audio, show it in the textbox
+      if (mounted && _hasUploadedAudio) {
+        final transcript = result['diagnosis']?['transcript']?.toString() ?? '';
+        if (transcript.isNotEmpty && _symptomController.text.trim().isEmpty) {
+          setState(() {
+            _symptomController.text = transcript;
+            _transcribedText = transcript;
+            _hasTranscription = true;
+          });
+          // Show a brief notification that transcription succeeded
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Voice transcribed! Showing your text below.'),
+              duration: Duration(seconds: 2),
+              backgroundColor: Color(0xFF2E7D32),
+            ),
+          );
+          return; // Let user review transcript before going to results
+        }
+      }
+
       if (mounted) {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (context) => ResultScreen(data: result)),
@@ -349,19 +374,42 @@ class _InstructionScreenState extends State<InstructionScreen> {
           const SizedBox(height: 10),
           TextField(
             controller: _symptomController,
-            maxLines: 3,
-            decoration: InputDecoration(hintText: 'Describe itch, pain, duration...', border: OutlineInputBorder(borderRadius: BorderRadius.circular(16))),
+            maxLines: 4,
+            onChanged: (val) => setState(() {}),
+            decoration: InputDecoration(
+              hintText: 'Describe itch, pain, duration, and any changes you noticed...', 
+              hintStyle: TextStyle(fontSize: 14, color: context.clrTextSec.withValues(alpha: 0.6)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: context.clrBorder)),
+              filled: true,
+              fillColor: context.clrSurface.withValues(alpha: 0.5),
+            ),
           ),
+          const SizedBox(height: 10),
+          _buildDetailIndicator(),
           const SizedBox(height: 12),
-          Row(
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
             children: [
-              _voiceButton(icon: _isRecording ? Icons.stop : Icons.mic, label: _isRecording ? 'Stop' : 'Voice', color: voiceColor, onTap: _toggleRecording),
-              const SizedBox(width: 10),
-              _voiceButton(icon: Icons.upload_file, label: 'Upload', color: AppColors.primary, onTap: _pickAudioFile),
-              if (_hasTranscription || _hasUploadedAudio) ...[
-                const SizedBox(width: 10),
-                _voiceButton(icon: Icons.delete, label: 'Clear', color: AppColors.error, onTap: _deleteTranscription),
-              ],
+              _voiceButton(
+                icon: _isRecording ? Icons.stop : Icons.mic,
+                label: _isRecording ? 'Stop' : 'Voice',
+                color: voiceColor,
+                onTap: _toggleRecording,
+              ),
+              _voiceButton(
+                icon: Icons.upload_file,
+                label: 'Upload',
+                color: AppColors.primary,
+                onTap: _pickAudioFile,
+              ),
+              if (_hasTranscription || _hasUploadedAudio)
+                _voiceButton(
+                  icon: Icons.delete,
+                  label: 'Clear',
+                  color: AppColors.error,
+                  onTap: _deleteTranscription,
+                ),
             ],
           ),
         ],
@@ -391,6 +439,38 @@ class _InstructionScreenState extends State<InstructionScreen> {
         ),
         child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Run Clinical Scan', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
       ),
+    );
+  }
+
+  Widget _buildDetailIndicator() {
+    final text = _symptomController.text.trim();
+    final words = text.isEmpty ? 0 : text.split(RegExp(r'\s+')).length;
+    
+    double progress = (words / 15).clamp(0.0, 1.0);
+    Color color = words < 5 ? AppColors.error : words < 12 ? AppColors.warning : AppColors.success;
+    String label = words < 5 ? 'Need more detail' : words < 12 ? 'Good' : 'Excellent Detail';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Symptom Detail Level', style: TextStyle(fontSize: 12, color: context.clrTextSec, fontWeight: FontWeight.w600)),
+            Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        const SizedBox(height: 5),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: progress,
+            backgroundColor: color.withValues(alpha: 0.1),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            minHeight: 6,
+          ),
+        ),
+      ],
     );
   }
 

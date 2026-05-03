@@ -568,7 +568,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 800),
         child: Container(
-          margin: const EdgeInsets.fromLTRB(20, 0, 20, 30),
+          margin: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).size.width < 400 ? 12 : 30),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
           decoration: BoxDecoration(
             color: context.clrSurface,
