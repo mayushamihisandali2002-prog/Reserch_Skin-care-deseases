@@ -156,10 +156,18 @@ class _InstructionScreenState extends State<InstructionScreen> {
     } catch (_) {}
   }
 
-  bool get _hasSymptomContext => 
-    _symptomController.text.trim().isNotEmpty || 
-    _transcribedText.isNotEmpty || 
+  int get _wordCount {
+    final text = _symptomController.text.trim();
+    if (text.isEmpty) return 0;
+    return text.split(RegExp(r'\s+')).length;
+  }
+
+  bool get _hasSymptomContext =>
+    _symptomController.text.trim().isNotEmpty ||
+    _transcribedText.isNotEmpty ||
     _hasUploadedAudio;
+
+  bool get _hasEnoughDetail => _hasUploadedAudio || _wordCount >= 8;
 
   String _effectiveSymptomText() {
     // Priority: typed text first, then live recording, then uploaded audio
@@ -168,6 +176,50 @@ class _InstructionScreenState extends State<InstructionScreen> {
   }
 
   Future<void> _analyze() async {
+    // VALIDATION: Require at least 8 words for a meaningful diagnosis
+    if (!_hasUploadedAudio && _wordCount < 8) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.mic_outlined, color: Color(0xFFF4A259)),
+              SizedBox(width: 8),
+              Text('More Detail Needed'),
+            ],
+          ),
+          content: Text(
+            'Your description only has $_wordCount word${_wordCount == 1 ? '' : 's'}. '
+            'For an accurate diagnosis, please describe:\n\n'
+            '• Where on your body is it?\n'
+            '• How long have you had it?\n'
+            '• Does it itch, burn, or hurt?\n'
+            '• Is it spreading or changing?\n\n'
+            'Aim for at least 8 words for the best result.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Add More Detail'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _runAnalysis();
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Color(0xFFF4A259)),
+              child: const Text('Scan Anyway', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    _runAnalysis();
+  }
+
+  Future<void> _runAnalysis() async {
     setState(() => _isLoading = true);
     try {
       final imageBytes = await _selectedImage!.readAsBytes();
@@ -189,7 +241,6 @@ class _InstructionScreenState extends State<InstructionScreen> {
             _transcribedText = transcript;
             _hasTranscription = true;
           });
-          // Show a brief notification that transcription succeeded
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('✅ Voice transcribed! Showing your text below.'),
@@ -197,7 +248,7 @@ class _InstructionScreenState extends State<InstructionScreen> {
               backgroundColor: Color(0xFF2E7D32),
             ),
           );
-          return; // Let user review transcript before going to results
+          return;
         }
       }
 
