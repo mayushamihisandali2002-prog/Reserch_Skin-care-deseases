@@ -13,8 +13,9 @@ joblib
 
 # ── Deep Learning — DistilBERT text model ────────────────────────────────────
 # Install CPU-only PyTorch (smaller; GPU version can be installed separately)
-torch
-torchvision
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.2.2+cpu
+torchvision==0.17.2+cpu
 timm
 
 # ── HuggingFace Transformers — loads best_model/best_model/ (DistilBERT) ──────
