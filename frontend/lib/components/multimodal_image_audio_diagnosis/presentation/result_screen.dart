@@ -244,23 +244,9 @@ class _ResultScreenState extends State<ResultScreen> {
                 _buildActionSection(nextSteps),
                 const SizedBox(height: 14),
               ],
-              if (top3.isNotEmpty) ...[
-                _buildPredictionSection(top3),
-                const SizedBox(height: 14),
-              ],
-              _buildModelDiagnostics(
-                imageDisease: imageDisease,
-                imageConfidence: imageConfidence,
-                textDisease: textDisease,
-                textConfidence: textConfidence,
-                imageWeight: imageWeight,
-                textWeight: textWeight,
-                agreementScore: agreementScore,
-                decisionMode: decisionMode,
-                modelUsed: modelUsed,
-                requiresDermatologistReview: requiresDermatologistReview,
-                reviewReasons: reviewReasons,
-              ),
+              // Top predictions removed per request
+
+              // Model diagnostics removed per request
               const SizedBox(height: 14),
               if (warnings.isNotEmpty) _buildWarningSection(warnings),
               // Removed Advanced Diagnostic Data (Gemini/AI references)
