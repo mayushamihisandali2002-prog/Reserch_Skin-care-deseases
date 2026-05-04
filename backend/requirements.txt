@@ -1,6 +1,7 @@
 # ── Core web framework ────────────────────────────────────────────────────────
 flask
 flask-cors
+gunicorn
 
 # ── Environment configuration ─────────────────────────────────────────────────
 python-dotenv
