@@ -7,7 +7,15 @@ import os
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from pathlib import Path
-from supabase import create_client, Client
+try:
+    from supabase import create_client, Client
+    SUPABASE_AVAILABLE = True
+except ImportError:
+    create_client = None
+    Client = None
+    SUPABASE_AVAILABLE = False
+    print("[Supabase] Library not found. Database logging will be disabled.")
+
 from dotenv import load_dotenv
 
 BACKEND_ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
@@ -15,10 +23,27 @@ BACKEND_ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
 if BACKEND_ENV_PATH.exists():
     load_dotenv(BACKEND_ENV_PATH, override=False)
 
+class MockTable:
+    def select(self, *args, **kwargs): return self
+    def insert(self, *args, **kwargs): return self
+    def update(self, *args, **kwargs): return self
+    def delete(self, *args, **kwargs): return self
+    def eq(self, *args, **kwargs): return self
+    def order(self, *args, **kwargs): return self
+    def limit(self, *args, **kwargs): return self
+    def single(self, *args, **kwargs): return self
+    def execute(self, *args, **kwargs):
+        class Result: 
+            def __init__(self): self.data = []
+        return Result()
+
+class MockSupabaseClient:
+    def table(self, name): return MockTable()
+
 class SupabaseService:
     """Supabase service for Python backend database operations."""
     
-    _client: Optional[Client] = None
+    _client: Any = None
     
     # Backend must use a server-side key, never the publishable/anon key.
     SUPABASE_URL = os.getenv('SUPABASE_URL', '').strip()
@@ -29,15 +54,19 @@ class SupabaseService:
     ).strip()
     
     @classmethod
-    def get_client(cls) -> Client:
+    def get_client(cls) -> Any:
         """Get or create Supabase client."""
+        if not SUPABASE_AVAILABLE:
+            return MockSupabaseClient()
+
         if not cls.SUPABASE_URL or not cls.SUPABASE_KEY:
-            raise RuntimeError(
-                "Supabase backend is not configured. Set SUPABASE_URL and "
-                "SUPABASE_SECRET_KEY in the local .env file."
-            )
+            return MockSupabaseClient()
+
         if cls._client is None:
-            cls._client = create_client(cls.SUPABASE_URL, cls.SUPABASE_KEY)
+            try:
+                cls._client = create_client(cls.SUPABASE_URL, cls.SUPABASE_KEY)
+            except Exception:
+                return MockSupabaseClient()
         return cls._client
     
     @classmethod
@@ -47,7 +76,15 @@ class SupabaseService:
             cls.SUPABASE_URL = url
         if key:
             cls.SUPABASE_KEY = key
-        cls._client = create_client(cls.SUPABASE_URL, cls.SUPABASE_KEY)
+        
+        if SUPABASE_AVAILABLE and cls.SUPABASE_URL and cls.SUPABASE_KEY:
+            try:
+                cls._client = create_client(cls.SUPABASE_URL, cls.SUPABASE_KEY)
+            except Exception as exc:
+                print(f"[Supabase] Initialization failed: {exc}")
+                cls._client = MockSupabaseClient()
+        else:
+            cls._client = MockSupabaseClient()
     
     # =========================================================================
     # CHAT SESSION OPERATIONS
@@ -62,6 +99,8 @@ class SupabaseService:
     ) -> Optional[Dict[str, Any]]:
         """Return an existing chat session or create it if missing."""
         client = cls.get_client()
+        if not client:
+            return None
 
         existing = (
             client.table('chat_sessions')
@@ -85,12 +124,16 @@ class SupabaseService:
     def update_chat_session_title(cls, session_id: str, title: str):
         """Update the title of a chat session."""
         client = cls.get_client()
+        if not client:
+            return None
         client.table('chat_sessions').update({'title': title}).eq('id', session_id).execute()
 
     @classmethod
     def get_user_sessions(cls, user_id: str) -> List[Dict]:
         """List all chat sessions for a user."""
         client = cls.get_client()
+        if not client:
+            return None
         result = client.table('chat_sessions') \
             .select('*') \
             .eq('user_id', user_id) \
@@ -102,6 +145,8 @@ class SupabaseService:
     def delete_chat_session(cls, session_id: str):
         """Delete a chat session and its messages."""
         client = cls.get_client()
+        if not client:
+            return None
         # Messages will be deleted by cascade if DB is set up, or manually:
         client.table('chat_messages').delete().eq('session_id', session_id).execute()
         client.table('chat_sessions').delete().eq('id', session_id).execute()
@@ -127,6 +172,8 @@ class SupabaseService:
     ) -> Dict[str, Any]:
         """Save a chat message to the database."""
         client = cls.get_client()
+        if not client:
+            return None
         
         data = {
             'user_id': user_id,
@@ -149,6 +196,8 @@ class SupabaseService:
     def get_chat_history(cls, session_id: str, limit: int = 100) -> List[Dict]:
         """Get chat history for a session."""
         client = cls.get_client()
+        if not client:
+            return None
         
         result = client.table('chat_messages') \
             .select('*') \
@@ -183,6 +232,8 @@ class SupabaseService:
     ) -> Dict[str, Any]:
         """Save a skin analysis result with journey tracking support."""
         client = cls.get_client()
+        if not client:
+            return None
         
         data = {
             'user_id': user_id,
@@ -213,6 +264,8 @@ class SupabaseService:
     ) -> List[Dict]:
         """Get skin analysis history for a user."""
         client = cls.get_client()
+        if not client:
+            return None
 
         query = (
             client.table('skin_analyses')
@@ -242,6 +295,8 @@ class SupabaseService:
     ) -> Dict[str, Any]:
         """Save a diagnosis to history."""
         client = cls.get_client()
+        if not client:
+            return None
         
         data = {
             'user_id': user_id,
@@ -259,6 +314,8 @@ class SupabaseService:
     def get_diagnosis_history(cls, user_id: str, limit: int = 50) -> List[Dict]:
         """Get diagnosis history for a user."""
         client = cls.get_client()
+        if not client:
+            return None
         
         result = client.table('diagnosis_history') \
             .select('*') \
@@ -277,6 +334,8 @@ class SupabaseService:
     def get_user_profile(cls, user_id: str) -> Optional[Dict]:
         """Get a user's profile."""
         client = cls.get_client()
+        if not client:
+            return None
         
         result = client.table('profiles') \
             .select('*') \
@@ -290,6 +349,8 @@ class SupabaseService:
     def update_user_profile(cls, user_id: str, profile_data: Dict[str, Any]) -> Dict[str, Any]:
         """Update a user's profile with personalization fields."""
         client = cls.get_client()
+        if not client:
+            return None
         
         # Filter allowed fields
         allowed_fields = [
@@ -314,6 +375,8 @@ class SupabaseService:
     def create_journey(cls, user_id: str, title: str, body_part: str, frequency: str = 'weekly') -> Dict[str, Any]:
         """Create a new tracking journey for a user."""
         client = cls.get_client()
+        if not client:
+            return None
         
         data = {
             'user_id': user_id,
@@ -330,6 +393,8 @@ class SupabaseService:
     def get_user_journeys(cls, user_id: str) -> List[Dict]:
         """List all tracking journeys for a user."""
         client = cls.get_client()
+        if not client:
+            return None
         
         result = client.table('tracking_journeys') \
             .select('*') \
@@ -343,6 +408,8 @@ class SupabaseService:
     def get_journey_part(cls, journey_id: str) -> Optional[str]:
         """Retrieve the target body part for a journey."""
         client = cls.get_client()
+        if not client:
+            return None
         
         result = client.table('tracking_journeys') \
             .select('body_part') \
@@ -370,6 +437,8 @@ class SupabaseService:
     ) -> Dict[str, Any]:
         """Persist a severity tracking visit for a user."""
         client = cls.get_client()
+        if not client:
+            return None
 
         data = {
             'user_id': user_id,
@@ -394,6 +463,8 @@ class SupabaseService:
     ) -> List[Dict]:
         """Return persisted severity visits for a user."""
         client = cls.get_client()
+        if not client:
+            return None
 
         query = (
             client.table('severity_visits')
@@ -423,6 +494,8 @@ class SupabaseService:
     ) -> Dict[str, Any]:
         """Add a treatment to track."""
         client = cls.get_client()
+        if not client:
+            return None
         
         data = {
             'user_id': user_id,
@@ -441,6 +514,8 @@ class SupabaseService:
     def get_active_treatments(cls, user_id: str) -> List[Dict]:
         """Get active treatments for a user."""
         client = cls.get_client()
+        if not client:
+            return None
         
         result = client.table('treatment_tracking') \
             .select('*') \

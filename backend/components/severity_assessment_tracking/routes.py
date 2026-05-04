@@ -44,6 +44,7 @@ SEVERITY_VISIT_FIELDS = [
     "confidence",
     "metrics_json",
     "image_path",
+    "description",
 ]
 
 
@@ -233,6 +234,7 @@ def _ensure_visits_csv_schema() -> None:
                     "confidence": row[4],
                     "metrics_json": row[5],
                     "image_path": "",
+                    "description": "",
                 }
             )
             continue
@@ -248,6 +250,7 @@ def _ensure_visits_csv_schema() -> None:
                     "confidence": row[5],
                     "metrics_json": row[6],
                     "image_path": "",
+                    "description": "",
                 }
             )
             continue
@@ -284,6 +287,7 @@ def _ensure_visits_csv_schema() -> None:
                 "confidence": confidence,
                 "metrics_json": metrics_json,
                 "image_path": padded[7] if len(padded) > 7 else "",
+                "description": padded[8] if len(padded) > 8 else "",
             }
         )
 
@@ -303,12 +307,13 @@ def _append_severity_visit(
     metrics: dict[str, float] | None = None,
     metadata: dict | None = None,
     image_path: str = "",
+    description: str = "",
 ) -> dict[str, str]:
     user_id, journey_id = _normalize_user_and_journey_ids(user_id, journey_id)
     normalized_level = _normalize_severity_level(severity_level)
     timestamp = datetime.datetime.now().isoformat()
     persisted_metrics = _parse_metrics_json(metrics) if metrics is not None else _severity_metrics_from_features(features)
-    persisted_metadata = metadata or {}
+    persisted_metadata = {**(metadata or {}), "description": str(description or "").strip()}
 
     if user_id and user_id != "anonymous":
         try:
@@ -348,6 +353,7 @@ def _append_severity_visit(
                 "confidence": f"{confidence:.6f}",
                 "metrics_json": json.dumps(persisted_metrics),
                 "image_path": image_path,
+                "description": str(description or "").strip(),
             }
         )
     return {"storage_backend": "csv", "timestamp": timestamp}
@@ -464,20 +470,26 @@ def _load_real_history(user_id: str, journey_id: str | None = None) -> tuple[lis
     history: list[dict] = []
     try:
         rows.sort(key=_row_timestamp)
-        recent_rows = rows[-10:]
+        recent_rows = rows
         start_index = len(rows) - len(recent_rows)
         for i, row in enumerate(recent_rows):
             ts = _row_timestamp(row)
             metrics = _parse_metrics_json(row.get("metrics_json"))
-            saved_path = row.get("image_path")
+            metadata = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+            saved_path = row.get("image_path") or metadata.get("image_path")
+            description = row.get("description") or metadata.get("description") or ""
             image_url = f"/api/severity/uploads/{os.path.basename(saved_path)}" if saved_path else "assets/images/severity_log.png"
             
             history.append({
                 "week": f"Visit {start_index + i + 1}",
                 "date": ts.split("T")[0] if "T" in ts else ts,
+                "timestamp": ts,
+                "journey_id": row.get("journey_id") or "",
                 "image_url": image_url,
                 "status": row.get("severity_level", "Unknown"),
                 "score": int(round(_safe_float(row.get("severity_score")))),
+                "confidence": round(_safe_float(row.get("confidence")), 4),
+                "description": description,
                 "metrics": metrics,
             })
     except Exception as exc:
@@ -588,40 +600,13 @@ def register_routes(app) -> None:
             request.form.get("user_id") or request.args.get("user_id") or "anonymous",
             request.form.get("journey_id") or request.args.get("journey_id"),
         )
+        description = (request.form.get("description") or request.args.get("description") or "").strip()
         tracking_enabled = tracking_requested and face_visible is not False
         tracking_blocked_reason = None
         if tracking_requested and not tracking_enabled:
             tracking_blocked_reason = (
                 "Tracking was skipped because no face was detected in the uploaded image."
             )
-
-        tracking = None
-        tracking_backend = None
-        if tracking_enabled:
-            try:
-                persistence = _append_severity_visit(
-                    user_id=user_id,
-                    journey_id=journey_id,
-                    severity_level=severity_level,
-                    severity_score=severity_score,
-                    confidence=confidence,
-                    features=prediction.get("normalized_features"),
-                    metadata={"source": "severity_model"},
-                    image_path=saved_image_path,
-                )
-                tracking = _build_severity_tracking_summary(user_id, journey_id=journey_id)
-                tracking_backend = tracking.get("storage_backend") or persistence.get("storage_backend")
-            except Exception as exc:
-                logger.exception("Severity tracking update failed")
-                tracking = {
-                    "error": f"Failed to update tracking data: {exc}",
-                    "storage_backend": "csv",
-                    "files": {
-                        "visits_csv": str(SEVERITY_VISITS_CSV),
-                        "weeks_json": str(SEVERITY_WEEKS_JSON),
-                    },
-                }
-                tracking_backend = tracking.get("storage_backend")
 
         # --- SMART GUARD: Fetch baseline visit & run multimodal analysis ---
         severity_metrics = _severity_metrics_from_features(prediction.get("normalized_features"))
@@ -638,6 +623,7 @@ def register_routes(app) -> None:
         baseline_image_bytes = None
         baseline_level = ""
         baseline_score = 0.0
+        baseline_img_path = ""
         if journey_rows:
             baseline_row = journey_rows[0]
             baseline_level = baseline_row.get("severity_level", "")
@@ -696,6 +682,7 @@ def register_routes(app) -> None:
                     features=prediction.get("normalized_features"),
                     metadata={"source": "severity_model", "body_part": smart_guard.get("identified_body_part", "")},
                     image_path=saved_image_path,
+                    description=description,
                 )
                 tracking = _build_severity_tracking_summary(user_id, journey_id=journey_id)
                 tracking_backend = tracking.get("storage_backend") or persistence.get("storage_backend")
@@ -749,9 +736,10 @@ def register_routes(app) -> None:
                 "tracking_requested": tracking_requested,
                 "tracking_enabled": tracking_enabled,
                 "tracking_blocked_reason": tracking_blocked_reason,
+                "description": description,
                 "journey_id": journey_id,
                 "visit_number": visit_number,
-                "current_image_url": f"/api/severity/{saved_image_path}" if saved_image_path else None,
+                "current_image_url": f"/api/severity/uploads/{Path(saved_image_path).name}" if saved_image_path else None,
                 "tracking": tracking,
                 "tracking_backend": tracking_backend,
                 "tracking_files": {

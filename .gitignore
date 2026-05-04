@@ -28,26 +28,15 @@ dist/
 .DS_Store
 Thumbs.db
 
-# ML models and binaries
-*.pt
-*.pth
-*.pkl
-*.safetensors
-*.joblib
-
-# Allow production models and their assets for deployment
-!backend/assets/models/**/*.pt
-!backend/assets/models/**/*.pth
-!backend/assets/models/**/*.joblib
-!backend/assets/models/**/*.json
-!backend/assets/models/**/*.npz
-!backend/assets/models/**/*.safetensors
-!backend/assets/models/conversational_diagnosis_assistant/distilbert/**/*
-
-# But keep ignoring the "previous" or "candidate" versions to save space
-backend/assets/models/**/*_previous*
-backend/assets/models/**/*_candidate*
-backend/assets/models/**/*_test*
+# User request: ignore train document and dataset
+dataset/
+datasets/
+train/
+training/
+**/training_output/
+backend/assets/data/
+*.train
+*.dataset
 
 # Cache / temp / logs
 *.log
@@ -97,12 +86,5 @@ backend/assets/data/skin_type_skincare_recommendation/skin_types_hf/.cache/
 backend/assets/data/skin_type_skincare_recommendation/skin_types_hf/**/*.lock
 backend/assets/data/skin_type_skincare_recommendation/skin_types_hf/**/*.incomplete
 backend/assets/cache/pytest_benchmark_tools/
-
-# Heavy Datasets (Added for deployment branch)
-backend/assets/data/multimodal_image_audio_diagnosis/research_dataset/
-backend/assets/data/multimodal_image_audio_diagnosis/combined_images/
-backend/assets/data/skin_type_skincare_recommendation/skin_types/
-backend/assets/data/skin_type_skincare_recommendation/skin_types_hf/
-backend/assets/data/severity_assessment_tracking/severity_benchmark/
 backend/scratch/
-backend/tools/validation/
+

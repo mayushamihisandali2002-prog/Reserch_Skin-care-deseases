@@ -1389,3 +1389,396 @@ DISEASE_TREATMENTS = {
         },
     ],
 }
+
+SKIN_CONDITIONS = {
+    "Common Skin Symptoms": [
+        "red", "redness", "rash", "itch", "itching", "itchy", "scratch",
+        "scratching", "pain", "painful", "dry", "dryness", "patch",
+        "patches", "scaly", "scale", "scales", "flaky", "cracked",
+        "swelling", "swollen", "burning", "stinging", "bumps", "blister",
+        "blisters", "hives", "welts", "spots", "sore", "sores", "oozing",
+        "pus", "bleeding"
+    ],
+    "Eczema": [
+        "itching", "dryness", "dry patches", "redness", "red rash",
+        "cracked skin", "flaky skin", "scaly patches", "inflammation",
+        "sensitive skin", "oozing"
+    ],
+    "Dermatitis": [
+        "red rash", "itching", "swelling", "blisters", "burning",
+        "irritation", "inflamed skin", "contact rash", "skin allergy",
+        "tender rash"
+    ],
+    "Psoriasis": [
+        "thick scales", "silvery scales", "red patches", "itching",
+        "cracked skin", "bleeding skin", "plaque", "dry thick skin",
+        "scaling", "thickened patches"
+    ],
+    "Acne": [
+        "pimples", "whiteheads", "blackheads", "cystic acne", "nodules",
+        "breakouts", "oily skin", "clogged pores", "pus", "inflamed acne",
+        "acne bumps"
+    ],
+    "Urticaria": [
+        "hives", "welts", "itching", "swelling", "raised bumps",
+        "red bumps", "rash", "allergic rash", "skin welts", "burning"
+    ],
+    "Pigmentation / Dark Spots": [
+        "dark spots", "uneven skin tone", "pigmentation", "hyperpigmentation",
+        "sun spots", "brown patches", "dark patches", "discoloration",
+        "darkened skin", "post acne marks"
+    ],
+    "Ringworm": [
+        "ring-shaped rash", "circular rash", "round rash", "itching",
+        "red patches", "scaly edges", "spreading rash", "fungal rash",
+        "ring rash", "flaky border"
+    ],
+    "Rosacea": [
+        "redness", "flushing", "burning", "stinging", "sensitive skin",
+        "visible blood vessels", "facial redness", "cheek redness",
+        "irritation", "warm skin", "red face"
+    ],
+    "Shingles": [
+        "painful blisters", "burning pain", "one-sided rash", "band rash",
+        "tingling", "stinging", "localized pain", "fluid blisters",
+        "nerve pain", "sensitive skin"
+    ],
+    "Vitiligo": [
+        "white patches", "loss of pigment", "depigmentation", "pale patches",
+        "milky white skin", "skin color loss", "patchy color", "white spots",
+        "uneven pigment", "lighter skin"
+    ],
+    "Impetigo": [
+        "honey crust", "golden crust", "yellow crust", "oozing sores",
+        "skin sores", "blisters", "scabs", "crusted rash", "red sores",
+        "weeping rash"
+    ],
+    "Molluscum Contagiosum": [
+        "pearly bumps", "dome bumps", "central dimple", "smooth bumps",
+        "small bumps", "flesh-colored bumps", "raised papules", "painless bumps",
+        "umbilicated bumps", "clustered bumps"
+    ],
+    "Folliculitis": [
+        "hair follicle bumps", "red bumps", "pustules", "itching",
+        "tender bumps", "shaving bumps", "inflamed follicles", "pus bumps",
+        "hair bumps", "follicle pain"
+    ],
+    "Scabies": [
+        "intense itching", "night itching", "burrows", "finger web itching",
+        "mite rash", "small bumps", "scratch marks", "severe itch",
+        "wrist rash", "household itching"
+    ],
+    "Warts": [
+        "wart", "warts", "rough growth", "grainy bump", "cauliflower growth",
+        "black dots", "hard bump", "skin growth", "verruca", "raised rough bump"
+    ],
+    "Seborrheic Dermatitis": [
+        "dandruff", "greasy scales", "yellow scales", "scalp flakes",
+        "flaking", "itchy scalp", "red scalp", "oily patches",
+        "facial flaking", "seborrheic rash"
+    ],
+    "Lichen Planus": [
+        "purple bumps", "shiny bumps", "flat-topped bumps", "itchy bumps",
+        "mouth streaks", "white mouth lines", "wrist bumps", "ankle bumps",
+        "violaceous rash", "skin lesions"
+    ],
+    "Cellulitis": [
+        "hot skin", "swollen skin", "tender skin", "redness", "pain",
+        "spreading redness", "warm swelling", "fever", "skin infection",
+        "leg swelling"
+    ],
+    "Herpes Simplex": [
+        "cold sore", "lip blisters", "fluid blisters", "tingling",
+        "burning", "mouth sores", "painful blisters", "recurrent blisters",
+        "crusted blisters", "clustered blisters"
+    ],
+    "Pityriasis Versicolor": [
+        "light patches", "dark patches", "discolored patches", "chest spots",
+        "back spots", "fine scaling", "tinea versicolor", "patchy spots",
+        "itching", "uneven color"
+    ],
+    "Melanoma": [
+        "asymmetrical mole", "irregular border", "multiple colors",
+        "changing mole", "evolving lesion", "bleeding mole", "itching mole",
+        "dark mole", "large mole", "new mole"
+    ],
+    "Basal Cell Carcinoma": [
+        "pearly bump", "shiny bump", "bleeding sore", "non-healing sore",
+        "pink lesion", "translucent bump", "visible blood vessels",
+        "scabbing sore", "waxy bump", "rolled edge"
+    ],
+    "Actinic Keratosis": [
+        "rough patch", "scaly patch", "sandpaper texture", "sun damaged skin",
+        "pink patch", "crusty patch", "tender patch", "dry rough spot",
+        "precancerous spot", "sun-exposed rash"
+    ],
+    "Seborrheic Keratosis": [
+        "waxy growth", "pasted-on growth", "brown growth", "black growth",
+        "crusty surface", "stuck-on bump", "rough plaque", "raised growth",
+        "itchy growth", "wart-like growth"
+    ],
+    "Dermatofibroma": [
+        "firm bump", "hard bump", "brown nodule", "pink nodule",
+        "dimple sign", "leg bump", "small nodule", "tender nodule",
+        "scar-like bump", "stable bump"
+    ],
+    "Cherry Angioma": [
+        "red bump", "bright red bump", "cherry red spot", "red papule",
+        "small red dot", "bleeding red bump", "blood vessel spot",
+        "round red bump", "ruby spot", "vascular bump"
+    ],
+    "Melanocytic Nevi": [
+        "mole", "brown mole", "round spot", "even color", "stable mole",
+        "symmetrical spot", "distinct border", "skin-colored mole",
+        "flat mole", "raised mole"
+    ],
+    "Hidradenitis Suppurativa": [
+        "painful boils", "armpit lumps", "groin abscess", "draining tracts",
+        "blackheads in pairs", "recurrent boils", "skin tunnels",
+        "underarm bumps", "painful nodules", "pus drainage"
+    ],
+    "Alopecia Areata": [
+        "round bald patches", "sudden hair loss", "patchy hair loss",
+        "bald spots", "exclamation mark hairs", "nail pitting",
+        "smooth bald patch", "hair shedding", "scalp patch", "beard hair loss"
+    ],
+    "Melasma": [
+        "brown facial patches", "symmetrical discoloration", "forehead patches",
+        "cheek hyperpigmentation", "worse after sun", "dark facial patches",
+        "melasma", "mask-like pigmentation", "brown patches", "uneven pigment"
+    ],
+}
+
+
+def _normalize_keyword_text(text: str) -> str:
+    chars = []
+    for char in str(text or "").lower():
+        chars.append(char if char.isalnum() else " ")
+    return " ".join("".join(chars).split())
+
+
+def _keyword_variants(normalized_keyword: str) -> set[str]:
+    variants = {normalized_keyword}
+    words = normalized_keyword.split()
+    if not words:
+        return variants
+
+    last_word = words[-1]
+    if last_word.endswith("ies") and len(last_word) > 4:
+        variants.add(" ".join([*words[:-1], f"{last_word[:-3]}y"]))
+    elif last_word.endswith(("ches", "shes", "xes", "zes", "ses")) and len(last_word) > 4:
+        variants.add(" ".join([*words[:-1], last_word[:-2]]))
+    elif last_word.endswith("s") and len(last_word) > 3:
+        variants.add(" ".join([*words[:-1], last_word[:-1]]))
+    elif len(last_word) > 2:
+        variants.add(" ".join([*words[:-1], f"{last_word}s"]))
+    return variants
+
+
+def _expected_symptom_keyword_categories() -> dict[str, list[str]]:
+    categories: dict[str, list[str]] = {
+        "Common Skin Symptoms": SKIN_CONDITIONS.get("Common Skin Symptoms", []),
+    }
+    for condition, symptoms in EXPECTED_SYMPTOMS.items():
+        if not isinstance(symptoms, list):
+            continue
+        categories[condition] = [
+            str(symptom)
+            for symptom in symptoms
+            if isinstance(symptom, str) and symptom.strip()
+        ]
+    return categories
+
+
+def validate_skin_condition_keywords(text: str, minimum_keywords: int = 4) -> dict:
+    normalized_text = f" {_normalize_keyword_text(text)} "
+    matches: list[dict[str, str]] = []
+    seen: set[str] = set()
+    condition_hits: set[str] = set()
+
+    for condition, keywords in _expected_symptom_keyword_categories().items():
+        for keyword in keywords:
+            normalized_keyword = _normalize_keyword_text(keyword)
+            if not normalized_keyword:
+                continue
+            variants = _keyword_variants(normalized_keyword)
+            matched_variant = next(
+                (variant for variant in variants if f" {variant} " in normalized_text),
+                None,
+            )
+            if matched_variant:
+                condition_hits.add(condition)
+                if not seen.intersection(variants):
+                    seen.update(variants)
+                    matches.append({"condition": condition, "keyword": keyword})
+
+    return {
+        "valid": len(matches) >= minimum_keywords,
+        "validation_mode": "expected_symptoms_any_4_across_all_disease_categories",
+        "mismatch_symptoms_allowed": True,
+        "minimum_keywords": minimum_keywords,
+        "keyword_count": len(matches),
+        "matches": matches,
+        "matched_keywords": [match["keyword"] for match in matches],
+        "matched_conditions": sorted(condition_hits),
+    }
+
+
+def _normalize_condition_name(condition: str | None) -> str:
+    raw = str(condition or "").replace("_", " ").strip()
+    if not raw:
+        return "Unknown"
+
+    lowered = raw.lower()
+    for known in DISEASE_KNOWLEDGE:
+        if known.lower() == lowered:
+            return known
+    for known in DISEASE_KNOWLEDGE:
+        if known.lower() in lowered or lowered in known.lower():
+            return known
+    return raw.title()
+
+
+def _text_matches_condition(transcript: str, condition: str) -> tuple[bool, list[str]]:
+    text = str(transcript or "").lower()
+    expected = EXPECTED_SYMPTOMS.get(condition, [])
+    if not isinstance(expected, list):
+        return False, []
+
+    normalized_terms = set()
+    for word in text.replace("/", " ").replace(",", " ").replace(".", " ").split():
+        cleaned = word.strip().lower()
+        if cleaned:
+            normalized_terms.add(cleaned)
+            normalized_terms.add(SYMPTOM_MAP.get(cleaned, cleaned))
+
+    matched: list[str] = []
+    for symptom in expected:
+        if not isinstance(symptom, str):
+            continue
+        token = symptom.lower().strip()
+        if token and (token in text or token in normalized_terms) and token not in matched:
+            matched.append(token)
+    return len(matched) > 0, matched[:5]
+
+
+def _condition_visual_phrase(condition: str) -> str:
+    info = DISEASE_KNOWLEDGE.get(condition, {})
+    symptoms = str(info.get("symptoms", "")).strip()
+    if symptoms:
+        phrase = symptoms[0].lower() + symptoms[1:]
+        return phrase.rstrip(".")
+    return f"visual features commonly associated with {condition.lower()}"
+
+
+def build_system_summary(
+    *,
+    condition: str,
+    transcript: str,
+    image_correct: bool | None,
+    text_correct: bool | None,
+    mismatch_detected: bool,
+    image_accuracy: float = 0.0,
+    text_accuracy: float = 0.0,
+) -> dict:
+    """Build the visible System Summary from the Python knowledge base."""
+
+    condition_name = _normalize_condition_name(condition)
+    transcript_text = str(transcript or "").strip()
+    if not transcript_text:
+        transcript_text = "no symptom text"
+
+    kb_text_match, matched_terms = _text_matches_condition(transcript_text, condition_name)
+    if text_correct is None and kb_text_match:
+        text_correct = True
+
+    visual_phrase = _condition_visual_phrase(condition_name)
+    matched_phrase = ", ".join(matched_terms)
+    if matched_phrase:
+        text_phrase = f"the text also mentions relevant terms ({matched_phrase})."
+    else:
+        text_phrase = "the submitted text does not contain clear expected skin symptoms for this condition."
+
+    image_quality_problem = image_correct is False
+    image_uncertain = image_correct is None
+    text_uncertain = text_correct is None
+
+    if image_correct is True and text_correct is True and not mismatch_detected:
+        case_id = "image_and_text_matched"
+        summary = (
+            f"System analysis indicates the image and text are matched. "
+            f"The image is consistent with {condition_name}: {visual_phrase}. "
+            f"{text_phrase.capitalize()} The final result is taken from the diagnostic analysis."
+        )
+    elif image_correct is True and text_correct is False:
+        case_id = "image_correct_text_incorrect"
+        summary = (
+            f"System analysis indicates a mismatch. The image appears to show {condition_name}, "
+            f"with visual findings such as {visual_phrase}. However, the user text "
+            f"({transcript_text!r}) is not clinically related to the visible skin problem. "
+            f"The final result is taken from the diagnostic analysis."
+        )
+    elif image_quality_problem and text_correct is True:
+        case_id = "image_incorrect_text_correct"
+        summary = (
+            f"System analysis indicates the text is clinically useful, but the image is not reliable. "
+            f"The photo may be blurred, unclear, or not closely related to the described skin problem. "
+            f"The text points toward {condition_name}; {text_phrase} The final result is taken from "
+            f"the diagnostic analysis."
+        )
+    elif image_quality_problem and text_correct is False:
+        case_id = "image_and_text_incorrect"
+        summary = (
+            f"System analysis cannot confirm a reliable match. The image is weak, blurred, or not clearly "
+            f"related to a skin problem, and the text ({transcript_text!r}) does not describe useful skin "
+            f"symptoms. Please upload a clearer skin image and describe symptoms such as itch, pain, scaling, "
+            f"redness, duration, and body location."
+        )
+    elif image_uncertain and text_uncertain:
+        case_id = "uncertain"
+        summary = (
+            f"System analysis could not confidently compare the image and text. The final result is still "
+            f"taken from the diagnostic analysis, but a clearer image and more specific symptom text would "
+            f"make the backend summary stronger."
+        )
+    else:
+        case_id = "partial_match"
+        summary = (
+            f"System analysis found a partial image-text match for {condition_name}. "
+            f"The image score is {image_accuracy:.0f}% and the text alignment score is {text_accuracy:.0f}%. "
+            f"The final result is taken from the diagnostic analysis."
+        )
+
+    return {
+        "case_id": case_id,
+        "condition": condition_name,
+        "matched_terms": matched_terms,
+        "summary": summary,
+        "source": "backend_python_knowledge_base",
+    }
+
+
+def treatment_suggestions_for_confidence(
+    *,
+    condition: str,
+    confidence: float,
+    threshold: float = 0.60,
+) -> dict:
+    """Return treatment suggestions only when backend confidence is high enough."""
+
+    normalized_condition = _normalize_condition_name(condition)
+    confidence_value = float(confidence or 0.0)
+    if confidence_value > 1.0:
+        confidence_value = confidence_value / 100.0
+
+    include_treatments = confidence_value >= threshold
+    treatments = DISEASE_TREATMENTS.get(normalized_condition, []) if include_treatments else []
+
+    return {
+        "include_treatments": include_treatments,
+        "threshold": threshold,
+        "confidence": confidence_value,
+        "condition": normalized_condition,
+        "treatments": treatments,
+        "source": "backend_python_knowledge_base",
+    }

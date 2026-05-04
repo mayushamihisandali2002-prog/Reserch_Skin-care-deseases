@@ -6,6 +6,19 @@ param(
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $envPath = Join-Path $repoRoot "..\backend\.env"
 $frontendDir = Resolve-Path (Join-Path $repoRoot ".")
+$flutterCommand = (Get-Command flutter -ErrorAction SilentlyContinue).Source
+
+if (-not $flutterCommand) {
+    $puroFlutter = Join-Path $env:USERPROFILE ".puro\envs\stable\flutter\bin\flutter.bat"
+    if (Test-Path $puroFlutter) {
+        $flutterCommand = $puroFlutter
+    }
+}
+
+if (-not $flutterCommand) {
+    Write-Error "Flutter is not available on PATH and was not found in the Puro stable environment."
+    exit 1
+}
 
 if (-not (Test-Path $envPath)) {
     Write-Error "Missing backend\.env at $envPath"
@@ -46,7 +59,7 @@ if (-not $frontendKey) {
 
 Push-Location $frontendDir
 try {
-    flutter run -d $Device `
+    & $flutterCommand run -d $Device `
         --dart-define="SUPABASE_URL=$supabaseUrl" `
         --dart-define="SUPABASE_ANON_KEY=$frontendKey" `
         --dart-define="API_BASE_URL=$BackendUrl"

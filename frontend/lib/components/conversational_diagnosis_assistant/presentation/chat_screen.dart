@@ -63,14 +63,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   List<ChatSession> _sessions = [];
   String? _currentSessionId;
   bool _isLoadingSessions = false;
-  bool _isInitialLoad = true;
 
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
 
   bool _isTyping = false;
-  bool _isConnected = true;
   String? _lastDisease;
 
   late AnimationController _dotController;
@@ -104,7 +102,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           timestamp: DateTime.now(),
         ),
       );
-      _isInitialLoad = false;
     });
 
     if (widget.initialMessage != null) {
@@ -298,7 +295,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             timestamp: DateTime.now(),
           ),
         );
-        _isConnected = true;
       });
       
       // If the AI returned a chat title, update our local session title immediately
@@ -331,7 +327,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _isConnected = false;
           _messages.add(
             ChatMessage(
               sender: MessageSender.bot,
@@ -395,7 +390,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF10252D), // Original deep clinical teal
-        border: Border(right: BorderSide(color: Colors.white.withOpacity(0.1))),
+        border: Border(right: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
       ),
       child: Column(
         children: [
@@ -408,9 +403,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.08),
+                  color: Colors.white.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                 ),
                 child: Row(
                   children: [
@@ -444,7 +439,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       child: ListTile(
                         dense: true,
                         selected: isSelected,
-                        selectedTileColor: Colors.white.withOpacity(0.08),
+                        selectedTileColor: Colors.white.withValues(alpha: 0.08),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         leading: Icon(Icons.chat_outlined, size: 16, color: isSelected ? Colors.white : Colors.white60),
                         title: Text(
@@ -481,7 +476,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   Widget _buildUserActionSection() {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1)))),
+      decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1)))),
       child: Row(
         children: [
           CircleAvatar(
@@ -507,7 +502,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 10, 20, 16),
       decoration: BoxDecoration(
         color: context.isDarkMode ? const Color(0xFF161B22) : Colors.white,
-        border: Border(bottom: BorderSide(color: context.clrBorder.withOpacity(0.1))),
+        border: Border(bottom: BorderSide(color: context.clrBorder.withValues(alpha: 0.1))),
       ),
       child: Row(
         children: [
@@ -530,9 +525,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.1),
+          color: AppColors.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -568,13 +563,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 800),
         child: Container(
-          margin: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).size.width < 400 ? 12 : 30),
+          margin: const EdgeInsets.fromLTRB(20, 0, 20, 30),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
           decoration: BoxDecoration(
             color: context.clrSurface,
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: context.clrBorder.withOpacity(0.3)),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 4))],
+            border: Border.all(color: context.clrBorder.withValues(alpha: 0.3)),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 15, offset: const Offset(0, 4))],
           ),
           child: Row(
             children: [
@@ -646,8 +641,8 @@ class _BotBubble extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16).copyWith(topLeft: Radius.circular(0)),
-                border: Border.all(color: Colors.black.withOpacity(0.05)),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 2))],
+                border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 2))],
               ),
               child: _RichBotText(text: message.text),
             ),
@@ -692,4 +687,3 @@ class _DotsAnimation extends AnimatedWidget {
     return Row(mainAxisSize: MainAxisSize.min, children: List.generate(3, (i) => Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: Opacity(opacity: animation.value, child: Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle))))));
   }
 }
-

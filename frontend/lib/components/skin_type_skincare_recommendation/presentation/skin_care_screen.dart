@@ -5,7 +5,6 @@ import 'package:app/utils/app_styles.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 
 class SkinCareScreen extends StatefulWidget {
   const SkinCareScreen({super.key});
@@ -255,7 +254,9 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
         border: Border.all(color: _border),
         boxShadow: [
           BoxShadow(
-            color: context.isDarkMode ? Colors.black26 : Colors.black.withValues(alpha: 0.04),
+            color: context.isDarkMode
+                ? Colors.black26
+                : Colors.black.withValues(alpha: 0.04),
             blurRadius: 14,
             offset: const Offset(0, 8),
           ),
@@ -282,9 +283,9 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
               Expanded(
                 child: Text(
                   title,
-                  style: AppTextStyles.subHeading(context).copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTextStyles.subHeading(
+                    context,
+                  ).copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
             ],
@@ -350,7 +351,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
       runSpacing: 12,
       children: [
         SizedBox(
-          width: (MediaQuery.of(context).size.width < 400 ? double.infinity : 180),
+          width: 180,
           child: FilledButton.icon(
             onPressed: () => _pickImage(ImageSource.camera),
             icon: const Icon(Icons.camera_alt_outlined),
@@ -366,7 +367,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
           ),
         ),
         SizedBox(
-          width: (MediaQuery.of(context).size.width < 400 ? double.infinity : 180),
+          width: 180,
           child: OutlinedButton.icon(
             onPressed: () => _pickImage(ImageSource.gallery),
             icon: const Icon(Icons.photo_library_outlined),
@@ -603,8 +604,8 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
             borderRadius: BorderRadius.circular(20),
             gradient: LinearGradient(
               colors: [
-                _brand.withValues(alpha: 0.18), 
-                context.isDarkMode ? Colors.black26 : const Color(0xFFF4FBF8)
+                _brand.withValues(alpha: 0.18),
+                context.isDarkMode ? Colors.black26 : const Color(0xFFF4FBF8),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -800,9 +801,9 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
               Expanded(
                 child: Text(
                   title,
-                  style: AppTextStyles.bodyStrong(context).copyWith(
-                    color: context.clrTextMain,
-                  ),
+                  style: AppTextStyles.bodyStrong(
+                    context,
+                  ).copyWith(color: context.clrTextMain),
                 ),
               ),
             ],
@@ -829,7 +830,9 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
                   children: [
                     Icon(Icons.fiber_manual_record, size: 8, color: _warning),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(reason, style: AppTextStyles.body(context))),
+                    Expanded(
+                      child: Text(reason, style: AppTextStyles.body(context)),
+                    ),
                   ],
                 ),
               ),
@@ -878,7 +881,9 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
               '${_titleCaseFromSlug(entry.key)}: $probability%',
               style: TextStyle(
                 fontWeight: isTop ? FontWeight.w700 : FontWeight.w500,
-                color: isTop ? (context.isDarkMode ? AppColors.success : _brandDark) : context.clrTextMain,
+                color: isTop
+                    ? (context.isDarkMode ? AppColors.success : _brandDark)
+                    : context.clrTextMain,
               ),
             ),
           );
@@ -943,14 +948,18 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
         children: [
           Text(
             'Goals',
-            style: AppTextStyles.body(context).copyWith(fontWeight: FontWeight.w700),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           _buildTagChips(goals, color: _positive, icon: Icons.flag),
           const SizedBox(height: 14),
           Text(
             'Allergies / Sensitivities',
-            style: AppTextStyles.body(context).copyWith(fontWeight: FontWeight.w700),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           _buildTagChips(
@@ -985,7 +994,7 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 13.5, 
+          fontSize: 13.5,
           fontWeight: FontWeight.w500,
           color: context.clrTextMain,
         ),
@@ -1121,8 +1130,8 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
                 _analysisResult!['disclaimer'] ??
                 'Cosmetic guidance only; not a medical diagnosis.')
             .toString();
-    final validationStatus =
-        (_analysisResult!['validation_status'] ?? '').toString();
+    final validationStatus = (_analysisResult!['validation_status'] ?? '')
+        .toString();
     final analysisScope = (_analysisResult!['analysis_scope'] ?? '').toString();
     final requiresReview = _toBool(_analysisResult!['requires_review']);
     final reviewReasons = _toStringList(_analysisResult!['review_reasons']);
@@ -1137,7 +1146,9 @@ class _SkinCareScreenState extends State<SkinCareScreen> {
       children: [
         _buildResultHero(skinType, confidence),
         const SizedBox(height: 16),
-        if (validationStatus.isNotEmpty || requiresReview || questionnaireAdjusted) ...[
+        if (validationStatus.isNotEmpty ||
+            requiresReview ||
+            questionnaireAdjusted) ...[
           _buildValidationBanner(
             validationStatus: validationStatus,
             analysisScope: analysisScope,

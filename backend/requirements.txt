@@ -1,12 +1,6 @@
-# CRITICAL: Forces the small CPU wheel (~200MB not 4GB).
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.2.2+cpu
-torchvision==0.17.2+cpu
-
 # ── Core web framework ────────────────────────────────────────────────────────
 flask
 flask-cors
-gunicorn
 
 # ── Environment configuration ─────────────────────────────────────────────────
 python-dotenv
@@ -14,10 +8,13 @@ python-dotenv
 # ── Data / ML utilities ───────────────────────────────────────────────────────
 numpy
 pandas
-scikit-learn
+scikit-learn==1.8.0
 joblib
 
-# ── DistilBERT text model ────────────────────────────────────
+# ── Deep Learning — DistilBERT text model ────────────────────────────────────
+# Install CPU-only PyTorch (smaller; GPU version can be installed separately)
+torch
+torchvision
 timm
 
 # ── HuggingFace Transformers — loads best_model/best_model/ (DistilBERT) ──────
@@ -44,5 +41,6 @@ supabase
 groq
 # Google Gemini - for image analysis
 google-generativeai
+google-genai
 
 opencv-python-headless

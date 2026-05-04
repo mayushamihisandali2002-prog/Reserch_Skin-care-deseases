@@ -57,8 +57,6 @@ from inference.config import (
 from components.conversational_diagnosis_assistant.knowledge_base import (
     SYMPTOM_KEYWORDS,
     SYMPTOM_MAP,
-    DISEASE_KNOWLEDGE,
-    EXPECTED_SYMPTOMS,
 )
 
 
@@ -1004,72 +1002,26 @@ class InferencePipeline:
 
     def _extract_symptoms(self, text: str) -> List[str]:
         """
-        Rich symptom extraction using full-phrase analysis.
-        Goes beyond simple keywords to capture the full clinical meaning of the transcript.
-        Returns canonical symptom terms found AND a detail-richness bonus list.
+        Extract canonical symptom keywords from user text/transcript.
         """
-        if not text:
+        if text is None:
             return []
         text_lower = text.lower()
         found = []
-
-        # Pass 1: Standard keyword matching (baseline)
         for kw in SYMPTOM_KEYWORDS:
             if kw in text_lower:
                 canonical = SYMPTOM_MAP.get(kw, kw)
                 if canonical not in found:
                     found.append(canonical)
-
-        # Pass 2: Extended semantic phrase matching
-        # These cover natural language that someone would say in a voice recording
-        EXTENDED_PHRASES = {
-            "ring": "circular rash", "circle": "circular rash", "round": "circular rash",
-            "spread": "spreading", "spreading": "spreading", "getting bigger": "spreading",
-            "getting worse": "worsening", "worsening": "worsening",
-            "night": "nocturnal itching", "worse at night": "nocturnal itching",
-            "keep me awake": "nocturnal itching", "sleep": "nocturnal itching",
-            "face": "facial", "cheek": "facial", "forehead": "facial", "nose": "facial",
-            "arm": "limb", "leg": "limb", "foot": "limb", "hand": "limb",
-            "weep": "oozing", "weeping": "oozing", "wet": "oozing", "fluid": "oozing",
-            "crust": "crusting", "scab": "crusting", "yellow": "yellow crust",
-            "honey": "yellow crust", "golden": "yellow crust",
-            "silver": "silver scales", "silvery": "silver scales",
-            "blister": "blisters", "bubble": "blisters", "fluid filled": "blisters",
-            "pale": "depigmentation", "white patch": "depigmentation", "loss of color": "depigmentation",
-            "hair": "hair follicle", "shaving": "post-shave",
-            "lip": "oral/lip", "mouth": "oral/lip", "cold sore": "oral/lip",
-            "month": "chronic duration", "week": "sub-acute duration", "year": "chronic duration",
-            "since": "duration noted", "for a while": "chronic duration",
-            "bump": "papule", "lump": "nodule", "growth": "growth",
-            "tan": "tanning failure", "not tanning": "tanning failure",
-            "peel": "peeling", "flak": "flaking", "dandruff": "flaking",
-        }
-        for phrase, canonical in EXTENDED_PHRASES.items():
-            if phrase in text_lower and canonical not in found:
-                found.append(canonical)
-
         return found
 
     def _get_expected_symptoms(self, disease: str) -> List[str]:
-        """Get expected symptoms for a disease from the knowledge base."""
-        # First try the structured EXPECTED_SYMPTOMS mapping
-        base = EXPECTED_SYMPTOMS.get(disease, [])
-        if isinstance(base, list) and base and isinstance(base[0], str):
-            return base
-        # Fall back to extracting from DISEASE_KNOWLEDGE disease overview text
-        info = DISEASE_KNOWLEDGE.get(disease, {})
-        if info:
-            symptom_text = info.get('symptoms', '') + ' ' + info.get('overview', '')
-            return self._extract_symptoms(symptom_text)
-        return []
+        """Get expected symptoms for a disease from config."""
+        return EXPECTED_SYMPTOMS.get(disease, [])
 
     def _compute_symptom_match(self, extracted: List[str], expected: List[str]) -> Tuple[float, List[str]]:
         """
-        Compute a semantic symptom match score using the FULL transcript richness.
-        Rewards:
-        - Keyword overlap (classic F1)
-        - Length of description (more words = more clinical detail)
-        - Coverage of expected clinical signs
+        Compute symptom match score using F1 between extracted and expected symptoms.
         Returns (score, matched_symptoms)
         """
         if not expected:
@@ -1079,10 +1031,10 @@ class InferencePipeline:
         if not extracted:
             return 0.0, matched
 
-        precision = len(matched) / max(len(set(extracted)), 1)
-        recall = len(matched) / max(len(set(expected)), 1)
-        f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
-        return f1, matched
+        precision = len(matched) / len(set(extracted))
+        recall = len(matched) / len(set(expected))
+        score = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+        return score, matched
 
     def _determine_decision_mode(
         self, img_conf: float, txt_conf: float, have_img: bool, have_txt: bool, image_alpha: float
@@ -1126,26 +1078,9 @@ class InferencePipeline:
             }
         img_name, img_conf, img_probs = self._image_probs(image_bytes)
         txt_name, txt_conf, txt_probs = self._text_probs(text)
-
-        # 1. IMAGE-FIRST CANDIDATES
-        # We identify the top candidate from the image model
-        img_top_idx = int(np.argmax(img_probs))
-        img_top_disease = DISEASE_LABELS.get(img_top_idx, 'Unknown')
-
-        # 2. SYMPTOM CONFIRMATION & BOOSTING
-        # Check if the user provided a high-quality description
-        word_count = len(text.split())
-        is_high_detail = word_count >= 15 # Threshold for a detailed description
-        
         image_alpha = self._compute_dynamic_alpha(img_conf, txt_conf, have_img, have_txt, txt_probs)
-        
-        # If we have a very detailed description, we give it slightly more weight
-        if is_high_detail:
-            image_alpha = float(np.clip(image_alpha - 0.1, 0.3, 0.8))
-        
         text_alpha = 1.0 - image_alpha
 
-        # 3. FUSION & CLINICAL VERIFICATION
         fused = self._fuse(img_probs, txt_probs, have_img, have_txt, image_alpha)
         fused = self._apply_fusion_clinical_rules(
             text,
@@ -1181,17 +1116,6 @@ class InferencePipeline:
         agreement_score = self._agreement_score(img_probs, txt_probs) if have_img and have_txt else None
 
         warnings: List[str] = []
-        
-        # 4. CONFLICT DETECTION (Image vs Symptoms)
-        # If the fusion changed the top disease significantly from the image's top pick
-        if img_conf > 0.4 and final_disease != img_top_disease:
-            # Check if text confidence was high enough to override
-            if txt_conf < 0.3:
-                warnings.append(
-                    f"Warning: Visual analysis suggests {img_top_disease}, but symptoms point to {final_disease}. "
-                    "Please ensure your description is accurate or retake the photo."
-                )
-
         symptom_boost = 1.0
         if extracted_symptoms:
             if symptom_match_score >= 0.5:
@@ -1199,12 +1123,8 @@ class InferencePipeline:
             elif symptom_match_score < 0.2:
                 symptom_boost = 0.40
                 warnings.append(
-                    'Symptoms strongly mismatch the visual diagnosis. This may be an unusual presentation or a different condition.'
+                    'Symptoms strongly mismatch the predicted diagnosis. The condition may be out-of-scope (e.g., freckles, pigmentation, or sunspots).'
                 )
-        
-        # Boost confidence for long, descriptive inputs that match
-        if is_high_detail and symptom_match_score > 0.4:
-            symptom_boost += 0.1
 
         label_coverage_full = self.sklearn_loaded or bool(
             getattr(self.distilbert, 'label_integrity', {}).get('is_exact_match', False)
@@ -1217,7 +1137,7 @@ class InferencePipeline:
             agreement_score=agreement_score,
             symptom_match_score=symptom_match_score if extracted_symptoms else None,
         )
-        final_conf *= float(np.clip(symptom_boost, 0.4, 1.3))
+        final_conf *= float(np.clip(symptom_boost, 0.4, 1.2))
         final_conf = float(np.clip(final_conf, 0.0, 1.0))
 
         requires_review, review_reasons = self._build_review_flags(
@@ -1356,15 +1276,15 @@ class InferencePipeline:
         # 2. Disease Multi-modal Diagnosis (Disease + Symptoms)
         disease_res = self.predict_fused(text or "", image_bytes or b"", transcript=text)
 
-        # 2.5 EXPERT REASONING (Hybrid AI - Groq + Gemini)
-        expert_opinion = None
+        # 2.5 AI ASSISTANCE REASONING (Hybrid AI - Groq + Gemini)
+        ai_assistance_result = None
         ai_available = os.getenv("GROQ_API_KEY") or os.getenv("GEMINI_API_KEY")
         
         if ai_available and image_bytes and (text or "").strip():
             try:
                 from services.gemini_service import GeminiService
                 detailed_local_pred = f"Fused AI: {disease_res.get('disease')} (Visual Model suggests: {disease_res.get('image_disease')}, Symptom Model suggests: {disease_res.get('text_disease')})"
-                expert_opinion = GeminiService.analyze_skin_condition(
+                ai_assistance_result = GeminiService.analyze_skin_condition(
                     image_bytes=image_bytes,
                     symptoms=text or "",
                     local_pred=detailed_local_pred,
@@ -1372,39 +1292,85 @@ class InferencePipeline:
                 )
                 
                 # --- OUT OF SCOPE GUARDRAIL ---
-                if expert_opinion and expert_opinion.get("is_skin") is False:
+                if ai_assistance_result and ai_assistance_result.get("is_skin") is False:
                     master_report["status"] = "out_of_scope"
                     master_report["summary"] = "The provided image does not appear to be of human skin. Please upload a clear photo of the affected skin area for analysis."
                     master_report["diagnosis"] = None
                     return master_report
 
-                if expert_opinion and "error" not in expert_opinion:
-                    master_report["expert_opinion"] = expert_opinion
+                if ai_assistance_result and "error" not in ai_assistance_result:
+                    master_report["ai_assistance_result"] = ai_assistance_result
                     master_report["ai_enhanced"] = True
                     # If AI is very confident, refine the master diagnosis
-                    if expert_opinion.get("confidence", 0) > disease_res.get("confidence", 0):
-                        disease_res["disease"] = expert_opinion["disease"]
-                        disease_res["confidence"] = expert_opinion["confidence"]
-                        disease_res["reasoning_expert"] = expert_opinion.get("reasoning")
-                elif expert_opinion and "error" in expert_opinion:
-                    print(f"[Pipeline] AI expert skip: {expert_opinion.get('error')}")
+                    if ai_assistance_result.get("confidence", 0) > disease_res.get("confidence", 0):
+                        disease_res["disease"] = ai_assistance_result["disease"]
+                        disease_res["confidence"] = ai_assistance_result["confidence"]
+                        disease_res["reasoning_ai"] = ai_assistance_result.get("reasoning")
+                elif ai_assistance_result and "error" in ai_assistance_result:
+                    print(f"[Pipeline] AI assistance skip: {ai_assistance_result.get('error')}")
             except Exception as e:
-                print(f"[Pipeline] AI expert reasoning skip: {e}")
+                print(f"[Pipeline] AI assistance reasoning skip: {e}")
 
         # Local Low-Confidence Guardrail (If AI is not used)
-        if not master_report.get("ai_enhanced") and disease_res.get("confidence", 0) < 0.12:
+        if (
+            have_img
+            and have_txt
+            and not master_report.get("ai_enhanced")
+            and disease_res.get("confidence", 0) < 0.12
+        ):
             master_report["status"] = "uncertain"
             master_report["summary"] = "The system is unable to confidently identify a skin condition in this image. Please ensure the photo is clear, well-lit, and focused on the skin."
             master_report["diagnosis"] = {"disease": "Uncertain", "confidence": 0.0}
             return master_report
 
-        # 3. Specialized Face Analysis (Automation) - DISABLED as per request
+        # 3. Specialized Face Analysis (Automation)
         detected_part = "Skin" # Default generic
         part_warning = None
-        
-        # Severity and Skin Type are now handled in separate screens
-        master_report["severity"] = {}
-        master_report["skin_profile"] = {}
+
+        if pil_img and self.severity_model and self.severity_model.loaded:
+            import numpy as np
+            img_np = np.array(pil_img.convert("RGB"))
+            
+            # Check for face presence automatically
+            severity_res = self.severity_model.predict_from_pil(pil_img, disease_name=disease_res.get("disease"))
+            face_visible = severity_res.get("preprocessing", {}).get("face_visible", False)
+            
+            if face_visible:
+                detected_part = "Face"
+                master_report["severity"] = {
+                    "level": severity_res["severity_level"],
+                    "score": severity_res["severity_score"],
+                    "face_detected": True
+                }
+                
+                # If face is detected, automatically run skin-type for a full "user profile"
+                if self.skin_type_model and self.skin_type_model.loaded:
+                    type_res = self.skin_type_model.predict_from_pil(pil_img)
+                    master_report["skin_profile"] = {
+                        "type": type_res["skin_type"],
+                        "confidence": type_res["confidence"]
+                    }
+
+                # EXPERT SEVERITY RATIONALE
+                if os.getenv("GEMINI_API_KEY") and "expert_opinion" not in master_report:
+                    try:
+                        from services.gemini_service import GeminiService
+                        expert_sev = GeminiService.assess_severity(
+                            image_bytes=image_bytes,
+                            metrics={
+                                "local_level": severity_res["severity_level"],
+                                "local_score": severity_res["severity_score"],
+                                "image_features": severity_res.get("normalized_features", {})
+                            }
+                        )
+                        if expert_sev and "error" not in expert_sev:
+                            master_report["severity"]["expert_rationale"] = expert_sev.get("rationale")
+                            master_report["severity"]["clinical_notes"] = expert_sev.get("clinical_notes")
+                    except Exception:
+                        pass
+            else:
+                detected_part = "Body/Other"
+                master_report["severity"] = {"face_detected": False, "note": "Limited body-part severity analysis used."}
 
         # 3.1 Anatomical Part Consistency Check
         if target_body_part and target_body_part.lower() != "skin":
@@ -1424,40 +1390,51 @@ class InferencePipeline:
         if not have_txt or not have_img:
             master_report["status"] = "incomplete"
             master_report["automation_level"] = "partial"
-            master_report["summary"] = "I need both an image and a description of your symptoms to provide an accurate clinical prediction."
-            master_report["diagnosis"] = {"disease": "Awaiting inputs...", "confidence": 0.0}
+            if have_img:
+                diagnosis = self.predict_from_image(image_bytes or b"")
+                master_report["summary"] = (
+                    "This is a provisional image-only screening. Add symptom details "
+                    "or a voice note for the full multimodal clinical prediction."
+                )
+            else:
+                diagnosis = disease_res
+                master_report["summary"] = (
+                    "I need both an image and a description of your symptoms to "
+                    "provide an accurate clinical prediction."
+                )
+            master_report["diagnosis"] = diagnosis
             return master_report
 
-        # 4. FINAL HYBRID UNIFICATION (The "Lead Consultant" Logic)
-        # We use the Expert Opinion to reconcile any conflicts between image and text branches.
+        # 4. FINAL HYBRID UNIFICATION (The "Lead Assistant" Logic)
+        # We use the AI Assistance Result to reconcile any conflicts between image and text branches.
         final_disease = disease_res.get("disease", "a skin condition")
         final_confidence = disease_res.get("confidence", 0.0)
         
-        if expert_opinion and not expert_opinion.get("error"):
-            expert_diag = expert_opinion.get("disease")
-            is_skin_verified = expert_opinion.get("is_skin", True)
+        if ai_assistance_result and not ai_assistance_result.get("error"):
+            ai_diag = ai_assistance_result.get("disease")
+            is_skin_detected = ai_assistance_result.get("is_skin", True)
             
             # --- GUARDRAIL: OUT OF SCOPE ---
-            if not is_skin_verified:
+            if not is_skin_detected:
                 master_report["status"] = "out_of_scope"
                 master_report["summary"] = "The system has determined that the provided image does not contain human skin or a recognizable skin condition."
                 master_report["diagnosis"] = {
                     "disease": "Non-Skin Image Detected",
                     "confidence": 1.0,
-                    "reasoning_expert": expert_opinion.get("reasoning", "The image appears to be an object or animal, not human skin.")
+                    "reasoning_ai": ai_assistance_result.get("reasoning", "The image appears to be an object or animal, not human skin.")
                 }
                 return master_report
 
             # --- RECONCILIATION ---
-            # If the expert (Cloud) and the local models agree, we boost confidence
-            if expert_diag and expert_diag.lower() in final_disease.lower():
+            # If the AI and the local models agree, we boost confidence
+            if ai_diag and ai_diag.lower() in final_disease.lower():
                 final_confidence = min(0.98, final_confidence + 0.15)
-                master_report["summary"] = f"Our local analysis and AI Expert both strongly suggest {final_disease}."
+                master_report["summary"] = f"Our local analysis and AI Assistant both suggest {final_disease}."
             
-            # If they disagree, we let the Expert (Lead Consultant) decide the primary display
-            elif expert_diag:
-                final_disease = expert_diag
-                final_confidence = expert_opinion.get("confidence", final_confidence)
+            # If they disagree, we let the AI Assistant decide the primary display
+            elif ai_diag:
+                final_disease = ai_diag
+                final_confidence = ai_assistance_result.get("confidence", final_confidence)
                 master_report["summary"] = f"A high-fidelity analysis suggests this condition is {final_disease}, providing more context than initial visual scanning."
 
         # Finalize the Master Report for the Frontend
@@ -1467,7 +1444,7 @@ class InferencePipeline:
             "final_diagnosis": final_disease,
             "confidence": final_confidence,
             "confidence_percent": f"{final_confidence * 100:.1f}%",
-            "reasoning_expert": expert_opinion.get("reasoning") if expert_opinion else None,
+            "reasoning_ai": ai_assistance_result.get("reasoning") if ai_assistance_result else None,
             # Synchronize the explanation and expected symptoms with the final AI decision
             "disease_explanation": self._get_disease_explanation(final_disease),
             "expected_symptoms": self._get_expected_symptoms(final_disease),
@@ -1488,9 +1465,9 @@ class InferencePipeline:
             new_warnings = [w for w in old_warnings if "Symptoms strongly mismatch" not in w]
             master_report["diagnosis"]["warnings"] = new_warnings
 
-        # Move expert opinion to the top level for the UI to find easily
-        if expert_opinion and not expert_opinion.get("error"):
-            master_report["expert_opinion"] = expert_opinion
+        # Move AI assistance result to the top level for the UI to find easily
+        if ai_assistance_result and not ai_assistance_result.get("error"):
+            master_report["ai_assistance_result"] = ai_assistance_result
 
         return master_report
 

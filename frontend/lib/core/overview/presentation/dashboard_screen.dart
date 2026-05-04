@@ -324,8 +324,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (fullName.isEmpty) missing.add('name');
     if (skinType.isEmpty) missing.add('skin type');
 
-    final isSmall = MediaQuery.of(context).size.width < 360;
-    
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: AppDecor.softCard(
@@ -333,119 +331,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: AppColors.primary.withValues(alpha: 0.05),
         borderColor: AppColors.primary.withValues(alpha: 0.16),
       ),
-      child: isSmall 
-        ? Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(
-                      Icons.person_outline_rounded,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      'Complete your profile',
-                      style: AppTextStyles.bodyStrong(
-                        context,
-                      ).copyWith(fontSize: 16),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Missing: ${missing.join(' and ')}. Completing this improves skin-type recommendations.',
-                style: AppTextStyles.body(context),
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    await Navigator.pushNamed(context, '/onboarding');
-                    if (mounted) {
-                      _loadData();
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text('Set up'),
-                ),
-              ),
-            ],
-          )
-        : Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(
-                  Icons.person_outline_rounded,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Complete your profile',
-                      style: AppTextStyles.bodyStrong(
-                        context,
-                      ).copyWith(fontSize: 16),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Missing: ${missing.join(' and ')}. Completing this improves skin-type recommendations without blocking the app.',
-                      style: AppTextStyles.body(context),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              ElevatedButton(
-                onPressed: () async {
-                  await Navigator.pushNamed(context, '/onboarding');
-                  if (mounted) {
-                    _loadData();
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Text('Set up'),
-              ),
-            ],
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.person_outline_rounded,
+              color: AppColors.primary,
+            ),
           ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Complete your profile',
+                  style: AppTextStyles.bodyStrong(
+                    context,
+                  ).copyWith(fontSize: 16),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Missing: ${missing.join(' and ')}. Completing this improves skin-type recommendations without blocking the app.',
+                  style: AppTextStyles.body(context),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          ElevatedButton(
+            onPressed: () async {
+              await Navigator.pushNamed(context, '/onboarding');
+              if (mounted) {
+                _loadData();
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              elevation: 0,
+            ),
+            child: const Text('Set up'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1111,43 +1051,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 32),
-                                if (MediaQuery.of(context).size.width < 400) ...[
-                                  _metricTile(
-                                    'Check-ins',
-                                    '${_historyCount()}',
-                                    Icons.insights_rounded,
-                                    AppColors.secondary,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _metricTile(
-                                    'Skin Score',
-                                    '${_latestScore().toStringAsFixed(0)}%',
-                                    Icons.auto_awesome_rounded,
-                                    AppColors.success,
-                                  ),
-                                ] else ...[
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: _metricTile(
-                                          'Check-ins',
-                                          '${_historyCount()}',
-                                          Icons.insights_rounded,
-                                          AppColors.secondary,
-                                        ),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _metricTile(
+                                        'Check-ins',
+                                        '${_historyCount()}',
+                                        Icons.insights_rounded,
+                                        AppColors.secondary,
                                       ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: _metricTile(
-                                          'Skin Score',
-                                          '${_latestScore().toStringAsFixed(0)}%',
-                                          Icons.auto_awesome_rounded,
-                                          AppColors.success,
-                                        ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: _metricTile(
+                                        'Skin Score',
+                                        '${_latestScore().toStringAsFixed(0)}%',
+                                        Icons.auto_awesome_rounded,
+                                        AppColors.success,
                                       ),
-                                    ],
-                                  ),
-                                ],
+                                    ),
+                                  ],
+                                ),
                                 const SizedBox(height: 16),
                                 Text(
                                   'Overview first. Scan, chat, care, and severity tools are one tap away.',

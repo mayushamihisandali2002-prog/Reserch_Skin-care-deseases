@@ -10,6 +10,7 @@ class SeverityTrackingApi {
     String userId = 'anonymous',
     String? journeyId,
     String? journeyTitle,
+    String? description,
   }) {
     return ApiService.analyzeSeverity(
       imageBytes,
@@ -18,6 +19,7 @@ class SeverityTrackingApi {
       userId: userId,
       journeyId: journeyId,
       journeyTitle: journeyTitle,
+      description: description,
     );
   }
 
@@ -26,11 +28,7 @@ class SeverityTrackingApi {
     String fileName, {
     String? journeyId,
   }) {
-    return ApiService.addProgress(
-      imageBytes,
-      fileName,
-      journeyId: journeyId,
-    );
+    return ApiService.addProgress(imageBytes, fileName, journeyId: journeyId);
   }
 
   static Future<List<dynamic>> getHistory({String? journeyId}) {

@@ -222,6 +222,7 @@ class ApiService {
     String userId = 'anonymous',
     String? journeyId,
     String? journeyTitle,
+    String? description,
   }) async {
     try {
       var request = http.MultipartRequest(
@@ -232,14 +233,16 @@ class ApiService {
       request.files.add(
         http.MultipartFile.fromBytes('image', imageBytes, filename: fileName),
       );
-      final resolvedUserId =
-          (userId.trim().isNotEmpty && userId != 'anonymous')
+      final resolvedUserId = (userId.trim().isNotEmpty && userId != 'anonymous')
           ? userId
           : (SupabaseService.userId ?? 'anonymous');
       request.fields['track'] = track ? 'true' : 'false';
       request.fields['user_id'] = resolvedUserId;
       if (journeyId != null) request.fields['journey_id'] = journeyId;
       if (journeyTitle != null) request.fields['journey_title'] = journeyTitle;
+      if (description != null && description.trim().isNotEmpty) {
+        request.fields['description'] = description.trim();
+      }
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
@@ -289,7 +292,10 @@ class ApiService {
     }
   }
 
-  static Future<List<dynamic>> getHistory({String? userId, String? journeyId}) async {
+  static Future<List<dynamic>> getHistory({
+    String? userId,
+    String? journeyId,
+  }) async {
     try {
       final uid = userId ?? SupabaseService.userId;
       if (uid == null || uid.trim().isEmpty || uid == 'anonymous') {
@@ -299,7 +305,9 @@ class ApiService {
       if (journeyId != null && journeyId.trim().isNotEmpty) {
         params['journey_id'] = journeyId.trim();
       }
-      final uri = Uri.parse('$baseUrl/api/history').replace(queryParameters: params);
+      final uri = Uri.parse(
+        '$baseUrl/api/history',
+      ).replace(queryParameters: params);
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
@@ -313,7 +321,43 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> getStats({String? userId, String? journeyId}) async {
+  static Future<List<dynamic>> getScanHistory({
+    String? userId,
+    String? journeyId,
+    int limit = 50,
+  }) async {
+    try {
+      final uid = userId ?? SupabaseService.userId;
+      if (uid == null || uid.trim().isEmpty || uid == 'anonymous') {
+        return [];
+      }
+      final params = <String, String>{
+        'user_id': uid,
+        'limit': limit.toString(),
+      };
+      if (journeyId != null && journeyId.trim().isNotEmpty) {
+        params['journey_id'] = journeyId.trim();
+      }
+      final uri = Uri.parse(
+        '$baseUrl/api/scan-history',
+      ).replace(queryParameters: params);
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to load scan history');
+      }
+    } catch (e) {
+      debugPrint("Error getting scan history: $e");
+      return [];
+    }
+  }
+
+  static Future<Map<String, dynamic>> getStats({
+    String? userId,
+    String? journeyId,
+  }) async {
     try {
       final uid = userId ?? SupabaseService.userId;
       if (uid == null || uid.trim().isEmpty || uid == 'anonymous') {
@@ -327,7 +371,9 @@ class ApiService {
       if (journeyId != null && journeyId.trim().isNotEmpty) {
         params['journey_id'] = journeyId.trim();
       }
-      final uri = Uri.parse('$baseUrl/api/stats').replace(queryParameters: params);
+      final uri = Uri.parse(
+        '$baseUrl/api/stats',
+      ).replace(queryParameters: params);
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
@@ -360,7 +406,10 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> sendChatMessage(String message, {String? customSessionId}) async {
+  static Future<Map<String, dynamic>> sendChatMessage(
+    String message, {
+    String? customSessionId,
+  }) async {
     try {
       final sid = customSessionId ?? sessionId;
       final response = await http.post(
@@ -399,7 +448,7 @@ class ApiService {
     try {
       final uid = SupabaseService.userId;
       if (uid == null || uid == 'anonymous') return [];
-      
+
       final response = await http.get(
         Uri.parse('$baseUrl/api/chat/sessions/$uid'),
       );

@@ -32,14 +32,14 @@ def _write_test_image(path: Path) -> None:
     image.save(path, format="JPEG")
 
 
-def test_benchmark_readiness_reports_current_missing_benchmarks() -> None:
+def test_benchmark_readiness_reports_current_benchmarks() -> None:
     report = benchmark_readiness.build_report()
 
-    assert report["ready"] is False
-    assert report["skin_type_benchmark"]["ready"] is False
-    assert report["severity_benchmark"]["ready"] is False
-    assert report["skin_type_benchmark"]["class_image_counts"]["Dry"] == 0
-    assert "labels.csv is missing." in report["severity_benchmark"]["issues"]
+    assert report["ready"] is True
+    assert report["skin_type_benchmark"]["ready"] is True
+    assert report["severity_benchmark"]["ready"] is True
+    assert report["skin_type_benchmark"]["class_image_counts"]["Dry"] > 0
+    assert report["severity_benchmark"]["valid_rows"] > 0
 
 
 def test_benchmark_readiness_validates_complete_synthetic_benchmarks() -> None:

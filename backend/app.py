@@ -203,13 +203,7 @@ def _build_pending_issues(validation_summary: dict) -> list[dict[str, str]]:
 
 
 app = Flask(__name__)
-CORS(
-    app,
-    resources={r"/*": {"origins": "*"}},
-    supports_credentials=True,
-    allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Methods", "Access-Control-Allow-Origin"],
-    methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
-)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 
 @app.get("/api/health")

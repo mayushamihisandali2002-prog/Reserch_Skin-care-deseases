@@ -16,7 +16,7 @@ class AppConfig {
   AppConfig._internal();
 
   // Current environment
-  static Environment environment = Environment.production;
+  static Environment environment = Environment.development;
 
   // ============================================================================
   // API CONFIGURATION
@@ -31,7 +31,7 @@ class AppConfig {
 
     // Production URL (when deployed)
     if (environment == Environment.production) {
-      return 'https://reserchskin-care-deseases-production.up.railway.app';
+      return 'https://your-production-api.com';
     }
 
     // Development URLs based on platform

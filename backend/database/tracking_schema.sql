@@ -45,7 +45,6 @@ CREATE TABLE IF NOT EXISTS public.severity_visits (
     confidence DECIMAL(5, 4),
     metrics_json JSONB DEFAULT '{}'::jsonb,
     metadata JSONB DEFAULT '{}'::jsonb,
-    image_path TEXT, -- Path to stored image for visual tracking
     captured_at TIMESTAMPTZ DEFAULT NOW(),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );

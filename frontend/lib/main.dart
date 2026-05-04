@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app/components/severity_assessment_tracking/presentation/journey_setup_screen.dart';
@@ -12,6 +13,7 @@ import 'package:app/utils/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy();
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -36,24 +38,31 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.light,
       theme: AppTheme.lightTheme,
-      home: const AuthWrapper(),
+      home: const AuthWrapper(initialIndex: 0),
       routes: {
         '/onboarding': (context) => const OnboardingScreen(),
         '/journey-setup': (context) => const JourneySetupScreen(),
-        '/home': (context) => const HomeContainer(),
+        '/home': (context) => const AuthWrapper(initialIndex: 0),
+        '/AIchat': (context) => const AuthWrapper(initialIndex: 1),
+        '/Scan': (context) => const AuthWrapper(initialIndex: 2),
+        '/Skincare': (context) => const AuthWrapper(initialIndex: 3),
+        '/Severity': (context) => const AuthWrapper(initialIndex: 4),
       },
     );
   }
 }
 
 class AuthWrapper extends StatefulWidget {
-  const AuthWrapper({super.key});
+  final int initialIndex;
+
+  const AuthWrapper({super.key, this.initialIndex = 0});
 
   @override
   State<AuthWrapper> createState() => _AuthWrapperState();
 }
 
-class _AuthWrapperState extends State<AuthWrapper> with SingleTickerProviderStateMixin {
+class _AuthWrapperState extends State<AuthWrapper>
+    with SingleTickerProviderStateMixin {
   bool _isInitializing = true;
   bool _isLoggedIn = false;
   bool _needsOnboarding = false;
@@ -64,7 +73,10 @@ class _AuthWrapperState extends State<AuthWrapper> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
     _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
     _animController.forward();
     _initializeApp();
@@ -100,11 +112,12 @@ class _AuthWrapperState extends State<AuthWrapper> with SingleTickerProviderStat
     if (isLoggedIn) {
       try {
         final profile = await SupabaseService.getProfile();
-        final displayName = (profile?['full_name'] ??
-                SupabaseService.currentUser?.userMetadata?['full_name'] ??
-                '')
-            .toString()
-            .trim();
+        final displayName =
+            (profile?['full_name'] ??
+                    SupabaseService.currentUser?.userMetadata?['full_name'] ??
+                    '')
+                .toString()
+                .trim();
         needsOnboarding = displayName.isEmpty;
       } catch (e) {
         needsOnboarding = false;
@@ -149,9 +162,18 @@ class _AuthWrapperState extends State<AuthWrapper> with SingleTickerProviderStat
     }
 
     if (_isLoggedIn) {
-      return _needsOnboarding ? const OnboardingScreen() : const HomeContainer();
+      _cleanRouteHash();
+      return _needsOnboarding
+          ? const OnboardingScreen()
+          : HomeContainer(initialIndex: widget.initialIndex);
     }
     return const LoginScreen();
+  }
+
+  void _cleanRouteHash() {
+    final routeName = ModalRoute.of(context)?.settings.name;
+    if (routeName == null || routeName.isEmpty) return;
+    SystemNavigator.routeInformationUpdated(uri: Uri.parse(routeName), replace: true);
   }
 
   Widget _buildSplashScreen() {
@@ -176,19 +198,35 @@ class _AuthWrapperState extends State<AuthWrapper> with SingleTickerProviderStat
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        width: 2,
+                      ),
                     ),
-                    child: const Icon(Icons.health_and_safety_rounded, size: 64, color: Colors.white),
+                    child: const Icon(
+                      Icons.health_and_safety_rounded,
+                      size: 64,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(height: 28),
                   const Text(
                     'SkinAI',
-                    style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1),
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -1,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Clinical Skin Care Assistant',
-                    style: TextStyle(fontSize: 15, color: Colors.white.withValues(alpha: 0.7), fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 48),
                   SizedBox(
@@ -222,7 +260,13 @@ class _AuthWrapperState extends State<AuthWrapper> with SingleTickerProviderStat
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(28),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 30, offset: const Offset(0, 12))],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 30,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -230,20 +274,48 @@ class _AuthWrapperState extends State<AuthWrapper> with SingleTickerProviderStat
                   children: [
                     Container(
                       padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(16)),
-                      child: const Icon(Icons.warning_amber_rounded, size: 32, color: AppColors.warning),
+                      decoration: BoxDecoration(
+                        color: AppColors.warning.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(
+                        Icons.warning_amber_rounded,
+                        size: 32,
+                        color: AppColors.warning,
+                      ),
                     ),
                     const SizedBox(height: 20),
-                    const Text('Configuration Required', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF10252D))),
+                    const Text(
+                      'Configuration Required',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF10252D),
+                      ),
+                    ),
                     const SizedBox(height: 10),
-                    Text(_initializationError!, style: const TextStyle(fontSize: 14, color: Color(0xFF5E737C), height: 1.5)),
+                    Text(
+                      _initializationError!,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF5E737C),
+                        height: 1.5,
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     Container(
                       padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(color: const Color(0xFF0F4C5C).withValues(alpha: 0.05), borderRadius: BorderRadius.circular(12)),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F4C5C).withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: const SelectableText(
                         'flutter run -d chrome\n  --dart-define=SUPABASE_URL=...\n  --dart-define=SUPABASE_ANON_KEY=...',
-                        style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: Color(0xFF0F4C5C)),
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                          color: Color(0xFF0F4C5C),
+                        ),
                       ),
                     ),
                   ],

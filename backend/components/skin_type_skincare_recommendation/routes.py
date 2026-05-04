@@ -9,9 +9,6 @@ from inference.config import (
 )
 
 from . import get_skin_type_model
-from services.gemini_service import GeminiService
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -315,20 +312,57 @@ def _build_structured_skin_care_output(
     if "acne_pimples" in goals_input:
         pm_steps[2 if routine_level == "full" else 1] = "Acne treatment (if tolerated)"
 
+    visible_concerns: list[str] = []
+    if "acne_pimples" in goals_input:
+        visible_concerns.append("Acne-prone or breakout concerns")
+    if "oil_control" in goals_input:
+        visible_concerns.append("Excess shine or oil control")
+    if "dryness" in goals_input:
+        visible_concerns.append("Dryness or barrier support")
+    if "redness_irritation" in goals_input:
+        visible_concerns.append("Redness or irritation")
+    if "dark_spots" in goals_input:
+        visible_concerns.append("Uneven tone or dark spots")
+    if "texture_pores" in goals_input:
+        visible_concerns.append("Texture or visible pores")
+    if "wrinkles_anti_aging" in goals_input:
+        visible_concerns.append("Fine lines or anti-aging")
+
+    recommendations: list[str] = [
+        "Patch test new products for 24-48 hours before regular use.",
+        "Introduce one new active ingredient at a time.",
+        "Use sunscreen every morning, especially when using actives.",
+    ]
+    if budget == "low":
+        recommendations.append("Prioritize cleanser, moisturizer, and sunscreen before optional serums.")
+    if key == "sensitive":
+        recommendations.append("Choose fragrance-free products and keep the routine minimal.")
+
+    note = (
+        "Cosmetic skin-care guidance only; not a medical diagnosis. "
+        "Stop any product that causes burning, swelling, or worsening irritation."
+    )
+
     return {
         "skin_type": key,
         "routine": {
             "am": am_steps,
             "pm": pm_steps,
         },
+        "safe_ingredients": safe_ingredients,
+        "avoid_ingredients": avoid_ingredients,
         "ingredients": {
             "safe": safe_ingredients,
             "avoid": avoid_ingredients,
         },
+        "visible_concerns": visible_concerns,
+        "recommendations": recommendations,
+        "note": note,
+        "disclaimer": note,
         "metadata": {
             "routine_level": routine_level,
             "budget": budget,
-        }
+        },
     }
 
 ALLERGY_LABELS = {

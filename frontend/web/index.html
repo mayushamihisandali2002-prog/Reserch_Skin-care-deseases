@@ -34,8 +34,17 @@
 </head>
 <body>
   <script>
-    window.flutterWebRenderer = "html";
+    {{flutter_js}}
+    {{flutter_build_config}}
+
+    _flutter.loader.load({
+      onEntrypointLoaded: async function(engineInitializer) {
+        const appRunner = await engineInitializer.initializeEngine({
+          renderer: "html"
+        });
+        await appRunner.runApp();
+      }
+    });
   </script>
-  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

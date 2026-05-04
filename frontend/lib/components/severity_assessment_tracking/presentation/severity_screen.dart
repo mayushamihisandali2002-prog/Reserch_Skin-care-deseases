@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:app/services/api_service.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class SeverityScreen extends StatefulWidget {
   const SeverityScreen({super.key});
@@ -22,10 +23,142 @@ class _SeverityScreenState extends State<SeverityScreen> {
 
   XFile? _selectedImage;
   bool _isLoading = false;
+  bool _isHistoryLoading = true;
   bool _trackProgress = true;
   Map<String, dynamic>? _result;
+  List<dynamic> _history = [];
+  List<Map<String, dynamic>> _logBooks = [];
+  String? _selectedLogBookId;
+  String _historyLogBookId = _allLogBooksFilter;
+  bool _isCreatingLogBook = false;
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _logBookTitleController = TextEditingController();
+  String _logBookBodyPart = 'Face';
+  String _logBookFrequency = 'weekly';
+  static const List<String> _bodyParts = [
+    'Face',
+    'Neck',
+    'Arm',
+    'Leg',
+    'Hand',
+    'Foot',
+    'Back',
+    'Chest',
+    'Scalp',
+  ];
+  static const List<String> _frequencies = ['daily', 'weekly'];
+  static const String _allLogBooksFilter = '__all_logbooks__';
 
-  // ... (rest of the state logic)
+  @override
+  void initState() {
+    super.initState();
+    _loadLogBooksAndHistory();
+  }
+
+  @override
+  void dispose() {
+    _descriptionController.dispose();
+    _logBookTitleController.dispose();
+    super.dispose();
+  }
+
+  Map<String, dynamic>? get _selectedLogBook {
+    for (final item in _logBooks) {
+      if (item['id']?.toString() == _selectedLogBookId) return item;
+    }
+    return null;
+  }
+
+  String? get _historyJourneyId =>
+      _historyLogBookId == _allLogBooksFilter ? null : _historyLogBookId;
+
+  String _logBookTitleForId(String? id) {
+    final normalized = id?.trim();
+    if (normalized == null || normalized.isEmpty) return 'No log book';
+    for (final item in _logBooks) {
+      if (item['id']?.toString() == normalized) {
+        return item['title']?.toString() ?? 'Untitled Log Book';
+      }
+    }
+    return 'Unknown Log Book';
+  }
+
+  Future<void> _loadHistory() async {
+    setState(() => _isHistoryLoading = true);
+    final history = await SeverityTrackingApi.getHistory(
+      journeyId: _historyJourneyId,
+    );
+    if (!mounted) return;
+    setState(() {
+      _history = history;
+      _isHistoryLoading = false;
+    });
+  }
+
+  Future<void> _loadLogBooksAndHistory() async {
+    setState(() => _isHistoryLoading = true);
+    try {
+      final logBooks = await SupabaseService.getJourneys();
+      String? selected = _selectedLogBookId;
+      if (selected == null && logBooks.isNotEmpty) {
+        selected = logBooks.first['id']?.toString();
+      }
+      final history = await SeverityTrackingApi.getHistory(
+        journeyId: _historyJourneyId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _logBooks = logBooks;
+        _selectedLogBookId = selected;
+        _history = history;
+        _isHistoryLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _logBooks = [];
+        _history = [];
+        _isHistoryLoading = false;
+      });
+    }
+  }
+
+  Future<void> _createLogBook() async {
+    final title = _logBookTitleController.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a log book name.')),
+      );
+      return;
+    }
+
+    setState(() => _isCreatingLogBook = true);
+    try {
+      final created = await SupabaseService.startJourney(
+        title: title,
+        bodyPart: _logBookBodyPart,
+        frequency: _logBookFrequency,
+      );
+      if (!mounted) return;
+      _logBookTitleController.clear();
+      setState(() {
+        _selectedLogBookId = created['id']?.toString();
+        _historyLogBookId = _allLogBooksFilter;
+      });
+      await _loadLogBooksAndHistory();
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Log book created.')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Log book create failed: $e')));
+    } finally {
+      if (mounted) setState(() => _isCreatingLogBook = false);
+    }
+  }
 
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
@@ -56,11 +189,15 @@ class _SeverityScreenState extends State<SeverityScreen> {
         _selectedImage!.name,
         track: _trackProgress,
         userId: SupabaseService.userId ?? 'anonymous',
+        journeyId: _selectedLogBookId,
+        journeyTitle: _selectedLogBook?['title']?.toString(),
+        description: _descriptionController.text,
       );
       if (!mounted) return;
       setState(() {
         _result = response;
       });
+      await _loadHistory();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -80,6 +217,7 @@ class _SeverityScreenState extends State<SeverityScreen> {
       _selectedImage = null;
       _result = null;
       _trackProgress = true;
+      _descriptionController.clear();
     });
   }
 
@@ -142,7 +280,7 @@ class _SeverityScreenState extends State<SeverityScreen> {
     final effectiveAccent = accent ?? _brand;
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: AppDecor.softCard(context, ),
+      decoration: AppDecor.softCard(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -161,7 +299,9 @@ class _SeverityScreenState extends State<SeverityScreen> {
               Expanded(
                 child: Text(
                   title,
-                  style: AppTextStyles.subHeading(context).copyWith(fontSize: 17),
+                  style: AppTextStyles.subHeading(
+                    context,
+                  ).copyWith(fontSize: 17),
                 ),
               ),
             ],
@@ -188,7 +328,9 @@ class _SeverityScreenState extends State<SeverityScreen> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: context.isDarkMode ? Colors.black45 : const Color(0x1F145563),
+                color: context.isDarkMode
+                    ? Colors.black45
+                    : const Color(0x1F145563),
                 blurRadius: 14,
                 offset: const Offset(0, 8),
               ),
@@ -199,22 +341,25 @@ class _SeverityScreenState extends State<SeverityScreen> {
             children: [
               Text(
                 'Face Skin Severity',
-                style: AppTextStyles.heading(context).copyWith(
-                  color: Colors.white,
-                  fontSize: 24,
-                ),
+                style: AppTextStyles.heading(
+                  context,
+                ).copyWith(color: Colors.white, fontSize: 24),
               ),
               const SizedBox(height: 8),
               Text(
                 'Upload one clear face image. The system extracts engineered skin features and predicts Mild, Moderate, or Severe.',
-                style: AppTextStyles.body(context).copyWith(
-                  color: Colors.white.withValues(alpha: 0.9),
-                ),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: Colors.white.withValues(alpha: 0.9)),
               ),
             ],
           ),
         ),
         const SizedBox(height: 16),
+        _buildLogBookCreator(),
+        const SizedBox(height: 14),
+        _buildLogBookSection(compactWhenEmpty: true),
+        const SizedBox(height: 14),
         _sectionCard(
           title: 'Face Image',
           subtitle: 'Use frontal/near-frontal photo with good lighting.',
@@ -291,6 +436,22 @@ class _SeverityScreenState extends State<SeverityScreen> {
         ),
         const SizedBox(height: 14),
         _sectionCard(
+          title: 'Log Book Description',
+          subtitle: 'Add daily or weekly notes for this severity entry.',
+          icon: Icons.edit_note_outlined,
+          child: TextField(
+            controller: _descriptionController,
+            minLines: 3,
+            maxLines: 5,
+            textInputAction: TextInputAction.newline,
+            decoration: const InputDecoration(
+              hintText:
+                  'Describe today\'s skin condition, changes, care routine, or symptoms...',
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _sectionCard(
           title: 'Tracking',
           subtitle: 'Enable weekly trend tracking for this user profile.',
           icon: Icons.timeline_outlined,
@@ -338,6 +499,425 @@ class _SeverityScreenState extends State<SeverityScreen> {
     );
   }
 
+  String _resolveImageUrl(String? rawUrl) {
+    if (rawUrl == null || rawUrl.trim().isEmpty) return '';
+    final value = rawUrl.trim();
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return value;
+    }
+    if (value.startsWith('/')) return '${ApiService.baseUrl}$value';
+    return value;
+  }
+
+  Widget _buildHistoryImage(String? rawUrl) {
+    final url = _resolveImageUrl(rawUrl);
+    if (url.isEmpty) {
+      return const Icon(Icons.hide_image_outlined);
+    }
+    if (url.startsWith('assets/')) {
+      return Image.asset(
+        url,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.hide_image_outlined),
+      );
+    }
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) =>
+          const Icon(Icons.hide_image_outlined),
+    );
+  }
+
+  List<Map<String, dynamic>> _historyMaps() {
+    final rows = <Map<String, dynamic>>[];
+    for (final item in _history) {
+      if (item is Map) {
+        rows.add(item.map((key, value) => MapEntry(key.toString(), value)));
+      }
+    }
+    return rows;
+  }
+
+  Widget _buildLogBookSection({bool compactWhenEmpty = false}) {
+    final rows = _historyMaps();
+    final newestFirst = rows.reversed.toList();
+    final showingAll = _historyLogBookId == _allLogBooksFilter;
+    final selectedName = showingAll
+        ? 'All log books'
+        : _logBookTitleForId(_historyLogBookId);
+    return _sectionCard(
+      title: 'Severity Log Book',
+      subtitle: showingAll
+          ? 'Combined day-by-day and weekly tracking history from every log book.'
+          : '$selectedName history saved in this Severity tab.',
+      icon: Icons.menu_book_outlined,
+      child: _isHistoryLoading
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_logBooks.isNotEmpty) ...[
+                  _buildHistoryFilter(),
+                  const SizedBox(height: 16),
+                ],
+                if (rows.isEmpty)
+                  Text(
+                    compactWhenEmpty
+                        ? 'No entries yet. Create a log book, add a face image and description, then run Analyze Severity.'
+                        : 'No severity log book entries yet. Add a face image, description, keep tracking enabled, and run Analyze Severity.',
+                    style: AppTextStyles.body(context),
+                  )
+                else ...[
+                  _buildLogTrendChart(rows),
+                  const SizedBox(height: 16),
+                  ...newestFirst.map(_buildLogBookEntry),
+                ],
+              ],
+            ),
+    );
+  }
+
+  Widget _buildHistoryFilter() {
+    final items = <DropdownMenuItem<String>>[
+      const DropdownMenuItem(
+        value: _allLogBooksFilter,
+        child: Text('All Log Books'),
+      ),
+      ..._logBooks.map(
+        (book) => DropdownMenuItem(
+          value: book['id']?.toString(),
+          child: Text(
+            '${book['title'] ?? 'Untitled Log Book'} - ${book['frequency'] ?? 'weekly'}',
+          ),
+        ),
+      ),
+    ];
+
+    return DropdownButtonFormField<String>(
+      initialValue: _historyLogBookId,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Show history',
+        prefixIcon: Icon(Icons.history_outlined),
+      ),
+      items: items,
+      onChanged: (value) async {
+        if (value == null) return;
+        setState(() {
+          _historyLogBookId = value;
+          _isHistoryLoading = true;
+        });
+        await _loadHistory();
+      },
+    );
+  }
+
+  Widget _buildLogBookCreator() {
+    return _sectionCard(
+      title: 'Create Log Book',
+      subtitle:
+          'Create one log book for a daily or weekly severity tracking history.',
+      icon: Icons.add_chart_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _logBookTitleController,
+            decoration: const InputDecoration(
+              labelText: 'Log book name',
+              hintText: 'Example: Face eczema weekly tracking',
+              prefixIcon: Icon(Icons.book_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 720;
+              final fields = [
+                DropdownButtonFormField<String>(
+                  initialValue: _logBookBodyPart,
+                  decoration: const InputDecoration(
+                    labelText: 'Body part',
+                    prefixIcon: Icon(Icons.face_retouching_natural_outlined),
+                  ),
+                  items: _bodyParts
+                      .map(
+                        (item) =>
+                            DropdownMenuItem(value: item, child: Text(item)),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _logBookBodyPart = value);
+                  },
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: _logBookFrequency,
+                  decoration: const InputDecoration(
+                    labelText: 'Report frequency',
+                    prefixIcon: Icon(Icons.event_repeat_outlined),
+                  ),
+                  items: _frequencies
+                      .map(
+                        (item) => DropdownMenuItem(
+                          value: item,
+                          child: Text(item.toUpperCase()),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _logBookFrequency = value);
+                  },
+                ),
+              ];
+              if (isNarrow) {
+                return Column(
+                  children: [fields[0], const SizedBox(height: 12), fields[1]],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: fields[0]),
+                  const SizedBox(width: 12),
+                  Expanded(child: fields[1]),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: FilledButton.icon(
+              onPressed: _isCreatingLogBook ? null : _createLogBook,
+              icon: _isCreatingLogBook
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.add),
+              label: const Text('Create New Log Book'),
+            ),
+          ),
+          if (_logBooks.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedLogBookId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Active log book',
+                prefixIcon: Icon(Icons.menu_book_outlined),
+                helperText:
+                    'New severity scans are saved here. History can still show all log books.',
+              ),
+              items: _logBooks
+                  .map(
+                    (book) => DropdownMenuItem(
+                      value: book['id']?.toString(),
+                      child: Text(
+                        '${book['title'] ?? 'Untitled Log Book'} - ${book['frequency'] ?? 'weekly'}',
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) async {
+                setState(() {
+                  _selectedLogBookId = value;
+                  _isHistoryLoading = true;
+                });
+                await _loadHistory();
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogTrendChart(List<Map<String, dynamic>> rows) {
+    final spots = <FlSpot>[];
+    for (var i = 0; i < rows.length; i++) {
+      spots.add(
+        FlSpot(
+          i.toDouble(),
+          _toDouble(rows[i]['score']).clamp(0.0, 100.0).toDouble(),
+        ),
+      );
+    }
+
+    return Container(
+      height: 220,
+      padding: const EdgeInsets.fromLTRB(12, 18, 12, 10),
+      decoration: BoxDecoration(
+        color: context.clrSurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.clrBorder),
+      ),
+      child: LineChart(
+        LineChartData(
+          minY: 0,
+          maxY: 100,
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: 25,
+            getDrawingHorizontalLine: (_) => FlLine(
+              color: context.clrBorder.withValues(alpha: 0.55),
+              strokeWidth: 1,
+            ),
+          ),
+          borderData: FlBorderData(show: false),
+          titlesData: FlTitlesData(
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 34,
+                interval: 25,
+                getTitlesWidget: (value, _) => Text(
+                  value.toInt().toString(),
+                  style: AppTextStyles.caption(context),
+                ),
+              ),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 24,
+                interval: 1,
+                getTitlesWidget: (value, _) {
+                  final index = value.toInt();
+                  if (index < 0 || index >= rows.length) {
+                    return const SizedBox.shrink();
+                  }
+                  return Text(
+                    '${index + 1}',
+                    style: AppTextStyles.caption(context),
+                  );
+                },
+              ),
+            ),
+          ),
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: spots.length > 2,
+              color: AppColors.primary,
+              barWidth: 3,
+              dotData: FlDotData(show: true),
+              belowBarData: BarAreaData(
+                show: true,
+                color: AppColors.primary.withValues(alpha: 0.10),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogBookEntry(Map<String, dynamic> entry) {
+    final status = (entry['status'] ?? 'Unknown').toString();
+    final score = _toDouble(entry['score']);
+    final description = (entry['description'] ?? '').toString().trim();
+    final metrics = _toMap(entry['metrics']);
+    final logBookTitle = _logBookTitleForId(entry['journey_id']?.toString());
+    final showLogBookName = _historyLogBookId == _allLogBooksFilter;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.clrSurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.clrBorder),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              width: 92,
+              height: 92,
+              color: context.clrBackgroundAlt,
+              child: _buildHistoryImage(entry['image_url']?.toString()),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${entry['week'] ?? 'Visit'} - $status',
+                        style: AppTextStyles.bodyStrong(context),
+                      ),
+                    ),
+                    Text(
+                      '${score.toStringAsFixed(0)}%',
+                      style: AppTextStyles.bodyStrong(
+                        context,
+                      ).copyWith(color: _levelColor(status)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  (entry['date'] ?? entry['timestamp'] ?? '').toString(),
+                  style: AppTextStyles.caption(context),
+                ),
+                if (showLogBookName) ...[
+                  const SizedBox(height: 6),
+                  _chip(logBookTitle),
+                ],
+                const SizedBox(height: 8),
+                Text(
+                  description.isEmpty ? 'No description added.' : description,
+                  style: AppTextStyles.body(context),
+                ),
+                if (metrics.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _chip(
+                        'Redness ${_toDouble(metrics['redness']).toStringAsFixed(1)}',
+                      ),
+                      _chip(
+                        'Inflammation ${_toDouble(metrics['inflammation']).toStringAsFixed(1)}',
+                      ),
+                      _chip(
+                        'Scaling ${_toDouble(metrics['scaling']).toStringAsFixed(1)}',
+                      ),
+                      _chip(
+                        'Texture ${_toDouble(metrics['texture']).toStringAsFixed(1)}',
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildReviewBanner({
     required String validationStatus,
     required String analysisScope,
@@ -345,7 +925,9 @@ class _SeverityScreenState extends State<SeverityScreen> {
     required String? trackingBlockedReason,
     required List<String> reviewReasons,
   }) {
-    final title = requiresReview ? 'Review recommended' : 'Operational validation only';
+    final title = requiresReview
+        ? 'Review recommended'
+        : 'Operational validation only';
     final message = validationStatus == 'operational_only_unlabeled'
         ? 'This severity model passed operational checks, but there is no local labeled severity benchmark for a formal clinical accuracy claim.'
         : 'Use this severity result as a screening/tracking aid only.';
@@ -368,9 +950,9 @@ class _SeverityScreenState extends State<SeverityScreen> {
               Expanded(
                 child: Text(
                   title,
-                  style: AppTextStyles.bodyStrong(context).copyWith(
-                    color: context.clrTextMain,
-                  ),
+                  style: AppTextStyles.bodyStrong(
+                    context,
+                  ).copyWith(color: context.clrTextMain),
                 ),
               ),
             ],
@@ -383,11 +965,13 @@ class _SeverityScreenState extends State<SeverityScreen> {
             runSpacing: 8,
             children: [
               _chip('Scope: $analysisScope'),
-              if (trackingBlockedReason != null && trackingBlockedReason.isNotEmpty)
+              if (trackingBlockedReason != null &&
+                  trackingBlockedReason.isNotEmpty)
                 _chip('Tracking blocked'),
             ],
           ),
-          if (trackingBlockedReason != null && trackingBlockedReason.isNotEmpty) ...[
+          if (trackingBlockedReason != null &&
+              trackingBlockedReason.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(trackingBlockedReason, style: AppTextStyles.body(context)),
           ],
@@ -401,7 +985,9 @@ class _SeverityScreenState extends State<SeverityScreen> {
                   children: [
                     Icon(Icons.fiber_manual_record, size: 8, color: _warning),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(reason, style: AppTextStyles.body(context))),
+                    Expanded(
+                      child: Text(reason, style: AppTextStyles.body(context)),
+                    ),
                   ],
                 ),
               ),
@@ -432,17 +1018,18 @@ class _SeverityScreenState extends State<SeverityScreen> {
     final limitations = _toStringList(result['limitations']);
     final qualityNotes = _toStringList(result['quality_notes']);
     final trackingBlockedReason = result['tracking_blocked_reason']?.toString();
-    
+
     // Smart Guard Fields
     final clinicalRationale = (result['clinical_rationale'] ?? '').toString();
     final healingInsight = (result['healing_insight'] ?? '').toString();
-    final identifiedBodyPart = (result['identified_body_part'] ?? '').toString();
+    final identifiedBodyPart = (result['identified_body_part'] ?? '')
+        .toString();
     final isConsistent = _toBool(result['is_consistent_with_journey'] ?? true);
     final consistencyWarning = (result['consistency_warning'] ?? '').toString();
     final visitNumber = result['visit_number'] ?? 1;
     final currentImageUrl = result['current_image_url']?.toString();
     final baselineImageUrl = result['baseline_image_url']?.toString();
-    
+
     final baseUrl = ApiService.baseUrl;
 
     final levelColor = _levelColor(level);
@@ -466,20 +1053,23 @@ class _SeverityScreenState extends State<SeverityScreen> {
             children: [
               Text(
                 'Severity Level',
-                style: AppTextStyles.caption(context).copyWith(color: Colors.white70),
+                style: AppTextStyles.caption(
+                  context,
+                ).copyWith(color: Colors.white70),
               ),
               const SizedBox(height: 4),
               Text(
                 level,
-                style: AppTextStyles.heading(context).copyWith(
-                  color: Colors.white,
-                  fontSize: 34,
-                ),
+                style: AppTextStyles.heading(
+                  context,
+                ).copyWith(color: Colors.white, fontSize: 34),
               ),
               const SizedBox(height: 10),
               Text(
                 'Severity Score: ${score.toStringAsFixed(1)} / 100',
-                style: AppTextStyles.bodyStrong(context).copyWith(color: Colors.white),
+                style: AppTextStyles.bodyStrong(
+                  context,
+                ).copyWith(color: Colors.white),
               ),
               const SizedBox(height: 8),
               ClipRRect(
@@ -517,10 +1107,15 @@ class _SeverityScreenState extends State<SeverityScreen> {
                     children: [
                       Text(
                         'Body Part Mismatch',
-                        style: AppTextStyles.bodyStrong(context).copyWith(color: AppColors.error),
+                        style: AppTextStyles.bodyStrong(
+                          context,
+                        ).copyWith(color: AppColors.error),
                       ),
                       const SizedBox(height: 4),
-                      Text(consistencyWarning, style: AppTextStyles.body(context)),
+                      Text(
+                        consistencyWarning,
+                        style: AppTextStyles.body(context),
+                      ),
                     ],
                   ),
                 ),
@@ -534,14 +1129,18 @@ class _SeverityScreenState extends State<SeverityScreen> {
         if (clinicalRationale.isNotEmpty) ...[
           _sectionCard(
             title: 'Clinical Advisory',
-            subtitle: 'AI-driven rationale for visit #$visitNumber ($identifiedBodyPart)',
+            subtitle:
+                'AI-driven rationale for visit #$visitNumber ($identifiedBodyPart)',
             icon: Icons.medical_services_outlined,
             accent: Colors.blueAccent,
             child: MarkdownBody(
               data: clinicalRationale,
-              styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                p: AppTextStyles.body(context).copyWith(fontSize: 15, height: 1.5),
-              ),
+              styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
+                  .copyWith(
+                    p: AppTextStyles.body(
+                      context,
+                    ).copyWith(fontSize: 15, height: 1.5),
+                  ),
             ),
           ),
           const SizedBox(height: 14),
@@ -556,99 +1155,65 @@ class _SeverityScreenState extends State<SeverityScreen> {
             accent: Colors.orangeAccent,
             child: Column(
               children: [
-                if (MediaQuery.of(context).size.width < 380) ...[
-                  Column(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          '$baseUrl$baselineImageUrl',
-                          height: 180,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            height: 180,
-                            width: double.infinity,
-                            color: context.clrBackgroundAlt,
-                            child: const Icon(Icons.broken_image_outlined),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text('Baseline (Day 1)', style: AppTextStyles.caption(context)),
-                      const SizedBox(height: 16),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: currentImageUrl != null
-                            ? Image.network(
-                                '$baseUrl$currentImageUrl',
-                                height: 180,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                              )
-                            : Container(
-                                height: 180,
-                                width: double.infinity,
-                                color: context.clrBackgroundAlt,
-                                child: const Center(child: Text('Current Scan')),
-                              ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text('Current Scan', style: AppTextStyles.caption(context)),
-                    ],
-                  ),
-                ] else ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Image.network(
-                                '$baseUrl$baselineImageUrl',
-                                height: 150,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => Container(
-                                  height: 150,
-                                  color: context.clrBackgroundAlt,
-                                  child: const Icon(Icons.broken_image_outlined),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text('Baseline', style: AppTextStyles.caption(context)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: currentImageUrl != null
-                                  ? Image.network(
-                                      '$baseUrl$currentImageUrl',
-                                      height: 150,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Container(
-                                      height: 150,
-                                      color: context.clrBackgroundAlt,
-                                      child: const Center(child: Text('Current')),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              '$baseUrl$baselineImageUrl',
+                              height: 150,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                    height: 150,
+                                    color: context.clrBackgroundAlt,
+                                    child: const Icon(
+                                      Icons.broken_image_outlined,
                                     ),
+                                  ),
                             ),
-                            const SizedBox(height: 6),
-                            Text('Current', style: AppTextStyles.caption(context)),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Baseline',
+                            style: AppTextStyles.caption(context),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: currentImageUrl != null
+                                ? Image.network(
+                                    '$baseUrl$currentImageUrl',
+                                    height: 150,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Container(
+                                    height: 150,
+                                    color: context.clrBackgroundAlt,
+                                    child: const Center(child: Text('Current')),
+                                  ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Current',
+                            style: AppTextStyles.caption(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
                 if (healingInsight.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Container(
@@ -656,12 +1221,16 @@ class _SeverityScreenState extends State<SeverityScreen> {
                     decoration: BoxDecoration(
                       color: Colors.orangeAccent.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.1)),
+                      border: Border.all(
+                        color: Colors.orangeAccent.withValues(alpha: 0.1),
+                      ),
                     ),
                     child: Text(
                       healingInsight,
                       style: AppTextStyles.bodyStrong(context).copyWith(
-                        color: context.isDarkMode ? Colors.orange[200] : Colors.orange[800],
+                        color: context.isDarkMode
+                            ? Colors.orange[200]
+                            : Colors.orange[800],
                         fontStyle: FontStyle.italic,
                         fontSize: 13,
                       ),
@@ -684,12 +1253,16 @@ class _SeverityScreenState extends State<SeverityScreen> {
               decoration: BoxDecoration(
                 color: Colors.purpleAccent.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.purpleAccent.withValues(alpha: 0.1)),
+                border: Border.all(
+                  color: Colors.purpleAccent.withValues(alpha: 0.1),
+                ),
               ),
               child: Text(
                 healingInsight,
                 style: AppTextStyles.bodyStrong(context).copyWith(
-                  color: context.isDarkMode ? Colors.purple[200] : Colors.purple[800],
+                  color: context.isDarkMode
+                      ? Colors.purple[200]
+                      : Colors.purple[800],
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -698,7 +1271,9 @@ class _SeverityScreenState extends State<SeverityScreen> {
           const SizedBox(height: 14),
         ],
 
-        if (validationStatus.isNotEmpty || requiresReview || (trackingBlockedReason?.isNotEmpty ?? false)) ...[
+        if (validationStatus.isNotEmpty ||
+            requiresReview ||
+            (trackingBlockedReason?.isNotEmpty ?? false)) ...[
           _buildReviewBanner(
             validationStatus: validationStatus,
             analysisScope: analysisScope,
@@ -779,9 +1354,18 @@ class _SeverityScreenState extends State<SeverityScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.chevron_right, size: 18, color: AppColors.primary),
+                          const Icon(
+                            Icons.chevron_right,
+                            size: 18,
+                            color: AppColors.primary,
+                          ),
                           const SizedBox(width: 6),
-                          Expanded(child: Text(step, style: AppTextStyles.body(context))),
+                          Expanded(
+                            child: Text(
+                              step,
+                              style: AppTextStyles.body(context),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -793,7 +1377,8 @@ class _SeverityScreenState extends State<SeverityScreen> {
         if (qualityNotes.isNotEmpty)
           _sectionCard(
             title: 'Quality Notes',
-            subtitle: 'Automatic input-quality observations from preprocessing.',
+            subtitle:
+                'Automatic input-quality observations from preprocessing.',
             icon: Icons.image_search_outlined,
             accent: _warning,
             child: Column(
@@ -909,6 +1494,8 @@ class _SeverityScreenState extends State<SeverityScreen> {
               ],
             ),
           ),
+        const SizedBox(height: 14),
+        _buildLogBookSection(),
         const SizedBox(height: 20),
         SizedBox(
           width: double.infinity,
@@ -932,11 +1519,10 @@ class _SeverityScreenState extends State<SeverityScreen> {
         border: Border.all(color: context.clrBorder),
       ),
       child: Text(
-        text, 
-        style: AppTextStyles.caption(context).copyWith(
-          fontSize: 13,
-          color: context.clrTextMain,
-        ),
+        text,
+        style: AppTextStyles.caption(
+          context,
+        ).copyWith(fontSize: 13, color: context.clrTextMain),
       ),
     );
   }
@@ -963,18 +1549,16 @@ class _SeverityScreenState extends State<SeverityScreen> {
                   Expanded(
                     child: Text(
                       entry.key,
-                      style: AppTextStyles.bodyStrong(context).copyWith(
-                        fontSize: 13.5,
-                        color: context.clrTextMain,
-                      ),
+                      style: AppTextStyles.bodyStrong(
+                        context,
+                      ).copyWith(fontSize: 13.5, color: context.clrTextMain),
                     ),
                   ),
                   Text(
                     _toDouble(entry.value).toStringAsFixed(4),
-                    style: AppTextStyles.body(context).copyWith(
-                      fontSize: 13.5,
-                      color: context.clrTextSec,
-                    ),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(fontSize: 13.5, color: context.clrTextSec),
                   ),
                 ],
               ),

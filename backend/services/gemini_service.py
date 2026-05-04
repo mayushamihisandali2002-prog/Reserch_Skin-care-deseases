@@ -570,7 +570,7 @@ Return JSON: {{"agreement": "agree|disagree|unsure", "your_diagnosis": "name", "
             return {"error": "Gemini unavailable"}
         
         prompt = f"""
-You are the Lead Clinical Dermatology Consultant for a Hybrid AI System.
+You are an AI Dermatology Assistant for a Hybrid AI System.
 Our system is IMAGE-DOMINANT. Your job is to provide a final diagnosis based PRIMARILY on the visual evidence, using the patient's symptoms only to clarify or refine the visual diagnosis.
 
 TASK:
