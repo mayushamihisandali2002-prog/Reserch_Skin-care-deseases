@@ -506,7 +506,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       ),
       child: Row(
         children: [
-          if (showMenu) IconButton(icon: const Icon(Icons.menu), onPressed: () => Scaffold.of(context).openDrawer()),
+          if (showMenu) 
+            Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu), 
+                onPressed: () => Scaffold.of(context).openDrawer()
+              ),
+            ),
           const Icon(Icons.auto_awesome_rounded, color: AppColors.primary, size: 20),
           const SizedBox(width: 12),
           Text('Clinical Assistant', style: AppTextStyles.subHeading(context).copyWith(fontSize: 16)),
